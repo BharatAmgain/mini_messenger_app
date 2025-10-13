@@ -1,0 +1,184 @@
+<!-- templates/accounts/profile_edit.html -->
+{% extends 'base.html' %}
+
+{% block title %}Edit Profile - Messenger{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">Edit Your Profile</h1>
+                        <p class="text-gray-600">You can change your profile anytime</p>
+                    </div>
+                    <a href="{% url 'profile' %}" class="text-blue-600 hover:text-blue-700">
+                        ← Back to Profile
+                    </a>
+                </div>
+            </div>
+
+            <div class="p-6">
+                <!-- Success/Error Messages -->
+                {% if messages %}
+                <div class="mb-6 rounded-md bg-green-50 p-4 border border-green-200">
+                    {% for message in messages %}
+                    <div class="text-sm text-green-700">{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                    {% csrf_token %}
+
+                    <!-- Profile Picture Section -->
+                    <div class="border-b border-gray-200 pb-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Profile Picture</h3>
+                        <div class="flex items-center space-x-6">
+                            <div class="flex-shrink-0">
+                                {% if user.profile_picture %}
+                                <img id="current-photo" src="{{ user.profile_picture.url }}" alt="{{ user.username }}"
+                                     class="w-20 h-20 rounded-full border-2 border-gray-300 object-cover">
+                                {% else %}
+                                <div id="current-photo" class="w-20 h-20 rounded-full bg-gray-300 border-2 border-gray-300 flex items-center justify-center">
+                                    <i class="fas fa-user text-gray-500 text-2xl"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="flex-1">
+                                <label for="profile_picture" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Change Photo (Optional)
+                                </label>
+                                <input type="file" id="profile_picture" name="profile_picture"
+                                       accept="image/*"
+                                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                <p class="text-xs text-gray-500 mt-1">JPG, PNG, GIF • Max 5MB</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Personal Information -->
+                    <div class="border-b border-gray-200 pb-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Personal Information</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="first_name" class="block text-sm font-medium text-gray-700">First Name</label>
+                                <input type="text" id="first_name" name="first_name" value="{{ user.first_name }}"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+
+                            <div>
+                                <label for="last_name" class="block text-sm font-medium text-gray-700">Last Name</label>
+                                <input type="text" id="last_name" name="last_name" value="{{ user.last_name }}"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                            <input type="email" id="email" name="email" value="{{ user.email }}" required
+                                class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div class="mt-4">
+                            <label for="phone_number" class="block text-sm font-medium text-gray-700">Phone Number</label>
+                            <input type="text" id="phone_number" name="phone_number" value="{{ user.phone_number|default:'' }}"
+                                class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+
+                    <!-- Additional Information -->
+                    <div class="border-b border-gray-200 pb-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Additional Information</h3>
+
+                        <div class="mb-4">
+                            <label for="bio" class="block text-sm font-medium text-gray-700">Bio</label>
+                            <textarea id="bio" name="bio" rows="3" placeholder="Tell us about yourself..."
+                                class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500">{{ user.bio|default:'' }}</textarea>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="location" class="block text-sm font-medium text-gray-700">Location</label>
+                                <input type="text" id="location" name="location" value="{{ user.location|default:'' }}" placeholder="Your city"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+
+                            <div>
+                                <label for="website" class="block text-sm font-medium text-gray-700">Website</label>
+                                <input type="url" id="website" name="website" value="{{ user.website|default:'' }}" placeholder="https://example.com"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div>
+                                <label for="date_of_birth" class="block text-sm font-medium text-gray-700">Date of Birth</label>
+                                <input type="date" id="date_of_birth" name="date_of_birth"
+                                       value="{% if user.date_of_birth %}{{ user.date_of_birth|date:'Y-m-d' }}{% endif %}"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+
+                            <div>
+                                <label for="gender" class="block text-sm font-medium text-gray-700">Gender</label>
+                                <select id="gender" name="gender" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">Select Gender</option>
+                                    <option value="male" {% if user.gender == 'male' %}selected{% endif %}>Male</option>
+                                    <option value="female" {% if user.gender == 'female' %}selected{% endif %}>Female</option>
+                                    <option value="other" {% if user.gender == 'other' %}selected{% endif %}>Other</option>
+                                    <option value="prefer_not" {% if user.gender == 'prefer_not' %}selected{% endif %}>Prefer not to say</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex justify-between items-center">
+                        <p class="text-sm text-gray-600">
+                            You can come back and edit anytime
+                        </p>
+                        <div class="flex space-x-3">
+                            <a href="{% url 'profile' %}"
+                                class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-200">
+                                Cancel
+                            </a>
+                            <button type="submit"
+                                class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200 font-medium">
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Simple Photo Preview -->
+<script>
+document.getElementById('profile_picture').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const currentPhoto = document.getElementById('current-photo');
+            if (currentPhoto.tagName === 'IMG') {
+                currentPhoto.src = e.target.result;
+            } else {
+                // Replace div with image
+                const container = currentPhoto.parentElement;
+                const newImg = document.createElement('img');
+                newImg.src = e.target.result;
+                newImg.alt = 'Preview';
+                newImg.className = 'w-20 h-20 rounded-full border-2 border-gray-300 object-cover';
+                newImg.id = 'current-photo';
+                container.innerHTML = '';
+                container.appendChild(newImg);
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+});
+</script>
+{% endblock %}

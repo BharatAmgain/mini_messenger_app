@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+
+{% block title %}Notifications - Messenger{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-blue-100 rounded-lg">
+                            <i class="fas fa-bell text-blue-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-900">Notifications</h1>
+                            <p class="text-gray-600">Your recent activities and alerts</p>
+                        </div>
+                    </div>
+                    {% if notifications %}
+                    <form method="POST" action="{% url 'mark_all_notifications_read' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200 font-medium">
+                            Mark All as Read
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Notifications List -->
+            <div class="divide-y divide-gray-200">
+                {% if notifications %}
+                    {% for notification in notifications %}
+                    <div class="p-6 hover:bg-gray-50 transition duration-200 {% if not notification.is_read %}bg-blue-50 border-l-4 border-blue-500{% endif %}">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-start space-x-4 flex-1">
+                                <!-- Notification Icon -->
+                                <div class="flex-shrink-0">
+                                    {% if notification.notification_type == 'message' %}
+                                    <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-comment text-green-600"></i>
+                                    </div>
+                                    {% elif notification.notification_type == 'friend_request' %}
+                                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-user-plus text-blue-600"></i>
+                                    </div>
+                                    {% elif notification.notification_type == 'invitation' %}
+                                    <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-envelope text-purple-600"></i>
+                                    </div>
+                                    {% else %}
+                                    <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-info-circle text-gray-600"></i>
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Notification Content -->
+                                <div class="flex-1">
+                                    <h3 class="font-semibold text-gray-900">{{ notification.title }}</h3>
+                                    <p class="text-gray-600 mt-1">{{ notification.message }}</p>
+                                    <p class="text-sm text-gray-500 mt-2">
+                                        <i class="fas fa-clock mr-1"></i>
+                                        {{ notification.created_at|timesince }} ago
+                                    </p>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="flex items-center space-x-2">
+                                    {% if not notification.is_read %}
+                                    <form method="POST" action="{% url 'mark_notification_read' notification.id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                                            Mark Read
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <span class="text-green-600 text-sm font-medium">
+                                        <i class="fas fa-check mr-1"></i>Read
+                                    </span>
+                                    {% endif %}
+                                    
+                                    {% if notification.related_url %}
+                                    <a href="{{ notification.related_url }}" class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                                        View
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <!-- Empty State -->
+                    <div class="text-center py-12">
+                        <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            <i class="fas fa-bell-slash text-gray-400 text-2xl"></i>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">No notifications</h3>
+                        <p class="text-gray-600">You're all caught up! New notifications will appear here.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Load More Button -->
+            {% if notifications|length >= 10 %}
+            <div class="px-6 py-4 border-t border-gray-200">
+                <button class="w-full bg-gray-50 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100 transition duration-200 font-medium">
+                    Load More Notifications
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh notification count every 30 seconds
+    setInterval(function() {
+        fetch('{% url "get_unread_count" %}')
+            .then(response => response.json())
+            .then(data => {
+                const badge = document.querySelector('.notification-badge');
+                if (badge) {
+                    if (data.unread_count > 0) {
+                        badge.textContent = data.unread_count;
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+            });
+    }, 30000);
+
+    // Mark as read with AJAX
+    const markReadForms = document.querySelectorAll('form[action*="mark-notification-read"]');
+    markReadForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const notificationItem = this.closest('.hover\\:bg-gray-50');
+            
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    notificationItem.classList.remove('bg-blue-50', 'border-l-4', 'border-blue-500');
+                    // Update notification count
+                    const badge = document.querySelector('.notification-badge');
+                    if (badge) {
+                        const currentCount = parseInt(badge.textContent);
+                        if (currentCount > 1) {
+                            badge.textContent = currentCount - 1;
+                        } else {
+                            badge.classList.add('hidden');
+                        }
+                    }
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

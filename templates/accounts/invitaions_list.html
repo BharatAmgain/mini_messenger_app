@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">My Invitations</h1>
+                        <p class="text-gray-600">Track your sent invitations</p>
+                    </div>
+                    <div class="flex space-x-3">
+                        <a href="{% url 'invite_user' %}" 
+                           class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200">
+                            <i class="fas fa-user-plus mr-2"></i>Single Invite
+                        </a>
+                        <a href="{% url 'bulk_invite' %}" 
+                           class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200">
+                            <i class="fas fa-users mr-2"></i>Bulk Invite
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="invitations-stats">
+                    <!-- Stats will be loaded via JavaScript -->
+                </div>
+            </div>
+
+            <!-- Invitations List -->
+            <div class="divide-y divide-gray-200">
+                {% if invitations %}
+                    {% for invitation in invitations %}
+                    <div class="px-6 py-4 hover:bg-gray-50 transition duration-200">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-4">
+                                <div class="flex-shrink-0">
+                                    {% if invitation.invitation_type == 'email' %}
+                                    <div class="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-envelope text-blue-600"></i>
+                                    </div>
+                                    {% else %}
+                                    <div class="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-phone text-green-600"></i>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <p class="font-medium text-gray-900">
+                                        {{ invitation.email|default:invitation.phone_number }}
+                                    </p>
+                                    <p class="text-sm text-gray-500">
+                                        Sent {{ invitation.created_at|timesince }} ago
+                                        {% if invitation.message %}
+                                        • {{ invitation.message|truncatewords:10 }}
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+                                    {% if invitation.status == 'pending' %}bg-yellow-100 text-yellow-800
+                                    {% elif invitation.status == 'accepted' %}bg-green-100 text-green-800
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ invitation.get_status_display }}
+                                </span>
+                                {% if invitation.status == 'pending' %}
+                                <form method="POST" action="{% url 'cancel_invitation' invitation.id %}" class="inline">
+                                    {% csrf_token %}
+                                    <button type="submit" 
+                                            class="text-red-600 hover:text-red-800 text-sm font-medium"
+                                            onclick="return confirm('Are you sure you want to cancel this invitation?')">
+                                        Cancel
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="px-6 py-12 text-center">
+                        <i class="fas fa-inbox text-gray-400 text-5xl mb-4"></i>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2">No invitations sent yet</h3>
+                        <p class="text-gray-600 mb-6">Start inviting friends to join you on Messenger!</p>
+                        <a href="{% url 'invite_user' %}" 
+                           class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition duration-200">
+                            Send Your First Invitation
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load invitation stats
+    fetch('/accounts/api/invitations-stats/')
+        .then(response => response.json())
+        .then(data => {
+            const statsContainer = document.getElementById('invitations-stats');
+            statsContainer.innerHTML = `
+                <div class="text-center p-4 bg-white rounded-lg border border-gray-200">
+                    <div class="text-2xl font-bold text-blue-600">${data.total}</div>
+                    <div class="text-sm text-gray-600">Total Invitations</div>
+                </div>
+                <div class="text-center p-4 bg-white rounded-lg border border-gray-200">
+                    <div class="text-2xl font-bold text-yellow-600">${data.pending}</div>
+                    <div class="text-sm text-gray-600">Pending</div>
+                </div>
+                <div class="text-center p-4 bg-white rounded-lg border border-gray-200">
+                    <div class="text-2xl font-bold text-green-600">${data.accepted}</div>
+                    <div class="text-sm text-gray-600">Accepted</div>
+                </div>
+            `;
+        });
+});
+</script>
+{% endblock %}

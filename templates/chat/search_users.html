@@ -1,0 +1,142 @@
+<!-- templates/chat/search_users.html -->
+{% extends 'base.html' %}
+{% load chat_filters %}
+{% block title %}Search Users - Messenger{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">Search Users</h1>
+                        <p class="text-gray-600">Find people to chat with</p>
+                    </div>
+                    <a href="{% url 'chat_home' %}" class="text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </a>
+                </div>
+            </div>
+
+            <!-- Search Form -->
+            <div class="p-6 border-b border-gray-200">
+                <form method="GET" class="flex space-x-4">
+                    <div class="flex-1 relative">
+                        <input
+                            type="text"
+                            name="q"
+                            value="{{ query }}"
+                            placeholder="Search by username, email, phone, or name..."
+                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            autofocus
+                        >
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
+                    </div>
+                    <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 font-medium">
+                        Search
+                    </button>
+                </form>
+            </div>
+
+            <!-- Search Results -->
+            <div class="p-6">
+                {% if query %}
+                    {% if users %}
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                        Search Results for "{{ query }}" ({{ users.count }})
+                    </h3>
+
+                    <div class="space-y-3">
+                        {% for user in users %}
+                        <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200">
+                            <div class="flex items-center space-x-4">
+                                {% if user.profile_picture %}
+                                <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}" class="w-12 h-12 rounded-full">
+                                {% else %}
+                                <div class="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center">
+                                    <i class="fas fa-user text-gray-500"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <p class="font-semibold text-gray-900">{{ user.username }}</p>
+                                    <p class="text-sm text-gray-500">{{ user.email }}</p>
+                                    {% if user.phone_number %}
+                                    <p class="text-sm text-gray-500">{{ user.phone_number }}</p>
+                                    {% endif %}
+                                    <p class="text-xs text-gray-400 mt-1">
+                                        {% if user.status.online %}
+                                        <span class="text-green-600">● Online</span>
+                                        {% else %}
+                                        Last seen {{ user.status.last_seen|timesince }} ago
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="flex space-x-2">
+                                <!-- Check if conversation already exists -->
+                                {% with existing_conversation=user|get_conversation:request.user %}
+                                    {% if existing_conversation %}
+                                    <a href="{% url 'conversation' existing_conversation.id %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 text-sm font-medium">
+                                        Open Chat
+                                    </a>
+                                    {% else %}
+                                    <form method="POST" action="{% url 'start_chat' %}" class="inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="email_or_phone" value="{{ user.email }}">
+                                        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-200 text-sm font-medium">
+                                            Start Chat
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                {% endwith %}
+
+                                <button class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition duration-200 text-sm font-medium">
+                                    <i class="fas fa-user-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8">
+                        <div class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            <i class="fas fa-users text-gray-400 text-xl"></i>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">No users found</h3>
+                        <p class="text-gray-600">
+                            No users found matching "{{ query }}". Try searching with a different term.
+                        </p>
+                    </div>
+                    {% endif %}
+                {% else %}
+                <div class="text-center py-8">
+                    <div class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-search text-gray-400 text-xl"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Search for users</h3>
+                    <p class="text-gray-600">
+                        Enter a username, email address, phone number, or name to find people to chat with.
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Tips -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-blue-900 mb-2">Search Tips</h3>
+            <ul class="text-blue-800 space-y-1 text-sm">
+                <li>• Search by username, email address, or phone number</li>
+                <li>• You can also search by first name or last name</li>
+                <li>• Partial matches are supported (e.g., "john" will match "john.doe@example.com")</li>
+                <li>• If you can't find someone, they may not have an account yet</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

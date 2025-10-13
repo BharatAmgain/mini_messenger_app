@@ -1,0 +1,166 @@
+<!-- templates/accounts/profile.html -->
+{% extends 'base.html' %}
+
+{% block title %}Profile - {{ user.username }} - Messenger{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- Success Messages -->
+        {% if messages %}
+        <div class="mb-6 rounded-md bg-green-50 p-4">
+            {% for message in messages %}
+            <div class="text-sm text-green-700">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <!-- Profile Header -->
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <!-- Profile Picture Display -->
+                        {% if user.profile_picture and user.profile_picture.url %}
+                        <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}"
+                             class="w-16 h-16 rounded-full border-2 border-gray-300 object-cover">
+                        {% else %}
+                        <div class="w-16 h-16 rounded-full bg-gray-300 border-2 border-gray-300 flex items-center justify-center">
+                            <i class="fas fa-user text-gray-500 text-2xl"></i>
+                        </div>
+                        {% endif %}
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-900">{{ user.username }}</h1>
+                            <p class="text-gray-600">{{ user.email }}</p>
+                            {% if user.first_name or user.last_name %}
+                            <p class="text-gray-600">{{ user.first_name }} {{ user.last_name }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <a href="{% url 'profile_edit' %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 font-medium">
+                        Edit Profile
+                    </a>
+                </div>
+            </div>
+
+            <!-- Profile Information -->
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Personal Information -->
+                    <div class="space-y-4">
+                        <h2 class="text-lg font-semibold text-gray-900">Personal Information</h2>
+
+                        <div class="space-y-3">
+                            {% if user.first_name or user.last_name %}
+                            <div class="flex justify-between items-center p-3 border border-gray-200 rounded-lg">
+                                <span class="font-medium text-gray-700">Full Name</span>
+                                <span class="text-gray-900">{{ user.first_name }} {{ user.last_name }}</span>
+                            </div>
+                            {% endif %}
+
+                            <div class="flex justify-between items-center p-3 border border-gray-200 rounded-lg">
+                                <span class="font-medium text-gray-700">Username</span>
+                                <span class="text-gray-900">{{ user.username }}</span>
+                            </div>
+
+                            <div class="flex justify-between items-center p-3 border border-gray-200 rounded-lg">
+                                <span class="font-medium text-gray-700">Email</span>
+                                <span class="text-gray-900">{{ user.email }}</span>
+                            </div>
+
+                            {% if user.phone_number %}
+                            <div class="flex justify-between items-center p-3 border border-gray-200 rounded-lg">
+                                <span class="font-medium text-gray-700">Phone</span>
+                                <span class="text-gray-900">{{ user.phone_number }}</span>
+                            </div>
+                            {% endif %}
+
+                            {% if user.date_of_birth %}
+                            <div class="flex justify-between items-center p-3 border border-gray-200 rounded-lg">
+                                <span class="font-medium text-gray-700">Date of Birth</span>
+                                <span class="text-gray-900">{{ user.date_of_birth }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Additional Information -->
+                    <div class="space-y-4">
+                        <h2 class="text-lg font-semibold text-gray-900">Additional Information</h2>
+
+                        <div class="space-y-3">
+                            {% if user.bio %}
+                            <div class="p-3 border border-gray-200 rounded-lg">
+                                <h3 class="font-medium text-gray-700 mb-2">Bio</h3>
+                                <p class="text-gray-900">{{ user.bio }}</p>
+                            </div>
+                            {% endif %}
+
+                            {% if user.location %}
+                            <div class="flex justify-between items-center p-3 border border-gray-200 rounded-lg">
+                                <span class="font-medium text-gray-700">Location</span>
+                                <span class="text-gray-900">{{ user.location }}</span>
+                            </div>
+                            {% endif %}
+
+                            {% if user.website %}
+                            <div class="flex justify-between items-center p-3 border border-gray-200 rounded-lg">
+                                <span class="font-medium text-gray-700">Website</span>
+                                <a href="{{ user.website }}" target="_blank" class="text-blue-600 hover:text-blue-700">{{ user.website }}</a>
+                            </div>
+                            {% endif %}
+
+                            <div class="flex justify-between items-center p-3 border border-gray-200 rounded-lg">
+                                <span class="font-medium text-gray-700">Member Since</span>
+                                <span class="text-gray-900">{{ user.date_joined|date:"M d, Y" }}</span>
+                            </div>
+
+                            <div class="flex justify-between items-center p-3 border border-gray-200 rounded-lg">
+                                <span class="font-medium text-gray-700">Last Login</span>
+                                <span class="text-gray-900">{{ user.last_login|date:"M d, Y H:i" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="mt-8 pt-6 border-t border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <a href="{% url 'start_chat' %}" class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200">
+                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                <i class="fas fa-comment text-blue-600"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-900">Start New Chat</p>
+                                <p class="text-sm text-gray-600">Message someone new</p>
+                            </div>
+                        </a>
+
+                        <a href="{% url 'create_group' %}" class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200">
+                            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                <i class="fas fa-users text-green-600"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-900">Create Group</p>
+                                <p class="text-sm text-gray-600">Start a group chat</p>
+                            </div>
+                        </a>
+
+                        <a href="{% url 'privacy_settings' %}" class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200">
+                            <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                                <i class="fas fa-shield-alt text-purple-600"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-900">Privacy Settings</p>
+                                <p class="text-sm text-gray-600">Manage your privacy</p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

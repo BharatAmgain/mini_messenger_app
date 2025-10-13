@@ -1,0 +1,648 @@
+<!-- templates/accounts/settings.html -->
+{% extends 'base.html' %}
+
+{% block title %}Settings - Messenger{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Success/Error Messages -->
+        {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+            <div class="rounded-md {% if message.tags == 'success' %}bg-green-50 border border-green-200{% elif message.tags == 'error' %}bg-red-50 border border-red-200{% else %}bg-blue-50 border border-blue-200{% endif %} p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        {% if message.tags == 'success' %}
+                        <i class="fas fa-check-circle text-green-400"></i>
+                        {% elif message.tags == 'error' %}
+                        <i class="fas fa-exclamation-circle text-red-400"></i>
+                        {% else %}
+                        <i class="fas fa-info-circle text-blue-400"></i>
+                        {% endif %}
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium {% if message.tags == 'success' %}text-green-800{% elif message.tags == 'error' %}text-red-800{% else %}text-blue-800{% endif %}">
+                            {{ message }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h1 class="text-2xl font-bold text-gray-900">Settings</h1>
+                <p class="text-gray-600">Manage your account settings and preferences</p>
+            </div>
+
+            <div class="p-6">
+                <div class="space-y-6">
+                    <!-- Account Settings -->
+                    <div class="border border-gray-200 rounded-lg p-6">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Account Settings</h2>
+                        <div class="space-y-4">
+                            <a href="{% url 'profile_edit' %}" class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fas fa-user-edit text-blue-600"></i>
+                                    <div>
+                                        <p class="font-medium text-gray-900">Edit Profile</p>
+                                        <p class="text-sm text-gray-600">Update your personal information</p>
+                                    </div>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-400"></i>
+                            </a>
+
+                            <a href="{% url 'notifications' %}" class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fas fa-bell text-blue-600"></i>
+                                    <div>
+                                        <p class="font-medium text-gray-900">Notifications</p>
+                                        <p class="text-sm text-gray-600">Manage your notification preferences</p>
+                                    </div>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-400"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Privacy & Security -->
+                    <div class="border border-gray-200 rounded-lg p-6">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Privacy & Security</h2>
+                        <div class="space-y-4">
+                            <a href="{% url 'privacy_settings' %}" class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fas fa-lock text-green-600"></i>
+                                    <div>
+                                        <p class="font-medium text-gray-900">Privacy Settings</p>
+                                        <p class="text-sm text-gray-600">Control who can see your information</p>
+                                    </div>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-400"></i>
+                            </a>
+
+                            <!-- Password Change Section -->
+                            <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fas fa-key text-purple-600"></i>
+                                    <div>
+                                        <p class="font-medium text-gray-900">Change Password</p>
+                                        <p class="text-sm text-gray-600">Update your account password</p>
+                                    </div>
+                                </div>
+                                <button onclick="openPasswordModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 text-sm">
+                                    Change Password
+                                </button>
+                            </div>
+
+                            <!-- Two-Factor Authentication -->
+                            <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fas fa-mobile-alt text-purple-600"></i>
+                                    <div>
+                                        <p class="font-medium text-gray-900">Two-Factor Authentication</p>
+                                        <p class="text-sm text-gray-600">Add an extra layer of security to your account</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-sm text-gray-500" id="twoFactorStatus">{% if user.two_factor_enabled %}Enabled{% else %}Disabled{% endif %}</span>
+                                    <form method="POST" action="{% url 'toggle_two_factor' %}" class="inline">
+                                        {% csrf_token %}
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" name="two_factor" class="sr-only peer" {% if user.two_factor_enabled %}checked{% endif %} onchange="this.form.submit()">
+                                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        </label>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <!-- Login Activity -->
+                            <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fas fa-history text-purple-600"></i>
+                                    <div>
+                                        <p class="font-medium text-gray-900">Login Activity</p>
+                                        <p class="text-sm text-gray-600">Review your recent account activity</p>
+                                    </div>
+                                </div>
+                                <button onclick="openLoginActivityModal()" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition duration-200 text-sm">
+                                    View Activity
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notification Settings -->
+                    <div class="border border-gray-200 rounded-lg p-6">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Notification Preferences</h2>
+                        <form method="POST" action="{% url 'update_notification_settings' %}">
+                            {% csrf_token %}
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                    <div>
+                                        <p class="font-medium text-gray-900">Email Notifications</p>
+                                        <p class="text-sm text-gray-600">Receive notifications via email</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="email_notifications" class="sr-only peer" {% if user.email_notifications %}checked{% endif %}>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+
+                                <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                    <div>
+                                        <p class="font-medium text-gray-900">Push Notifications</p>
+                                        <p class="text-sm text-gray-600">Receive push notifications</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="push_notifications" class="sr-only peer" {% if user.push_notifications %}checked{% endif %}>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+
+                                <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                    <div>
+                                        <p class="font-medium text-gray-900">Message Notifications</p>
+                                        <p class="text-sm text-gray-600">Get notified about new messages</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="message_notifications" class="sr-only peer" {% if user.message_notifications %}checked{% endif %}>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+
+                                <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                    <div>
+                                        <p class="font-medium text-gray-900">Marketing Emails</p>
+                                        <p class="text-sm text-gray-600">Receive updates about new features</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="marketing_emails" class="sr-only peer" {% if user.marketing_emails %}checked{% endif %}>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end mt-4">
+                                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200">
+                                    Save Notification Settings
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Data & Privacy -->
+                    <div class="border border-gray-200 rounded-lg p-6">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Data & Privacy</h2>
+                        <div class="space-y-4">
+                            <!-- Data Export -->
+                            <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fas fa-download text-blue-600"></i>
+                                    <div>
+                                        <p class="font-medium text-gray-900">Download Your Data</p>
+                                        <p class="text-sm text-gray-600">Get a copy of your Messenger data</p>
+                                    </div>
+                                </div>
+                                <form method="POST" action="{% url 'export_data' %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 text-sm">
+                                        Request Data
+                                    </button>
+                                </form>
+                            </div>
+
+                            <!-- Clear Chat History -->
+                            <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fas fa-trash-alt text-orange-600"></i>
+                                    <div>
+                                        <p class="font-medium text-gray-900">Clear Chat History</p>
+                                        <p class="text-sm text-gray-600">Permanently delete your message history</p>
+                                    </div>
+                                </div>
+                                <button onclick="openClearChatModal()" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition duration-200 text-sm">
+                                    Clear History
+                                </button>
+                            </div>
+
+                            <!-- Account Deactivation -->
+                            <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fas fa-pause-circle text-yellow-600"></i>
+                                    <div>
+                                        <p class="font-medium text-gray-900">Deactivate Account</p>
+                                        <p class="text-sm text-gray-600">Temporarily disable your account</p>
+                                    </div>
+                                </div>
+                                <button onclick="openDeactivateModal()" class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition duration-200 text-sm">
+                                    Deactivate
+                                </button>
+                            </div>
+
+                            <!-- Account Deletion -->
+                            <div class="flex items-center justify-between p-4 border border-red-200 rounded-lg bg-red-50">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fas fa-exclamation-triangle text-red-600"></i>
+                                    <div>
+                                        <p class="font-medium text-red-900">Delete Account</p>
+                                        <p class="text-sm text-red-700">Permanently delete your account and all data</p>
+                                    </div>
+                                </div>
+                                <button onclick="openDeleteModal()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition duration-200 text-sm">
+                                    Delete Account
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Appearance -->
+                    <div class="border border-gray-200 rounded-lg p-6">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Appearance</h2>
+                        <div class="space-y-4">
+                            <!-- Theme Selection -->
+                            <div class="p-4 border border-gray-200 rounded-lg">
+                                <p class="font-medium text-gray-900 mb-2">Theme</p>
+                                <p class="text-sm text-gray-600 mb-4">Choose how Messenger looks</p>
+                                <form method="POST" action="{% url 'update_theme' %}" id="themeForm">
+                                    {% csrf_token %}
+                                    <div class="flex space-x-4">
+                                        <div class="flex-1">
+                                            <input type="radio" id="light-theme" name="theme" value="light" class="hidden peer" {% if user.theme == 'light' %}checked{% endif %} onchange="document.getElementById('themeForm').submit()">
+                                            <label for="light-theme" class="flex flex-col items-center p-4 border border-gray-200 rounded-lg cursor-pointer peer-checked:border-blue-500 peer-checked:bg-blue-50 transition duration-200">
+                                                <i class="fas fa-sun text-yellow-500 text-xl mb-2"></i>
+                                                <span class="font-medium">Light</span>
+                                            </label>
+                                        </div>
+                                        <div class="flex-1">
+                                            <input type="radio" id="dark-theme" name="theme" value="dark" class="hidden peer" {% if user.theme == 'dark' %}checked{% endif %} onchange="document.getElementById('themeForm').submit()">
+                                            <label for="dark-theme" class="flex flex-col items-center p-4 border border-gray-200 rounded-lg cursor-pointer peer-checked:border-blue-500 peer-checked:bg-blue-50 transition duration-200">
+                                                <i class="fas fa-moon text-indigo-500 text-xl mb-2"></i>
+                                                <span class="font-medium">Dark</span>
+                                            </label>
+                                        </div>
+                                        <div class="flex-1">
+                                            <input type="radio" id="auto-theme" name="theme" value="auto" class="hidden peer" {% if user.theme == 'auto' or not user.theme %}checked{% endif %} onchange="document.getElementById('themeForm').submit()">
+                                            <label for="auto-theme" class="flex flex-col items-center p-4 border border-gray-200 rounded-lg cursor-pointer peer-checked:border-blue-500 peer-checked:bg-blue-50 transition duration-200">
+                                                <i class="fas fa-adjust text-gray-500 text-xl mb-2"></i>
+                                                <span class="font-medium">Auto</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Language Selection -->
+                            <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fas fa-globe text-blue-600"></i>
+                                    <div>
+                                        <p class="font-medium text-gray-900">Language</p>
+                                        <p class="text-sm text-gray-600">Choose your preferred language</p>
+                                    </div>
+                                </div>
+                                <select class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    <option>English</option>
+                                    <option>Spanish</option>
+                                    <option>French</option>
+                                    <option>German</option>
+                                    <option>Chinese</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Password Change Modal -->
+<div id="passwordModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Change Password</h3>
+                <button onclick="closePasswordModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form method="POST" action="{% url 'password_change' %}" class="space-y-4">
+                {% csrf_token %}
+
+                <div>
+                    <label for="old_password" class="block text-sm font-medium text-gray-700">Current Password</label>
+                    <input type="password" name="old_password" id="old_password" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label for="new_password1" class="block text-sm font-medium text-gray-700">New Password</label>
+                    <input type="password" name="new_password1" id="new_password1" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <p class="text-xs text-gray-500 mt-1">Password must be at least 8 characters long.</p>
+                </div>
+
+                <div>
+                    <label for="new_password2" class="block text-sm font-medium text-gray-700">Confirm New Password</label>
+                    <input type="password" name="new_password2" id="new_password2" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button" onclick="closePasswordModal()"
+                        class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-200">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200">
+                        Change Password
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Account Deactivation Modal -->
+<div id="deactivateModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Deactivate Account</h3>
+                <button onclick="closeDeactivateModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-yellow-800">What happens when you deactivate your account?</h3>
+                            <div class="mt-2 text-sm text-yellow-700">
+                                <ul class="list-disc pl-5 space-y-1">
+                                    <li>Your profile will be hidden from other users</li>
+                                    <li>You won't appear in search results</li>
+                                    <li>You can reactivate your account anytime by logging in</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="POST" action="{% url 'deactivate_account' %}" id="deactivateForm">
+                    {% csrf_token %}
+                    <div>
+                        <label for="deactivateReason" class="block text-sm font-medium text-gray-700">Reason for deactivation (optional)</label>
+                        <select id="deactivateReason" name="reason" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select a reason</option>
+                            <option value="privacy">Privacy concerns</option>
+                            <option value="too_much_time">Spending too much time</option>
+                            <option value="temporary_break">Taking a break</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="deactivateFeedback" class="block text-sm font-medium text-gray-700">Feedback (optional)</label>
+                        <textarea id="deactivateFeedback" name="feedback" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Tell us how we can improve..."></textarea>
+                    </div>
+
+                    <div class="flex items-center">
+                        <input id="deactivateConfirm" type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="deactivateConfirm" class="ml-2 block text-sm text-gray-900">
+                            I understand that I can reactivate my account anytime by logging in
+                        </label>
+                    </div>
+                </form>
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" onclick="closeDeactivateModal()"
+                    class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-200">
+                    Cancel
+                </button>
+                <button type="button" id="deactivateButton" onclick="document.getElementById('deactivateForm').submit()" disabled
+                    class="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Deactivate Account
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Account Deletion Modal -->
+<div id="deleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Delete Account</h3>
+                <button onclick="closeDeleteModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div class="bg-red-50 border border-red-200 rounded-md p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle text-red-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">This action cannot be undone</h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <ul class="list-disc pl-5 space-y-1">
+                                    <li>All your messages and data will be permanently deleted</li>
+                                    <li>You will lose access to your account</li>
+                                    <li>This action is irreversible</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="POST" action="{% url 'delete_account' %}" id="deleteForm">
+                    {% csrf_token %}
+                    <div>
+                        <label for="deleteConfirmText" class="block text-sm font-medium text-gray-700">
+                            To confirm, type "DELETE" below
+                        </label>
+                        <input type="text" id="deleteConfirmText"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Type DELETE to confirm">
+                    </div>
+
+                    <div class="flex items-center">
+                        <input id="deleteConfirm" type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="deleteConfirm" class="ml-2 block text-sm text-gray-900">
+                            I understand that all my data will be permanently deleted
+                        </label>
+                    </div>
+                </form>
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" onclick="closeDeleteModal()"
+                    class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-200">
+                    Cancel
+                </button>
+                <button type="button" id="deleteButton" onclick="document.getElementById('deleteForm').submit()" disabled
+                    class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Permanently Delete Account
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Clear Chat History Modal -->
+<div id="clearChatModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Clear Chat History</h3>
+                <button onclick="closeClearChatModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div class="bg-orange-50 border border-orange-200 rounded-md p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle text-orange-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-orange-800">This action cannot be undone</h3>
+                            <div class="mt-2 text-sm text-orange-700">
+                                <ul class="list-disc pl-5 space-y-1">
+                                    <li>All your chat messages will be permanently deleted</li>
+                                    <li>This action cannot be reversed</li>
+                                    <li>Other users will still see their copies of the messages</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="POST" action="{% url 'clear_chat_history' %}" id="clearChatForm">
+                    {% csrf_token %}
+                    <div class="flex items-center">
+                        <input id="clearChatConfirm" type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="clearChatConfirm" class="ml-2 block text-sm text-gray-900">
+                            I understand that all my chat history will be permanently deleted
+                        </label>
+                    </div>
+                </form>
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" onclick="closeClearChatModal()"
+                    class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-200">
+                    Cancel
+                </button>
+                <button type="button" id="clearChatButton" onclick="document.getElementById('clearChatForm').submit()" disabled
+                    class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Clear Chat History
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Password Modal Functions
+function openPasswordModal() {
+    document.getElementById('passwordModal').classList.remove('hidden');
+}
+
+function closePasswordModal() {
+    document.getElementById('passwordModal').classList.add('hidden');
+}
+
+// Account Deactivation Functions
+function openDeactivateModal() {
+    document.getElementById('deactivateModal').classList.remove('hidden');
+}
+
+function closeDeactivateModal() {
+    document.getElementById('deactivateModal').classList.add('hidden');
+    document.getElementById('deactivateConfirm').checked = false;
+    document.getElementById('deactivateButton').disabled = true;
+}
+
+// Enable deactivate button when confirmation is checked
+document.getElementById('deactivateConfirm').addEventListener('change', function() {
+    document.getElementById('deactivateButton').disabled = !this.checked;
+});
+
+// Account Deletion Functions
+function openDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
+    document.getElementById('deleteConfirmText').value = '';
+    document.getElementById('deleteConfirm').checked = false;
+    document.getElementById('deleteButton').disabled = true;
+}
+
+// Enable delete button when both confirmation text and checkbox are correct
+const deleteConfirmText = document.getElementById('deleteConfirmText');
+const deleteConfirm = document.getElementById('deleteConfirm');
+const deleteButton = document.getElementById('deleteButton');
+
+function updateDeleteButtonState() {
+    const textMatches = deleteConfirmText.value === 'DELETE';
+    const checkboxChecked = deleteConfirm.checked;
+    deleteButton.disabled = !(textMatches && checkboxChecked);
+}
+
+deleteConfirmText.addEventListener('input', updateDeleteButtonState);
+deleteConfirm.addEventListener('change', updateDeleteButtonState);
+
+// Clear Chat History Functions
+function openClearChatModal() {
+    document.getElementById('clearChatModal').classList.remove('hidden');
+}
+
+function closeClearChatModal() {
+    document.getElementById('clearChatModal').classList.add('hidden');
+    document.getElementById('clearChatConfirm').checked = false;
+    document.getElementById('clearChatButton').disabled = true;
+}
+
+// Enable clear chat button when confirmation is checked
+document.getElementById('clearChatConfirm').addEventListener('change', function() {
+    document.getElementById('clearChatButton').disabled = !this.checked;
+});
+
+// Close modals when clicking outside
+document.addEventListener('click', function(e) {
+    if (e.target.id === 'passwordModal') closePasswordModal();
+    if (e.target.id === 'deactivateModal') closeDeactivateModal();
+    if (e.target.id === 'deleteModal') closeDeleteModal();
+    if (e.target.id === 'clearChatModal') closeClearChatModal();
+});
+
+// Placeholder functions for other modals
+function openLoginActivityModal() {
+    alert('Login activity modal would open here');
+}
+</script>
+
+<style>
+/* Smooth modal animation */
+#passwordModal, #deactivateModal, #deleteModal, #clearChatModal {
+    transition: opacity 0.3s ease;
+}
+</style>
+{% endblock %}

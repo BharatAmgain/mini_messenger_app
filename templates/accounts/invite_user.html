@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="text-center mb-8">
+                <div class="mx-auto h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                    <i class="fas fa-user-plus text-blue-600 text-2xl"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Invite to Messenger</h1>
+                <p class="text-gray-600">Invite friends to join you on Messenger</p>
+            </div>
+
+            <form method="POST" class="space-y-6" id="invitation-form">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-1 gap-6">
+                    <!-- Email Field -->
+                    <div>
+                        <label for="id_email" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-envelope text-gray-400"></i>
+                            </div>
+                            {{ form.email }}
+                        </div>
+                        {% if form.email.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.email.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- OR Divider -->
+                    <div class="relative">
+                        <div class="absolute inset-0 flex items-center">
+                            <div class="w-full border-t border-gray-300"></div>
+                        </div>
+                        <div class="relative flex justify-center text-sm">
+                            <span class="px-2 bg-white text-gray-500">OR</span>
+                        </div>
+                    </div>
+
+                    <!-- Phone Field -->
+                    <div>
+                        <label for="id_phone_number" class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-phone text-gray-400"></i>
+                            </div>
+                            {{ form.phone_number }}
+                        </div>
+                        {% if form.phone_number.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.phone_number.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Message Field -->
+                    <div>
+                        <label for="id_message" class="block text-sm font-medium text-gray-700 mb-2">
+                            Personal Message <span class="text-gray-500 font-normal">(Optional)</span>
+                        </label>
+                        {{ form.message }}
+                        {% if form.message.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.message.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Form-level errors -->
+                {% if form.non_field_errors %}
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        {% for error in form.non_field_errors %}
+                            <p class="text-red-700 text-sm">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <div class="flex space-x-4">
+                    <button type="submit" 
+                            class="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-200">
+                        <i class="fas fa-paper-plane mr-2"></i>
+                        Send Invitation
+                    </button>
+                    
+                    <a href="{% url 'bulk_invite' %}" 
+                       class="flex-1 bg-gray-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition duration-200 text-center">
+                        <i class="fas fa-users mr-2"></i>
+                        Bulk Invite
+                    </a>
+                </div>
+            </form>
+
+            <div class="mt-8 border-t border-gray-200 pt-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Invitation Benefits</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-comments text-green-500 mr-3"></i>
+                        <span class="text-gray-700">Chat in real-time</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-video text-purple-500 mr-3"></i>
+                        <span class="text-gray-700">Video & audio calls</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-shield-alt text-blue-500 mr-3"></i>
+                        <span class="text-gray-700">End-to-end encryption</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-mobile-alt text-orange-500 mr-3"></i>
+                        <span class="text-gray-700">Works on all devices</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const emailInput = document.getElementById('id_email');
+    const phoneInput = document.getElementById('id_phone_number');
+    
+    // Clear other field when one is filled
+    emailInput.addEventListener('input', function() {
+        if (this.value) {
+            phoneInput.value = '';
+        }
+    });
+    
+    phoneInput.addEventListener('input', function() {
+        if (this.value) {
+            emailInput.value = '';
+        }
+    });
+    
+    // Real-time validation
+    function validateContact() {
+        const email = emailInput.value;
+        const phone = phoneInput.value;
+        
+        if (email) {
+            fetch(`/accounts/api/check-contact/?email=${encodeURIComponent(email)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exists) {
+                        showError(emailInput, data.message);
+                    } else {
+                        clearError(emailInput);
+                    }
+                });
+        } else if (phone) {
+            fetch(`/accounts/api/check-contact/?phone_number=${encodeURIComponent(phone)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exists) {
+                        showError(phoneInput, data.message);
+                    } else {
+                        clearError(phoneInput);
+                    }
+                });
+        }
+    }
+    
+    emailInput.addEventListener('blur', validateContact);
+    phoneInput.addEventListener('blur', validateContact);
+    
+    function showError(input, message) {
+        clearError(input);
+        const errorDiv = document.createElement('p');
+        errorDiv.className = 'mt-2 text-sm text-red-600';
+        errorDiv.textContent = message;
+        input.parentNode.appendChild(errorDiv);
+    }
+    
+    function clearError(input) {
+        const errorDiv = input.parentNode.querySelector('.text-red-600');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+    }
+});
+</script>
+{% endblock %}

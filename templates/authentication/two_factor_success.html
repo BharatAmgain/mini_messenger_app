@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-green-50 to-teal-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md mx-auto">
+        <div class="bg-white rounded-2xl shadow-xl p-8 text-center">
+            <div class="mx-auto h-20 w-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
+                <i class="fas fa-shield-check text-green-600 text-3xl"></i>
+            </div>
+            
+            <h2 class="text-3xl font-bold text-gray-900 mb-4">Two-Factor Enabled!</h2>
+            
+            <div class="space-y-4 mb-8">
+                <p class="text-gray-600 text-lg">
+                    Your account is now protected with two-factor authentication.
+                </p>
+                <p class="text-gray-500">
+                    You'll need to verify your identity when signing in from new devices.
+                </p>
+            </div>
+
+            <div class="bg-green-50 rounded-lg p-4 mb-6">
+                <div class="flex items-center justify-center space-x-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                        <span class="text-green-700 text-sm">Enhanced Security</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                        <span class="text-green-700 text-sm">Account Protection</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <a href="{% url 'chat' %}" 
+                   class="block w-full bg-green-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-200 transform hover:-translate-y-0.5">
+                    Continue to Messenger
+                </a>
+                
+                <a href="{% url 'profile' %}" 
+                   class="block w-full border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-semibold hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-200">
+                    Manage Security Settings
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

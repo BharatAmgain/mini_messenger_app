@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Messenger{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-lg border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo and Brand -->
+                <div class="flex items-center space-x-3">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-comments text-blue-600 text-2xl"></i>
+                    </div>
+                    <span class="text-xl font-bold text-gray-800">Messenger</span>
+                </div>
+
+                <!-- Navigation Links -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="{% url 'chat_home' %}"
+                       class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
+                        <i class="fas fa-home mr-1"></i> Home
+                    </a>
+                    <a href="{% url 'start_chat' %}"
+                       class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
+                        <i class="fas fa-comment-medical mr-1"></i> New Chat
+                    </a>
+                    <a href="{% url 'search_users' %}"
+                       class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
+                        <i class="fas fa-search mr-1"></i> Find People
+                    </a>
+                    <a href="{% url 'profile' %}"
+                       class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
+                        <i class="fas fa-user mr-1"></i> Profile
+                    </a>
+                    <a href="{% url 'settings_main' %}"
+                       class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
+                        <i class="fas fa-cog mr-1"></i> Settings
+                    </a>
+                </div>
+
+                <!-- User Menu -->
+                <div class="flex items-center space-x-4">
+                    <!-- Notifications Bell -->
+                    <div class="relative">
+                        <button id="notifications-button" class="text-gray-600 hover:text-blue-600 p-2 rounded-full hover:bg-gray-100 transition duration-200 relative">
+                            <i class="fas fa-bell"></i>
+                            {% if user.is_authenticated %}
+                            <span class="notification-badge absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center {% if not user.notifications.filter.is_read %}hidden{% endif %}">
+                                {{ user.notifications.filter.is_read|length }}
+                            </span>
+                            {% endif %}
+                        </button>
+
+                        <!-- Notifications Dropdown -->
+                        <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 max-h-96 overflow-y-auto">
+                            <div class="px-4 py-2 border-b border-gray-200">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="font-semibold text-gray-900">Notifications</h3>
+                                    <a href="{% url 'notifications' %}" class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                                        View All
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="notifications-list">
+                                {% if user.is_authenticated %}
+                                    {% for notification in user.account_notifications.all|slice:":5" %}
+                                    <div class="px-4 py-3 hover:bg-gray-50 border-b border-gray-100 {% if not notification.is_read %}bg-blue-50{% endif %}">
+                                        <div class="flex items-start space-x-3">
+                                            <div class="flex-shrink-0">
+                                                {% if notification.notification_type == 'message' %}
+                                                <i class="fas fa-comment text-green-600"></i>
+                                                {% elif notification.notification_type == 'friend_request' %}
+                                                <i class="fas fa-user-plus text-blue-600"></i>
+                                                {% else %}
+                                                <i class="fas fa-info-circle text-gray-600"></i>
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-gray-900">{{ notification.title }}</p>
+                                                <p class="text-sm text-gray-600 mt-1">{{ notification.message|truncatewords:10 }}</p>
+                                                <p class="text-xs text-gray-500 mt-1">{{ notification.created_at|timesince }} ago</p>
+                                            </div>
+                                            {% if not notification.is_read %}
+                                            <form method="POST" action="{% url 'mark_notification_read' notification.id %}" class="flex-shrink-0">
+                                                {% csrf_token %}
+                                                <button type="submit" class="text-blue-600 hover:text-blue-700 text-xs">
+                                                    Mark read
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% empty %}
+                                    <div class="px-4 py-8 text-center">
+                                        <i class="fas fa-bell-slash text-gray-400 text-2xl mb-2"></i>
+                                        <p class="text-sm text-gray-600">No notifications</p>
+                                    </div>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <div class="px-4 py-2 border-t border-gray-200">
+                                <a href="{% url 'notifications' %}" class="block text-center text-blue-600 hover:text-blue-700 text-sm font-medium">
+                                    See all notifications
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User Profile Dropdown -->
+                    <div class="relative">
+                        <button id="user-menu-button" class="flex items-center space-x-2 text-sm rounded-full focus:outline-none">
+                            {% if user.profile_picture %}
+                            <img class="h-8 w-8 rounded-full border-2 border-gray-300 object-cover"
+                                 src="{{ user.profile_picture.url }}" alt="Profile">
+                            {% else %}
+                            <div class="h-8 w-8 rounded-full bg-gray-300 border-2 border-gray-300 flex items-center justify-center">
+                                <i class="fas fa-user text-gray-500 text-sm"></i>
+                            </div>
+                            {% endif %}
+                            <span class="text-gray-700 font-medium">{{ user.username }}</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs"></i>
+                        </button>
+
+                        <!-- Dropdown Menu -->
+                        <div id="user-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                            <a href="{% url 'profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-user mr-2"></i> Your Profile
+                            </a>
+                            <a href="{% url 'settings_main' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-cog mr-2"></i> Settings
+                            </a>
+                            <div class="border-t border-gray-200 my-1"></div>
+                            <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
+                                <i class="fas fa-sign-out-alt mr-2"></i> Sign out
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile menu button -->
+    <div class="md:hidden bg-white border-b border-gray-200">
+        <div class="flex justify-around py-2">
+            <a href="{% url 'chat_home' %}" class="flex flex-col items-center text-gray-600 hover:text-blue-600">
+                <i class="fas fa-home"></i>
+                <span class="text-xs mt-1">Home</span>
+            </a>
+            <a href="{% url 'start_chat' %}" class="flex flex-col items-center text-gray-600 hover:text-blue-600">
+                <i class="fas fa-comment-medical"></i>
+                <span class="text-xs mt-1">New Chat</span>
+            </a>
+            <a href="{% url 'search_users' %}" class="flex flex-col items-center text-gray-600 hover:text-blue-600">
+                <i class="fas fa-search"></i>
+                <span class="text-xs mt-1">Find</span>
+            </a>
+            <a href="{% url 'profile' %}" class="flex flex-col items-center text-gray-600 hover:text-blue-600">
+                <i class="fas fa-user"></i>
+                <span class="text-xs mt-1">Profile</span>
+            </a>
+            <a href="{% url 'settings_main' %}" class="flex flex-col items-center text-blue-600">
+                <i class="fas fa-cog"></i>
+                <span class="text-xs mt-1">Settings</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    {% block scripts %}
+    <script>
+        // User dropdown functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const userMenuButton = document.getElementById('user-menu-button');
+            const userDropdown = document.getElementById('user-dropdown');
+
+            if (userMenuButton && userDropdown) {
+                userMenuButton.addEventListener('click', function() {
+                    userDropdown.classList.toggle('hidden');
+                });
+
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(event) {
+                    if (!userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
+                        userDropdown.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Notifications dropdown functionality
+            const notificationsButton = document.getElementById('notifications-button');
+            const notificationsDropdown = document.getElementById('notifications-dropdown');
+
+            if (notificationsButton && notificationsDropdown) {
+                notificationsButton.addEventListener('click', function() {
+                    notificationsDropdown.classList.toggle('hidden');
+
+                    // Close user dropdown if open
+                    if (userDropdown) {
+                        userDropdown.classList.add('hidden');
+                    }
+                });
+
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(event) {
+                    if (!notificationsButton.contains(event.target) && !notificationsDropdown.contains(event.target)) {
+                        notificationsDropdown.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Add active state to current page in navigation
+            const currentUrl = window.location.pathname;
+            const navLinks = document.querySelectorAll('nav a');
+            navLinks.forEach(link => {
+                if (link.getAttribute('href') && currentUrl.includes(link.getAttribute('href'))) {
+                    link.classList.add('text-blue-600', 'bg-blue-50');
+                    link.classList.remove('text-gray-600');
+                }
+            });
+
+            // Mobile menu active state
+            const mobileLinks = document.querySelectorAll('.md\\:hidden a');
+            mobileLinks.forEach(link => {
+                if (link.getAttribute('href') && currentUrl.includes(link.getAttribute('href'))) {
+                    link.classList.add('text-blue-600');
+                    link.classList.remove('text-gray-600');
+                }
+            });
+
+            // Auto-update notification count
+            function updateNotificationCount() {
+                fetch('{% url "get_unread_count" %}')
+                    .then(response => response.json())
+                    .then(data => {
+                        const badge = document.querySelector('.notification-badge');
+                        if (badge) {
+                            if (data.unread_count > 0) {
+                                badge.textContent = data.unread_count;
+                                badge.classList.remove('hidden');
+                            } else {
+                                badge.classList.add('hidden');
+                            }
+                        }
+                    });
+            }
+
+            // Update count every 30 seconds
+            setInterval(updateNotificationCount, 30000);
+        });
+    </script>
+    {% endblock %}
+</body>
+</html>

@@ -1,0 +1,725 @@
+<!-- templates/chat/conversation.html -->
+{% extends 'base.html' %}
+{% load static %}
+{% load chat_filters %}
+
+{% block title %}{% if is_group %}{{ conversation.group_name }} - Group Chat{% else %}Chat with {{ other_user.username }}{% endif %} - Messenger{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <div class="max-w-7xl mx-auto">
+        <div class="flex h-screen">
+            <!-- Sidebar (keep your existing sidebar code) -->
+            <div class="w-80 bg-white border-r border-gray-200">
+                <!-- Your existing sidebar code remains the same -->
+            </div>
+
+            <!-- Main Chat Area -->
+            <div class="flex-1 flex flex-col">
+                <!-- Chat Header (keep your existing header) -->
+                <div class="bg-white border-b border-gray-200 p-4">
+                    <!-- Your existing header code remains the same -->
+                </div>
+
+                <!-- Messages Area -->
+                <div class="flex-1 overflow-y-auto p-4 bg-gray-50" id="messages-container">
+                    <div class="space-y-4" id="messages-list">
+                        {% for message in messages %}
+                        <div class="message-group flex {% if message.sender == request.user %}justify-end{% else %}justify-start{% endif %}"
+                             data-message-id="{{ message.id }}">
+
+                            <div class="message-bubble relative group max-w-xs lg:max-w-md px-4 py-2 rounded-lg {% if message.sender == request.user %}bg-blue-600 text-white{% else %}bg-white border border-gray-200 text-gray-900{% endif %}">
+
+                                <!-- Message Header for Group -->
+                                {% if is_group and message.sender != request.user and not message.is_unsent %}
+                                <p class="text-xs font-medium {% if message.sender == request.user %}text-blue-100{% else %}text-blue-600{% endif %} mb-1">
+                                    {{ message.sender.username }}
+                                </p>
+                                {% endif %}
+
+                                <!-- Message Content -->
+                                {% if message.is_unsent %}
+                                <p class="text-sm italic opacity-70">This message was unsent</p>
+                                {% else %}
+                                <p class="text-sm message-content">{{ message.content }}</p>
+                                {% endif %}
+
+                                <!-- Message Meta -->
+                                <div class="flex items-center justify-between mt-1">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-xs opacity-70 {% if message.sender == request.user %}text-blue-100{% else %}text-gray-500{% endif %}">
+                                            {{ message.timestamp|time }}
+                                        </span>
+
+                                        {% if message.is_edited and not message.is_unsent %}
+                                        <span class="text-xs opacity-70 {% if message.sender == request.user %}text-blue-100{% else %}text-gray-500{% endif %}">
+                                            edited
+                                        </span>
+                                        {% endif %}
+
+                                        {% if message.sender == request.user and not message.is_unsent %}
+                                            {% if message.is_read %}
+                                            <i class="fas fa-check-double text-xs opacity-70 {% if message.sender == request.user %}text-blue-100{% else %}text-gray-500{% endif %}"></i>
+                                            {% else %}
+                                            <i class="fas fa-check text-xs opacity-70 {% if message.sender == request.user %}text-blue-100{% else %}text-gray-500{% endif %}"></i>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Reactions -->
+                                    {% if not message.is_unsent %}
+                                    <div class="message-reactions flex space-x-1">
+                                        {% for emoji, count in message.get_reaction_summary.items %}
+                                        <span class="text-xs {% if message.sender == request.user %}bg-white bg-opacity-20{% else %}bg-gray-100{% endif %} rounded-full px-1">
+                                            {{ emoji }} {{ count }}
+                                        </span>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Message Actions (hover menu) -->
+                                {% if message.sender == request.user and not message.is_unsent %}
+                                <div class="message-actions absolute -top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-1 hidden group-hover:flex space-x-1">
+                                    <!-- Edit Button -->
+                                    <button onclick="editMessage('{{ message.id }}')"
+                                            class="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition duration-200"
+                                            title="Edit message">
+                                        <i class="fas fa-edit text-xs"></i>
+                                    </button>
+
+                                    <!-- Unsend Button -->
+                                    <button onclick="unsendMessage('{{ message.id }}')"
+                                            class="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition duration-200"
+                                            title="Unsend message">
+                                        <i class="fas fa-trash text-xs"></i>
+                                    </button>
+
+                                    <!-- React Button -->
+                                    <div class="relative">
+                                        <button onclick="toggleReactions('{{ message.id }}')"
+                                                class="p-1 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition duration-200"
+                                                title="Add reaction">
+                                            <i class="fas fa-smile text-xs"></i>
+                                        </button>
+
+                                        <!-- Reaction Picker -->
+                                        <div id="reactions-{{ message.id }}" class="reaction-picker absolute bottom-full left-0 bg-white border border-gray-300 rounded-lg shadow-lg p-2 hidden grid grid-cols-3 gap-1 z-50">
+                                            {% for emoji in '👍,❤️,😂,😮,😢,😡'|split:',' %}
+                                            <button onclick="addReaction('{{ message.id }}', '{{ emoji }}')"
+                                                    class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">
+                                                {{ emoji }}
+                                            </button>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% elif not message.is_unsent %}
+                                <!-- React button for others' messages -->
+                                <div class="message-actions absolute -top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-1 hidden group-hover:flex">
+                                    <div class="relative">
+                                        <button onclick="toggleReactions('{{ message.id }}')"
+                                                class="p-1 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition duration-200"
+                                                title="Add reaction">
+                                            <i class="fas fa-smile text-xs"></i>
+                                        </button>
+
+                                        <div id="reactions-{{ message.id }}" class="reaction-picker absolute bottom-full left-0 bg-white border border-gray-300 rounded-lg shadow-lg p-2 hidden grid grid-cols-3 gap-1 z-50">
+                                            {% for emoji in '👍,❤️,😂,😮,😢,😡'|split:',' %}
+                                            <button onclick="addReaction('{{ message.id }}', '{{ emoji }}')"
+                                                    class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">
+                                                {{ emoji }}
+                                            </button>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center py-8" id="empty-state">
+                            <div class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                                <i class="fas fa-comments text-gray-400 text-xl"></i>
+                            </div>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">No messages yet</h3>
+                            <p class="text-gray-600">
+                                {% if is_group %}
+                                    Start the conversation in your group!
+                                {% else %}
+                                    Send a message to start the conversation.
+                                {% endif %}
+                            </p>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Typing Indicator -->
+                    <div id="typing-indicator" class="hidden flex justify-start mt-4">
+                        <div class="max-w-xs px-4 py-2 rounded-lg bg-white border border-gray-200">
+                            <div class="flex space-x-1">
+                                <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                                <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                                <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1" id="typing-text">
+                                {% if is_group %}
+                                    Someone is typing...
+                                {% else %}
+                                    {{ other_user.username }} is typing...
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Message Input -->
+                <div class="bg-white border-t border-gray-200 p-4">
+                    <form method="POST" class="flex space-x-4" id="message-form" action="{% url 'conversation' conversation.id %}">
+                        {% csrf_token %}
+                        <div class="flex-1 relative">
+                            <input
+                                type="text"
+                                name="content"
+                                id="message-input"
+                                placeholder="{% if is_group %}Type a message to the group...{% else %}Type a message...{% endif %}"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                required
+                                autocomplete="off"
+                                autofocus
+                            >
+                        </div>
+                        <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition duration-200 font-medium">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Message Modal -->
+<div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-96">
+        <h3 class="text-lg font-semibold mb-4">Edit Message</h3>
+        <textarea id="editMessageContent" class="w-full border border-gray-300 rounded-md p-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3"></textarea>
+        <div class="flex justify-end space-x-3">
+            <button onclick="closeEditModal()" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-200">
+                Cancel
+            </button>
+            <button onclick="saveEditedMessage()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200">
+                Save Changes
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for real-time chat and message actions -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const messageForm = document.getElementById('message-form');
+    const messageInput = document.getElementById('message-input');
+    const messagesList = document.getElementById('messages-list');
+    const messagesContainer = document.getElementById('messages-container');
+    const typingIndicator = document.getElementById('typing-indicator');
+    const emptyState = document.getElementById('empty-state');
+    const conversationId = '{{ conversation.id }}';
+
+    let currentEditingMessageId = null;
+
+    // Scroll to bottom of messages
+    function scrollToBottom() {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // Remove empty state if messages exist
+    if (messagesList.children.length > 0 && emptyState) {
+        emptyState.remove();
+    }
+
+    // Scroll to bottom on page load
+    scrollToBottom();
+
+    // Handle message form submission
+    messageForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const content = messageInput.value.trim();
+        if (!content) return;
+
+        // Send message via AJAX
+        fetch(`/chat/${conversationId}/send-message/`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: new URLSearchParams({
+                'content': content
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                messageInput.value = '';
+
+                // Remove empty state
+                if (emptyState) {
+                    emptyState.remove();
+                }
+
+                // Add message to the list
+                addMessageToChat(data);
+
+                // Stop typing indicator
+                stopTyping();
+            }
+        })
+        .catch(error => console.error('Error sending message:', error));
+    });
+
+    // Add message to chat
+    function addMessageToChat(messageData) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message-group flex justify-end';
+        messageDiv.id = `message-${messageData.message_id}`;
+        messageDiv.setAttribute('data-message-id', messageData.message_id);
+
+        messageDiv.innerHTML = createMessageHTML(messageData, true);
+        messagesList.appendChild(messageDiv);
+        scrollToBottom();
+    }
+
+    // Add received message to chat
+    function addReceivedMessage(message) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message-group flex justify-start';
+        messageDiv.id = `message-${message.id}`;
+        messageDiv.setAttribute('data-message-id', message.id);
+
+        messageDiv.innerHTML = createMessageHTML(message, false);
+        messagesList.appendChild(messageDiv);
+        scrollToBottom();
+
+        // Remove empty state
+        if (emptyState) {
+            emptyState.remove();
+        }
+    }
+
+    // Create message HTML
+    function createMessageHTML(message, isOwn) {
+        const isGroup = {% if is_group %}true{% else %}false{% endif %};
+        const isUnsent = message.is_unsent;
+
+        let messageHTML = `
+            <div class="message-bubble relative group max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isOwn ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-900'}">
+        `;
+
+        // Message header for group
+        if (isGroup && !isOwn && !isUnsent) {
+            messageHTML += `<p class="text-xs font-medium ${isOwn ? 'text-blue-100' : 'text-blue-600'} mb-1">${message.sender}</p>`;
+        }
+
+        // Message content
+        if (isUnsent) {
+            messageHTML += `<p class="text-sm italic opacity-70">This message was unsent</p>`;
+        } else {
+            messageHTML += `<p class="text-sm message-content">${message.content}</p>`;
+        }
+
+        // Message meta
+        messageHTML += `
+            <div class="flex items-center justify-between mt-1">
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs opacity-70 ${isOwn ? 'text-blue-100' : 'text-gray-500'}">${message.timestamp}</span>
+        `;
+
+        if (message.is_edited && !isUnsent) {
+            messageHTML += `<span class="text-xs opacity-70 ${isOwn ? 'text-blue-100' : 'text-gray-500'}">edited</span>`;
+        }
+
+        if (isOwn && !isUnsent) {
+            messageHTML += `<i class="fas fa-check text-xs opacity-70 ${isOwn ? 'text-blue-100' : 'text-gray-500'}"></i>`;
+        }
+
+        messageHTML += `</div>`;
+
+        // Reactions
+        if (!isUnsent && message.reactions && Object.keys(message.reactions).length > 0) {
+            messageHTML += `<div class="message-reactions flex space-x-1">`;
+            for (const [emoji, count] of Object.entries(message.reactions)) {
+                messageHTML += `<span class="text-xs ${isOwn ? 'bg-white bg-opacity-20' : 'bg-gray-100'} rounded-full px-1">${emoji} ${count}</span>`;
+            }
+            messageHTML += `</div>`;
+        }
+
+        messageHTML += `</div>`;
+
+        // Message actions
+        if (isOwn && !isUnsent) {
+            messageHTML += `
+                <div class="message-actions absolute -top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-1 hidden group-hover:flex space-x-1">
+                    <button onclick="editMessage('${message.id}')" class="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition duration-200" title="Edit message">
+                        <i class="fas fa-edit text-xs"></i>
+                    </button>
+                    <button onclick="unsendMessage('${message.id}')" class="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition duration-200" title="Unsend message">
+                        <i class="fas fa-trash text-xs"></i>
+                    </button>
+                    <div class="relative">
+                        <button onclick="toggleReactions('${message.id}')" class="p-1 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition duration-200" title="Add reaction">
+                            <i class="fas fa-smile text-xs"></i>
+                        </button>
+                        <div id="reactions-${message.id}" class="reaction-picker absolute bottom-full left-0 bg-white border border-gray-300 rounded-lg shadow-lg p-2 hidden grid grid-cols-3 gap-1 z-50">
+                            ${createReactionButtons(message.id)}
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (!isUnsent) {
+            messageHTML += `
+                <div class="message-actions absolute -top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-1 hidden group-hover:flex">
+                    <div class="relative">
+                        <button onclick="toggleReactions('${message.id}')" class="p-1 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition duration-200" title="Add reaction">
+                            <i class="fas fa-smile text-xs"></i>
+                        </button>
+                        <div id="reactions-${message.id}" class="reaction-picker absolute bottom-full left-0 bg-white border border-gray-300 rounded-lg shadow-lg p-2 hidden grid grid-cols-3 gap-1 z-50">
+                            ${createReactionButtons(message.id)}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        messageHTML += `</div>`;
+        return messageHTML;
+    }
+
+    // Create reaction buttons HTML
+    function createReactionButtons(messageId) {
+        const emojis = ['👍', '❤️', '😂', '😮', '😢', '😡'];
+        return emojis.map(emoji =>
+            `<button onclick="addReaction('${messageId}', '${emoji}')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">${emoji}</button>`
+        ).join('');
+    }
+
+    // ... rest of your existing JavaScript code for typing indicators, etc. ...
+
+    // Set up periodic updates
+    setInterval(checkForUpdates, 2000);
+
+    // Update online status when page loads and when user becomes active
+    updateOnlineStatus(true);
+
+    window.addEventListener('focus', function() {
+        updateOnlineStatus(true);
+    });
+
+    window.addEventListener('blur', function() {
+        updateOnlineStatus(false);
+    });
+});
+
+// Message Action Functions
+function editMessage(messageId) {
+    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+    const contentElement = messageElement.querySelector('.message-content');
+
+    document.getElementById('editMessageContent').value = contentElement.textContent;
+    document.getElementById('editModal').classList.remove('hidden');
+    currentEditingMessageId = messageId;
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').classList.add('hidden');
+    currentEditingMessageId = null;
+}
+
+function saveEditedMessage() {
+    if (!currentEditingMessageId) return;
+
+    const newContent = document.getElementById('editMessageContent').value.trim();
+    if (!newContent) return;
+
+    fetch(`/chat/message/${currentEditingMessageId}/edit/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ content: newContent })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const messageElement = document.querySelector(`[data-message-id="${currentEditingMessageId}"]`);
+            const contentElement = messageElement.querySelector('.message-content');
+            contentElement.textContent = data.new_content;
+
+            // Add edited indicator if not exists
+            const metaElement = messageElement.querySelector('.flex.items-center.space-x-2');
+            if (!metaElement.querySelector('.edited-indicator')) {
+                const editedSpan = document.createElement('span');
+                editedSpan.className = 'text-xs opacity-70 edited-indicator';
+                editedSpan.textContent = 'edited';
+                metaElement.appendChild(editedSpan);
+            }
+
+            closeEditModal();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error editing message');
+    });
+}
+
+function unsendMessage(messageId) {
+    if (!confirm('Are you sure you want to unsend this message? This cannot be undone.')) {
+        return;
+    }
+
+    fetch(`/chat/message/${messageId}/unsend/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+            const contentElement = messageElement.querySelector('.message-content');
+            contentElement.innerHTML = '<p class="text-sm italic opacity-70">This message was unsent</p>';
+
+            // Hide message actions
+            const actionsElement = messageElement.querySelector('.message-actions');
+            if (actionsElement) {
+                actionsElement.remove();
+            }
+
+            // Hide reactions
+            const reactionsElement = messageElement.querySelector('.message-reactions');
+            if (reactionsElement) {
+                reactionsElement.innerHTML = '';
+            }
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error unsending message');
+    });
+}
+
+function toggleReactions(messageId) {
+    const reactionsPicker = document.getElementById(`reactions-${messageId}`);
+    reactionsPicker.classList.toggle('hidden');
+
+    // Close other reaction pickers
+    document.querySelectorAll('.reaction-picker').forEach(picker => {
+        if (picker.id !== `reactions-${messageId}`) {
+            picker.classList.add('hidden');
+        }
+    });
+}
+
+function addReaction(messageId, emoji) {
+    fetch(`/chat/message/${messageId}/react/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ reaction: emoji })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateReactionsDisplay(messageId, data.reactions);
+            toggleReactions(messageId); // Close picker
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error adding reaction');
+    });
+}
+
+function updateReactionsDisplay(messageId, reactions) {
+    const reactionsContainer = document.querySelector(`[data-message-id="${messageId}"] .message-reactions`);
+    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+    const isOwn = messageElement.classList.contains('justify-end');
+
+    if (!reactionsContainer) return;
+
+    if (Object.keys(reactions).length === 0) {
+        reactionsContainer.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+    for (const [emoji, count] of Object.entries(reactions)) {
+        html += `<span class="text-xs ${isOwn ? 'bg-white bg-opacity-20' : 'bg-gray-100'} rounded-full px-1">${emoji} ${count}</span>`;
+    }
+
+    reactionsContainer.innerHTML = html;
+}
+
+// Close reaction pickers when clicking outside
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('.reaction-picker') && !event.target.closest('[onclick*="toggleReactions"]')) {
+        document.querySelectorAll('.reaction-picker').forEach(picker => {
+            picker.classList.add('hidden');
+        });
+    }
+});
+
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Update the checkForUpdates function to handle new message fields
+function checkForUpdates() {
+    // Check for new messages
+    fetch(`/chat/${conversationId}/new-messages/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.has_new_messages) {
+                data.new_messages.forEach(message => {
+                    // Check if message already exists
+                    if (!document.querySelector(`[data-message-id="${message.id}"]`)) {
+                        addReceivedMessage(message);
+                    }
+                });
+            }
+        });
+
+    // Check typing status
+    fetch(`/chat/${conversationId}/typing-status/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.is_typing && data.typing_users.length > 0) {
+                showTypingIndicator(data.typing_users);
+            } else {
+                hideTypingIndicator();
+            }
+        });
+
+    // Update message status and reactions
+    fetch(`/chat/${conversationId}/get-messages/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.messages) {
+                data.messages.forEach(message => {
+                    const existingMessage = document.querySelector(`[data-message-id="${message.id}"]`);
+                    if (existingMessage) {
+                        // Update reactions
+                        updateReactionsDisplay(message.id, message.reactions);
+
+                        // Update read status
+                        if (message.is_own && message.is_read) {
+                            const checkIcon = existingMessage.querySelector('.fa-check');
+                            if (checkIcon) {
+                                checkIcon.className = 'fas fa-check-double text-xs opacity-70 text-blue-100';
+                            }
+                        }
+                    }
+                });
+            }
+        });
+}
+
+function showTypingIndicator(typingUsers) {
+    const typingText = document.getElementById('typing-text');
+    if (typingUsers.length === 1) {
+        typingText.textContent = `${typingUsers[0]} is typing...`;
+    } else if (typingUsers.length === 2) {
+        typingText.textContent = `${typingUsers[0]} and ${typingUsers[1]} are typing...`;
+    } else {
+        typingText.textContent = 'Several people are typing...';
+    }
+    typingIndicator.classList.remove('hidden');
+    scrollToBottom();
+}
+
+function hideTypingIndicator() {
+    typingIndicator.classList.add('hidden');
+}
+
+function updateOnlineStatus(online) {
+    fetch('/chat/update-online-status/', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: new URLSearchParams({
+            'online': online.toString()
+        })
+    });
+}
+
+// Typing indicator functionality
+let typingTimer;
+const TYPING_TIMEOUT = 3000;
+
+document.getElementById('message-input').addEventListener('input', function() {
+    startTyping();
+
+    // Clear existing timer
+    clearTimeout(typingTimer);
+
+    // Set new timer to stop typing
+    typingTimer = setTimeout(stopTyping, TYPING_TIMEOUT);
+});
+
+function startTyping() {
+    fetch(`/chat/${conversationId}/typing/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            is_typing: true
+        })
+    });
+}
+
+function stopTyping() {
+    fetch(`/chat/${conversationId}/typing/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            is_typing: false
+        })
+    });
+}
+</script>
+{% endblock %}

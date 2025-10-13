@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100 py-12">
+    <div class="max-w-md mx-auto bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="bg-blue-600 p-6 text-white">
+            <h1 class="text-2xl font-bold">Create New Group</h1>
+            <a href="{% url 'chat' %}" class="text-blue-200 hover:text-white text-sm">← Back to Chat</a>
+        </div>
+        
+        <div class="p-6">
+            <form method="POST">
+                {% csrf_token %}
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="id_group_name">
+                        Group Name
+                    </label>
+                    <input type="text" name="group_name" id="id_group_name" required
+                           class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                           placeholder="Enter group name">
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                        Select Participants
+                    </label>
+                    <div class="max-h-60 overflow-y-auto border border-gray-300 rounded-lg p-4">
+                        {% for participant in form.participants %}
+                        <div class="flex items-center mb-2">
+                            {{ participant.tag }}
+                            <label for="{{ participant.id_for_label }}" class="ml-2 text-sm text-gray-700">
+                                {{ participant.choice_label }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <a href="{% url 'chat' %}" 
+                       class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        Cancel
+                    </a>
+                    <button type="submit" 
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        Create Group
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

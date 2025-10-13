@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="h-screen flex bg-gray-50">
+    <!-- Sidebar -->
+    <div class="w-1/4 bg-white border-r border-gray-300">
+        <div class="p-4 border-b border-gray-300 bg-blue-600 text-white">
+            <h1 class="text-xl font-semibold">Notifications</h1>
+        </div>
+        <div class="p-4">
+            <a href="{% url 'chat' %}" class="text-blue-600 hover:text-blue-500 flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Back to Chat
+            </a>
+        </div>
+    </div>
+
+    <!-- Notifications Content -->
+    <div class="flex-1 p-6">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Notifications</h2>
+                {% if notifications %}
+                <button id="mark-all-read" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200">
+                    Mark All as Read
+                </button>
+                {% endif %}
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                {% if notifications %}
+                    <div class="divide-y divide-gray-200">
+                        {% for notification in notifications %}
+                        <div class="p-6 hover:bg-gray-50 transition duration-200 {% if not notification.is_read %}bg-blue-50 border-l-4 border-blue-500{% endif %}" 
+                             data-notification-id="{{ notification.id }}">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center mb-2">
+                                        {% if notification.notification_type == 'message' %}
+                                        <i class="fas fa-comment text-blue-500 mr-3"></i>
+                                        {% elif notification.notification_type == 'call' %}
+                                        <i class="fas fa-phone text-red-500 mr-3"></i>
+                                        {% elif notification.notification_type == 'contact_request' %}
+                                        <i class="fas fa-user-plus text-green-500 mr-3"></i>
+                                        {% elif notification.notification_type == 'added_to_group' %}
+                                        <i class="fas fa-users text-purple-500 mr-3"></i>
+                                        {% else %}
+                                        <i class="fas fa-bell text-yellow-500 mr-3"></i>
+                                        {% endif %}
+                                        
+                                        <h3 class="font-semibold text-gray-900">{{ notification.title }}</h3>
+                                        {% if not notification.is_read %}
+                                        <span class="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">New</span>
+                                        {% endif %}
+                                    </div>
+                                    <p class="text-gray-600 mb-2">{{ notification.message }}</p>
+                                    <p class="text-sm text-gray-500">{{ notification.created_at|timesince }} ago</p>
+                                </div>
+                                <div class="flex space-x-2 ml-4">
+                                    {% if not notification.is_read %}
+                                    <button class="mark-read-btn text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                        Mark Read
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-12">
+                        <i class="fas fa-bell-slash text-gray-400 text-5xl mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2">No notifications</h3>
+                        <p class="text-gray-600">You're all caught up! New notifications will appear here.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mark individual notification as read
+    document.querySelectorAll('.mark-read-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const notificationDiv = this.closest('[data-notification-id]');
+            const notificationId = notificationDiv.dataset.notificationId;
+            
+            fetch(`/notifications/mark-read/${notificationId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    notificationDiv.classList.remove('bg-blue-50', 'border-l-4', 'border-blue-500');
+                    this.remove();
+                }
+            });
+        });
+    });
+
+    // Mark all as read
+    const markAllBtn = document.getElementById('mark-all-read');
+    if (markAllBtn) {
+        markAllBtn.addEventListener('click', function() {
+            fetch('/notifications/mark-all-read/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.querySelectorAll('[data-notification-id]').forEach(div => {
+                        div.classList.remove('bg-blue-50', 'border-l-4', 'border-blue-500');
+                    });
+                    document.querySelectorAll('.mark-read-btn').forEach(btn => btn.remove());
+                    markAllBtn.remove();
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}
