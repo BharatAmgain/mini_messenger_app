@@ -49,16 +49,23 @@ def profile_edit(request):
                 else:
                     messages.error(request, 'Please select a valid image file.')
 
-            # Update all profile fields
-            user.first_name = request.POST.get('first_name', '')
-            user.last_name = request.POST.get('last_name', '')
-            user.email = request.POST.get('email', '')
-            user.phone_number = request.POST.get('phone_number', '')
-            user.bio = request.POST.get('bio', '')
-            user.location = request.POST.get('location', '')
-            user.website = request.POST.get('website', '')
-            user.date_of_birth = request.POST.get('date_of_birth') or None
-            user.gender = request.POST.get('gender', '')
+            # Update all profile fields - FIXED: Use get() method with proper fallback
+            user.first_name = request.POST.get('first_name', user.first_name)
+            user.last_name = request.POST.get('last_name', user.last_name)
+            user.email = request.POST.get('email', user.email)
+            user.phone_number = request.POST.get('phone_number', user.phone_number)
+            user.bio = request.POST.get('bio', user.bio)
+            user.location = request.POST.get('location', user.location)
+            user.website = request.POST.get('website', user.website)
+
+            # Handle date_of_birth properly
+            date_of_birth = request.POST.get('date_of_birth')
+            if date_of_birth:
+                user.date_of_birth = date_of_birth
+            elif date_of_birth == '':  # If empty string, set to None
+                user.date_of_birth = None
+
+            user.gender = request.POST.get('gender', user.gender)
 
             # Save changes
             user.save()
@@ -762,4 +769,3 @@ def remove_friend(request, user_id):
             messages.error(request, 'User not found.')
 
     return redirect('friend_requests')
-
