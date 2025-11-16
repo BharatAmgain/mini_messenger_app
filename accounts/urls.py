@@ -1,5 +1,5 @@
 # messenger_app/accounts/urls.py
-from django.urls import path
+from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from . import views
 
@@ -8,6 +8,9 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('register/', views.register, name='register'),
+
+    # Social Auth URLs
+    path('social-auth/', include('social_django.urls', namespace='social')),
 
     # Profile URLs
     path('profile/', views.profile, name='profile'),
@@ -27,11 +30,33 @@ urlpatterns = [
     path('update-theme/', views.update_theme, name='update_theme'),
     path('toggle-two-factor/', views.toggle_two_factor, name='toggle_two_factor'),
 
-    # Notification URLs
+    # Enhanced Notification URLs - ALL NOTIFICATION URLS GO HERE
     path('notifications/', views.notifications, name='notifications'),
     path('notifications/mark-read/<int:notification_id>/', views.mark_notification_read, name='mark_notification_read'),
+    path('notifications/mark-unread/<int:notification_id>/', views.mark_notification_unread,
+         name='mark_notification_unread'),
     path('notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
+    path('notifications/mark-all-unread/', views.mark_all_notifications_unread, name='mark_all_notifications_unread'),
+    path('notifications/archive/<int:notification_id>/', views.archive_notification, name='archive_notification'),
+    path('notifications/archive-all/', views.archive_all_notifications, name='archive_all_notifications'),
+    path('notifications/delete/<int:notification_id>/', views.delete_notification, name='delete_notification'),
+    path('notifications/clear-all/', views.clear_all_notifications, name='clear_all_notifications'),
+
+    # Notification Settings
+    path('notification-settings/', views.notification_settings, name='notification_settings'),
+    path('update-notification-preferences/', views.update_notification_preferences,
+         name='update_notification_preferences'),
+
+    # Unread Count URL
     path('get-unread-count/', views.get_unread_count, name='get_unread_count'),
+
+    # Friend Request URLs - ADD THESE
+    path('friend-requests/', views.friend_requests, name='friend_requests'),
+    path('send-friend-request/<int:user_id>/', views.send_friend_request, name='send_friend_request'),
+    path('cancel-friend-request/<int:user_id>/', views.cancel_friend_request, name='cancel_friend_request'),
+    path('accept-friend-request/<int:request_id>/', views.accept_friend_request, name='accept_friend_request'),
+    path('reject-friend-request/<int:request_id>/', views.reject_friend_request, name='reject_friend_request'),
+    path('remove-friend/<int:user_id>/', views.remove_friend, name='remove_friend'),
 
     # Password Change URLs
     path('password-change/',
@@ -51,7 +76,8 @@ urlpatterns = [
          auth_views.PasswordResetView.as_view(
              template_name='accounts/password_reset.html',
              email_template_name='accounts/password_reset_email.html',
-             subject_template_name='accounts/password_reset_subject.txt'
+             subject_template_name='accounts/password_reset_subject.txt',
+             success_url='/accounts/password-reset/done/'
          ),
          name='password_reset'),
     path('password-reset/done/',

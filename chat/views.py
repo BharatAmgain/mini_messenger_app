@@ -4,13 +4,17 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Q
-from .models import Conversation, Message, UserStatus, ChatNotification, GroupInvitation
-from accounts.models import CustomUser  # ✅ Correct import
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from .models import Conversation, Message, UserStatus, ChatNotification, GroupInvitation, BlockedUser
+from accounts.models import CustomUser, Notification, Friendship, FriendRequest
 import uuid
 import json
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
-
+import os
+from django.conf import settings
+from .utils import EmojiManager
+import emoji
 
 @login_required
 def chat_home(request):
@@ -50,11 +54,8 @@ def chat_home(request):
             'is_group': conversation.is_group
         })
 
-    # Get unread notifications count
-    unread_notifications_count = ChatNotification.objects.filter(
-        user=request.user,
-        is_read=False
-    ).count()
+    # Get unread notifications count - FIXED: Use account_notifications
+    unread_notifications_count = request.user.account_notifications.filter(is_read=False).count()
 
     # Get pending group invitations
     pending_invitations = GroupInvitation.objects.filter(
@@ -72,13 +73,13 @@ def chat_home(request):
 
 @login_required
 def start_chat(request):
-    """Start a new chat with email or phone number"""
+    """Start a new chat with email or phone number - Updated with friendship check"""
     if request.method == 'POST':
         email_or_phone = request.POST.get('email_or_phone', '').strip()
 
         if not email_or_phone:
             messages.error(request, 'Please enter an email or phone number.')
-            return redirect('start_chat')  # Remove 'chat:' namespace
+            return redirect('start_chat')
 
         # Search for user by email or phone number
         try:
@@ -90,11 +91,16 @@ def start_chat(request):
                 user = CustomUser.objects.get(phone_number=email_or_phone)
         except CustomUser.DoesNotExist:
             messages.error(request, 'User not found. Please check the email or phone number.')
-            return redirect('start_chat')  # Remove 'chat:' namespace
+            return redirect('start_chat')
 
         if user == request.user:
             messages.error(request, 'You cannot start a chat with yourself.')
-            return redirect('start_chat')  # Remove 'chat:' namespace
+            return redirect('start_chat')
+
+        # Check if friends
+        if not Friendship.are_friends(request.user, user):
+            messages.error(request, 'You need to be friends to chat with this user.')
+            return redirect('start_chat')
 
         # Check if conversation already exists
         existing_conversation = Conversation.objects.filter(
@@ -106,18 +112,18 @@ def start_chat(request):
         ).first()
 
         if existing_conversation:
-            return redirect('conversation', conversation_id=existing_conversation.id)  # Remove 'chat:' namespace
+            return redirect('conversation', conversation_id=existing_conversation.id)
 
         # Create new conversation
         conversation = Conversation.objects.create()
         conversation.participants.add(request.user, user)
 
         messages.success(request, f'Started chat with {user.username}')
-        return redirect('conversation', conversation_id=conversation.id)  # Remove 'chat:' namespace
+        return redirect('conversation', conversation_id=conversation.id)
 
     return render(request, 'chat/start_chat.html')
 
-# In messenger_app/chat/views.py - update the create_group view
+
 @login_required
 def create_group(request):
     """Create a new group chat"""
@@ -128,7 +134,7 @@ def create_group(request):
 
         if not group_name:
             messages.error(request, 'Group name is required.')
-            return redirect('create_group')  # Remove 'chat:' namespace
+            return redirect('create_group')
 
         # Create group conversation
         conversation = Conversation.objects.create(
@@ -148,12 +154,13 @@ def create_group(request):
                 user = CustomUser.objects.get(id=user_id)
                 if user != request.user:
                     conversation.participants.add(user)
-                    # Create invitation notification
-                    ChatNotification.objects.create(
+                    # Create account notification - FIXED: Use Notification model
+                    Notification.objects.create(
                         user=user,
                         notification_type='group_invite',
-                        conversation=conversation,
-                        content=f"You were added to group '{group_name}' by {request.user.username}"
+                        title="Group Invitation",
+                        message=f"You were added to group '{group_name}' by {request.user.username}",
+                        related_url=f"/chat/{conversation.id}/"
                     )
             except CustomUser.DoesNotExist:
                 continue
@@ -167,11 +174,13 @@ def create_group(request):
         )
 
         messages.success(request, f'Group "{group_name}" created successfully!')
-        return redirect('conversation', conversation_id=conversation.id)  # Remove 'chat:' namespace
+        return redirect('conversation', conversation_id=conversation.id)
 
     # Get users to invite (exclude current user)
     users = CustomUser.objects.exclude(id=request.user.id)
     return render(request, 'chat/create_group.html', {'users': users})
+
+
 @login_required
 def search_users(request):
     """Search users by username, email, or phone number"""
@@ -197,25 +206,46 @@ def search_users(request):
 
 @login_required
 def conversation(request, conversation_id):
-    """View conversation and messages"""
+    """View conversation and messages - Updated with friendship check"""
     conversation = get_object_or_404(
         Conversation,
         id=conversation_id,
         participants=request.user
     )
 
-    # Mark messages as read
-    Message.objects.filter(
-        conversation=conversation,
-        is_read=False
-    ).exclude(sender=request.user).update(is_read=True)
+    # For direct chats, check if friends
+    if not conversation.is_group:
+        other_user = conversation.participants.exclude(id=request.user.id).first()
+        if other_user:
+            # Check if blocked in either direction
+            is_blocked = BlockedUser.objects.filter(
+                Q(user=request.user, blocked_user=other_user) |
+                Q(user=other_user, blocked_user=request.user)
+            ).exists()
 
-    # Mark notifications as read
-    ChatNotification.objects.filter(
-        user=request.user,
+            if is_blocked:
+                messages.error(request, 'This conversation is not available due to blocking.')
+                return redirect('chat_home')
+
+            # Check if friends
+            if not Friendship.are_friends(request.user, other_user):
+                messages.error(request, 'You need to be friends to chat with this user.')
+                return redirect('chat_home')
+
+    # Mark messages as read when viewing conversation
+    unread_messages = Message.objects.filter(
         conversation=conversation,
-        notification_type='message',
         is_read=False
+    ).exclude(sender=request.user)
+
+    for message in unread_messages:
+        message.is_read = True
+        message.save()
+
+    # Mark notifications as read when viewing conversation - FIXED: Use account_notifications
+    request.user.account_notifications.filter(
+        notification_type='message',
+        related_url=f"/chat/{conversation.id}/"
     ).update(is_read=True)
 
     # Get messages
@@ -239,43 +269,6 @@ def conversation(request, conversation_id):
             'is_group': False,
         }
 
-    # Handle AJAX requests
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        if request.method == 'POST':
-            content = request.POST.get('content', '').strip()
-            if content:
-                message = Message.objects.create(
-                    conversation=conversation,
-                    sender=request.user,
-                    content=content
-                )
-                conversation.save()
-
-                # Create notifications for other participants
-                for participant in conversation.participants.exclude(id=request.user.id):
-                    ChatNotification.objects.create(
-                        user=participant,
-                        notification_type='message',
-                        conversation=conversation,
-                        message=message,
-                        content=f"New message from {request.user.username}"
-                    )
-
-                return JsonResponse({
-                    'success': True,
-                    'message': {
-                        'id': str(message.id),
-                        'content': message.content,
-                        'sender': message.sender.username,
-                        'sender_id': message.sender.id,
-                        'timestamp': message.timestamp.strftime('%H:%M'),
-                        'is_own': True,
-                        'is_read': message.is_read
-                    }
-                })
-
-        return JsonResponse({'success': False, 'error': 'Invalid request'})
-
     return render(request, 'chat/conversation.html', context)
 
 
@@ -285,9 +278,13 @@ def group_settings(request, conversation_id):
     conversation = get_object_or_404(
         Conversation,
         id=conversation_id,
-        participants=request.user,
         is_group=True
     )
+
+    # Check if user is a participant
+    if not conversation.participants.filter(id=request.user.id).exists():
+        messages.error(request, 'You are not a member of this group.')
+        return redirect('chat_home')
 
     if request.method == 'POST':
         if 'add_member' in request.POST:
@@ -300,11 +297,13 @@ def group_settings(request, conversation_id):
 
                 if user not in conversation.participants.all():
                     conversation.participants.add(user)
-                    ChatNotification.objects.create(
+                    # FIXED: Use Notification model
+                    Notification.objects.create(
                         user=user,
                         notification_type='group_invite',
-                        conversation=conversation,
-                        content=f"You were added to group '{conversation.group_name}' by {request.user.username}"
+                        title="Group Invitation",
+                        message=f"You were added to group '{conversation.group_name}' by {request.user.username}",
+                        related_url=f"/chat/{conversation.id}/"
                     )
                     messages.success(request, f'{user.username} added to group.')
                 else:
@@ -312,15 +311,30 @@ def group_settings(request, conversation_id):
             except CustomUser.DoesNotExist:
                 messages.error(request, 'User not found.')
 
+            # Redirect to avoid resubmission
+            return redirect('group_settings', conversation_id=conversation_id)
+
         elif 'remove_member' in request.POST:
             user_id = request.POST.get('user_id')
             try:
                 user = CustomUser.objects.get(id=user_id)
                 if user != request.user and user in conversation.participants.all():
                     conversation.participants.remove(user)
+
+                    # Create system message
+                    Message.objects.create(
+                        conversation=conversation,
+                        sender=request.user,
+                        content=f"{user.username} was removed from the group by {request.user.username}",
+                        is_read=True
+                    )
+
                     messages.success(request, f'{user.username} removed from group.')
             except CustomUser.DoesNotExist:
                 messages.error(request, 'User not found.')
+
+            # Redirect to avoid resubmission
+            return redirect('group_settings', conversation_id=conversation_id)
 
         elif 'update_group' in request.POST:
             group_name = request.POST.get('group_name', '').strip()
@@ -330,8 +344,66 @@ def group_settings(request, conversation_id):
                 conversation.group_name = group_name
             if group_description:
                 conversation.group_description = group_description
+
+            # Handle group photo upload
+            if 'group_photo' in request.FILES and request.FILES['group_photo']:
+                group_photo = request.FILES['group_photo']
+
+                # Basic validation
+                if group_photo.content_type.startswith('image/'):
+                    if group_photo.size <= 5 * 1024 * 1024:  # 5MB
+                        conversation.group_photo = group_photo
+                    else:
+                        messages.error(request, 'Image too large. Max 5MB.')
+                else:
+                    messages.error(request, 'Please select a valid image file.')
+
             conversation.save()
             messages.success(request, 'Group updated successfully.')
+
+            # Redirect to avoid resubmission
+            return redirect('group_settings', conversation_id=conversation_id)
+
+        elif 'remove_group_photo' in request.POST:
+            # Remove group photo
+            if conversation.group_photo:
+                conversation.group_photo.delete(save=True)
+                messages.success(request, 'Group photo removed successfully.')
+            else:
+                messages.warning(request, 'No group photo to remove.')
+
+            # Redirect to avoid resubmission
+            return redirect('group_settings', conversation_id=conversation_id)
+
+        elif 'leave_group' in request.POST:
+            # User wants to leave the group
+            conversation.participants.remove(request.user)
+
+            # Remove from admins if they were an admin
+            if request.user in conversation.admins.all():
+                conversation.admins.remove(request.user)
+
+            # Create system message
+            Message.objects.create(
+                conversation=conversation,
+                sender=request.user,
+                content=f"{request.user.username} left the group",
+                is_read=True
+            )
+
+            messages.success(request, f'You have left the group "{conversation.group_name}".')
+            return redirect('chat_home')
+
+        elif 'delete_group' in request.POST:
+            # Only admins can delete group
+            if request.user in conversation.admins.all():
+                group_name = conversation.group_name
+                conversation.delete()
+                messages.success(request, f'Group "{group_name}" has been deleted.')
+                return redirect('chat_home')
+            else:
+                messages.error(request, 'Only group admins can delete the group.')
+                return redirect('group_settings', conversation_id=conversation_id)
 
     # Get all users for adding new members
     all_users = CustomUser.objects.exclude(
@@ -348,6 +420,46 @@ def group_settings(request, conversation_id):
 
 
 @login_required
+def leave_group(request, conversation_id):
+    """Leave a group"""
+    if request.method == 'POST':
+        conversation = get_object_or_404(
+            Conversation,
+            id=conversation_id,
+            participants=request.user,
+            is_group=True
+        )
+
+        # Remove user from group
+        conversation.participants.remove(request.user)
+
+        # Remove from admins if they were an admin
+        if request.user in conversation.admins.all():
+            conversation.admins.remove(request.user)
+
+        # Create system message
+        Message.objects.create(
+            conversation=conversation,
+            sender=request.user,
+            content=f"{request.user.username} left the group",
+            is_read=True
+        )
+
+        messages.success(request, f'You have left the group "{conversation.group_name}".')
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'message': f'You have left the group "{conversation.group_name}".'
+            })
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+    return redirect('chat_home')
+
+
+@login_required
 def invite_to_group(request, conversation_id):
     """Invite users to group via AJAX"""
     if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -360,11 +472,13 @@ def invite_to_group(request, conversation_id):
                 user = CustomUser.objects.get(id=user_id)
                 if user not in conversation.participants.all():
                     conversation.participants.add(user)
-                    ChatNotification.objects.create(
+                    # FIXED: Use Notification model
+                    Notification.objects.create(
                         user=user,
                         notification_type='group_invite',
-                        conversation=conversation,
-                        content=f"You were invited to group '{conversation.group_name}' by {request.user.username}"
+                        title="Group Invitation",
+                        message=f"You were invited to group '{conversation.group_name}' by {request.user.username}",
+                        related_url=f"/chat/{conversation.id}/"
                     )
                     invited_users.append(user.username)
             except CustomUser.DoesNotExist:
@@ -427,15 +541,31 @@ def get_new_messages(request, conversation_id):
 
         messages_data = []
         for message in new_messages:
-            messages_data.append({
+            message_data = {
                 'id': str(message.id),
                 'content': message.content,
                 'sender': message.sender.username,
                 'sender_id': message.sender.id,
                 'timestamp': message.timestamp.strftime('%H:%M'),
                 'is_own': False,
-                'is_read': message.is_read
-            })
+                'is_read': message.is_read,
+                'message_type': message.message_type,
+                'is_edited': message.is_edited,
+                'is_unsent': message.is_unsent,
+                'reactions': message.get_reaction_summary(),
+                'user_reaction': message.get_user_reaction(request.user)
+            }
+
+            # Add file information if it's a media message
+            if message.message_type != 'text':
+                message_data['file_url'] = message.file.url if message.file else None
+                message_data['file_name'] = message.file_name
+                message_data['file_size'] = message.get_file_size_display()
+                message_data['is_image'] = message.is_image_file()
+                message_data['is_video'] = message.is_video_file()
+                message_data['is_audio'] = message.is_audio_file()
+
+            messages_data.append(message_data)
 
             # Mark as read
             message.is_read = True
@@ -452,22 +582,23 @@ def get_new_messages(request, conversation_id):
 
 @login_required
 def get_notifications(request):
-    """Get user notifications"""
+    """Get user notifications for dropdown - FIXED: Use account_notifications"""
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        notifications = ChatNotification.objects.filter(
-            user=request.user,
-            is_read=False
-        ).order_by('-created_at')[:10]
+        notifications = request.user.account_notifications.filter(
+            is_read=False,
+            is_archived=False
+        ).order_by('-created_at')[:10]  # Show 10 latest unread notifications
 
         notifications_data = []
         for notification in notifications:
             notifications_data.append({
                 'id': notification.id,
                 'type': notification.notification_type,
-                'content': notification.content,
-                'conversation_id': str(notification.conversation.id) if notification.conversation else None,
+                'content': notification.message,
+                'title': notification.title,
+                'related_url': notification.related_url,
                 'created_at': notification.created_at.strftime('%H:%M'),
-                'is_message': notification.notification_type == 'message'
+                'is_read': notification.is_read
             })
 
         return JsonResponse({
@@ -480,55 +611,164 @@ def get_notifications(request):
 
 
 @login_required
-def mark_notification_read(request, notification_id):
-    """Mark notification as read"""
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        notification = get_object_or_404(ChatNotification, id=notification_id, user=request.user)
-        notification.is_read = True
-        notification.save()
-
-        return JsonResponse({'success': True})
-
-    return JsonResponse({'success': False, 'error': 'Invalid request'})
-
-
-@login_required
 def send_message_ajax(request, conversation_id):
-    """Send message via AJAX"""
+    """Send message via AJAX - Now supports emojis"""
     if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
         conversation = get_object_or_404(Conversation, id=conversation_id, participants=request.user)
-        content = request.POST.get('content', '').strip()
 
-        if content:
+        # Check for blocks in direct chats
+        if not conversation.is_group:
+            other_user = conversation.participants.exclude(id=request.user.id).first()
+            if other_user:
+                is_blocked = BlockedUser.objects.filter(
+                    Q(user=request.user, blocked_user=other_user) |
+                    Q(user=other_user, blocked_user=request.user)
+                ).exists()
+
+                if is_blocked:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Cannot send message. User is blocked.'
+                    })
+
+        content = request.POST.get('content', '').strip()
+        file = request.FILES.get('file')
+
+        # Validate file size (50MB limit)
+        if file and file.size > 50 * 1024 * 1024:
+            return JsonResponse({
+                'success': False,
+                'error': 'File too large. Maximum size is 50MB.'
+            })
+
+        if content or file:
+            # Determine message type
+            message_type = 'text'
+            file_name = None
+            file_size = None
+
+            if file:
+                file_name = file.name
+                file_size = file.size
+
+                # Determine message type based on file content type
+                if file.content_type.startswith('image/'):
+                    message_type = 'image'
+                elif file.content_type.startswith('video/'):
+                    message_type = 'video'
+                elif file.content_type.startswith('audio/'):
+                    message_type = 'audio'
+                else:
+                    message_type = 'file'
+            else:
+                # Check if it's an emoji message
+                emoji_count = sum(1 for char in content if emoji.is_emoji(char))
+                total_chars = len(content.strip())
+
+                if (emoji_count > 0 and total_chars <= 3) or (total_chars > 0 and emoji_count / total_chars > 0.7):
+                    message_type = 'emoji'
+
+            # Create message
             message = Message.objects.create(
                 conversation=conversation,
                 sender=request.user,
-                content=content
+                content=content,
+                message_type=message_type,
+                file=file if file else None,
+                file_name=file_name,
+                file_size=file_size
             )
+            conversation.updated_at = timezone.now()
             conversation.save()
 
             # Create notifications for other participants
             for participant in conversation.participants.exclude(id=request.user.id):
-                ChatNotification.objects.create(
+                # Check if participant blocked the sender
+                is_blocked = BlockedUser.objects.filter(
                     user=participant,
-                    notification_type='message',
-                    conversation=conversation,
-                    message=message,
-                    content=f"New message from {request.user.username}"
-                )
+                    blocked_user=request.user
+                ).exists()
 
-            return JsonResponse({
+                if not is_blocked:
+                    # Create appropriate notification message
+                    if message_type == 'text':
+                        notification_message = content[:100] + "..." if len(content) > 100 else content
+                    elif message_type == 'emoji':
+                        notification_message = "Sent an emoji"
+                    else:
+                        notification_message = f"Sent a {message_type}"
+
+                    Notification.objects.create(
+                        user=participant,
+                        notification_type='message',
+                        title=f"New message from {request.user.username}",
+                        message=notification_message,
+                        related_url=f"/chat/{conversation.id}/"
+                    )
+
+            # Prepare response data
+            response_data = {
                 'success': True,
                 'message_id': str(message.id),
                 'content': message.content,
                 'timestamp': message.timestamp.strftime('%H:%M'),
                 'sender': message.sender.username,
-                'is_own': True
-            })
+                'is_own': True,
+                'is_edited': False,
+                'is_unsent': False,
+                'reactions': {},
+                'user_reaction': None,
+                'message_type': message.message_type
+            }
+
+            # Add file information if it's a media message
+            if message.message_type != 'text' and message.message_type != 'emoji':
+                response_data['file_url'] = message.file.url if message.file else None
+                response_data['file_name'] = message.file_name
+                response_data['file_size'] = message.get_file_size_display()
+                response_data['is_image'] = message.is_image_file()
+                response_data['is_video'] = message.is_video_file()
+                response_data['is_audio'] = message.is_audio_file()
+
+            return JsonResponse(response_data)
+        else:
+            return JsonResponse({'success': False, 'error': 'Message content or file is required'})
 
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 
+@login_required
+def search_emojis(request):
+    """Search emojis via AJAX"""
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        query = request.GET.get('q', '').strip()
+
+        if query:
+            results = EmojiManager.search_emojis(query)
+        else:
+            # Return popular emojis if no query
+            results = EmojiManager.get_all_emojis()[:30]
+
+        return JsonResponse({
+            'success': True,
+            'emojis': results,
+            'query': query
+        })
+
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+
+@login_required
+def get_emoji_categories(request):
+    """Get emoji categories via AJAX"""
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        categories = EmojiManager.get_emoji_categories()
+        return JsonResponse({
+            'success': True,
+            'categories': categories
+        })
+
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
 @login_required
 def get_messages_ajax(request, conversation_id):
     """Get messages via AJAX"""
@@ -538,15 +778,31 @@ def get_messages_ajax(request, conversation_id):
 
         messages_data = []
         for message in messages_list:
-            messages_data.append({
+            message_data = {
                 'id': str(message.id),
                 'content': message.content,
                 'sender': message.sender.username,
                 'sender_id': message.sender.id,
                 'timestamp': message.timestamp.strftime('%H:%M'),
                 'is_own': message.sender.id == request.user.id,
-                'is_read': message.is_read
-            })
+                'is_read': message.is_read,
+                'is_edited': message.is_edited,
+                'is_unsent': message.is_unsent,
+                'reactions': message.get_reaction_summary(),
+                'user_reaction': message.get_user_reaction(request.user),
+                'message_type': message.message_type
+            }
+
+            # Add file information if it's a media message
+            if message.message_type != 'text':
+                message_data['file_url'] = message.file.url if message.file else None
+                message_data['file_name'] = message.file_name
+                message_data['file_size'] = message.get_file_size_display()
+                message_data['is_image'] = message.is_image_file()
+                message_data['is_video'] = message.is_video_file()
+                message_data['is_audio'] = message.is_audio_file()
+
+            messages_data.append(message_data)
 
         return JsonResponse({'messages': messages_data})
 
@@ -661,72 +917,249 @@ def react_to_message(request, message_id):
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 
-# Update the get_messages_ajax view to include new fields
 @login_required
-def get_messages_ajax(request, conversation_id):
-    """Get messages via AJAX"""
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        conversation = get_object_or_404(Conversation, id=conversation_id, participants=request.user)
-        messages_list = conversation.messages.all().order_by('timestamp')
+def discover_users(request):
+    """Merged page for discovering all users and searching users"""
+    query = request.GET.get('q', '').strip()
 
-        messages_data = []
-        for message in messages_list:
-            messages_data.append({
-                'id': str(message.id),
-                'content': message.content,
-                'sender': message.sender.username,
-                'sender_id': message.sender.id,
-                'timestamp': message.timestamp.strftime('%H:%M'),
-                'is_own': message.sender.id == request.user.id,
-                'is_read': message.is_read,
-                'is_edited': message.is_edited,
-                'is_unsent': message.is_unsent,
-                'reactions': message.get_reaction_summary(),
-                'user_reaction': message.get_user_reaction(request.user)
-            })
+    # Get users blocked by current user
+    blocked_users_ids = BlockedUser.objects.filter(user=request.user).values_list('blocked_user_id', flat=True)
 
-        return JsonResponse({'messages': messages_data})
+    # Get users who blocked current user
+    blocked_by_ids = BlockedUser.objects.filter(blocked_user=request.user).values_list('user_id', flat=True)
 
-    return JsonResponse({'error': 'Invalid request'})
+    # Combine both sets of blocked users
+    all_blocked_ids = set(blocked_users_ids) | set(blocked_by_ids)
+
+    # Get users based on search query or show all
+    if query:
+        # Search mode
+        users = CustomUser.objects.filter(
+            Q(username__icontains=query) |
+            Q(email__icontains=query) |
+            Q(phone_number__icontains=query) |
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query)
+        ).exclude(
+            Q(id=request.user.id) | Q(id__in=all_blocked_ids)
+        ).distinct().order_by('username')
+        is_search = True
+        total_users = users.count()
+    else:
+        # Discovery mode - show all users
+        users = CustomUser.objects.exclude(
+            Q(id=request.user.id) | Q(id__in=all_blocked_ids)
+        ).order_by('-date_joined')
+        is_search = False
+        total_users = users.count()
+
+    # Check which users are online and add friend status
+    online_users = []
+    users_with_status = []
+
+    for user in users:
+        if hasattr(user, 'status') and user.status.online:
+            online_users.append(user.id)
+
+        # Get friend status
+        friend_status = user.get_friend_status(request.user)
+
+        # Get received request ID if applicable
+        received_request_id = None
+        if friend_status == 'request_received':
+            received_request = FriendRequest.objects.filter(
+                from_user=user,
+                to_user=request.user,
+                status='pending'
+            ).first()
+            if received_request:
+                received_request_id = received_request.id
+
+        # Create a dictionary with user info and status
+        user_info = {
+            'user': user,
+            'friend_status': friend_status,
+            'received_request_id': received_request_id,
+            'is_online': user.id in online_users
+        }
+        users_with_status.append(user_info)
+
+    # Pagination
+    page = request.GET.get('page', 1)
+    paginator = Paginator(users_with_status, 20)  # 20 users per page
+
+    try:
+        users_page = paginator.page(page)
+    except PageNotAnInteger:
+        users_page = paginator.page(1)
+    except EmptyPage:
+        users_page = paginator.page(paginator.num_pages)
+
+    context = {
+        'users_page': users_page,
+        'online_users': online_users,
+        'total_users': total_users,
+        'query': query,
+        'is_search': is_search,
+    }
+    return render(request, 'chat/discover_users.html', context)
 
 
-# Update send_message_ajax to include new fields
 @login_required
-def send_message_ajax(request, conversation_id):
-    """Send message via AJAX"""
-    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        conversation = get_object_or_404(Conversation, id=conversation_id, participants=request.user)
-        content = request.POST.get('content', '').strip()
+def block_user(request, user_id):
+    """Block a user"""
+    if request.method == 'POST':
+        try:
+            user_to_block = CustomUser.objects.get(id=user_id)
 
-        if content:
-            message = Message.objects.create(
-                conversation=conversation,
-                sender=request.user,
-                content=content
+            # Can't block yourself
+            if user_to_block == request.user:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': 'You cannot block yourself.'})
+                messages.error(request, 'You cannot block yourself.')
+                return redirect('discover_users')
+
+            # Check if already blocked
+            if BlockedUser.objects.filter(user=request.user, blocked_user=user_to_block).exists():
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse(
+                        {'success': False, 'error': f'You have already blocked {user_to_block.username}.'})
+                messages.warning(request, f'You have already blocked {user_to_block.username}.')
+                return redirect('discover_users')
+
+            # Create block
+            BlockedUser.objects.create(
+                user=request.user,
+                blocked_user=user_to_block,
+                reason=request.POST.get('reason', '')
             )
-            conversation.save()
 
-            # Create notifications for other participants
-            for participant in conversation.participants.exclude(id=request.user.id):
-                ChatNotification.objects.create(
-                    user=participant,
-                    notification_type='message',
-                    conversation=conversation,
-                    message=message,
-                    content=f"New message from {request.user.username}"
-                )
+            # Cancel any pending friend requests
+            FriendRequest.objects.filter(
+                from_user=request.user,
+                to_user=user_to_block,
+                status='pending'
+            ).update(status='cancelled')
 
-            return JsonResponse({
-                'success': True,
-                'message_id': str(message.id),
-                'content': message.content,
-                'timestamp': message.timestamp.strftime('%H:%M'),
-                'sender': message.sender.username,
-                'is_own': True,
-                'is_edited': False,
-                'is_unsent': False,
-                'reactions': {},
-                'user_reaction': None
-            })
+            FriendRequest.objects.filter(
+                from_user=user_to_block,
+                to_user=request.user,
+                status='pending'
+            ).update(status='cancelled')
 
-    return JsonResponse({'success': False, 'error': 'Invalid request'})
+            # Remove friendship if exists
+            Friendship.objects.filter(
+                (Q(user1=request.user) & Q(user2=user_to_block)) |
+                (Q(user1=user_to_block) & Q(user2=request.user))
+            ).delete()
+
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': f'You have blocked {user_to_block.username}.'
+                })
+
+            messages.success(request, f'You have blocked {user_to_block.username}.')
+
+        except CustomUser.DoesNotExist:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'User not found.'})
+            messages.error(request, 'User not found.')
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': False, 'error': 'Invalid request'})
+    return redirect('discover_users')
+
+
+@login_required
+def unblock_user(request, user_id):
+    """Unblock a user"""
+    if request.method == 'POST':
+        try:
+            user_to_unblock = CustomUser.objects.get(id=user_id)
+
+            # Remove block
+            blocked_entry = BlockedUser.objects.filter(
+                user=request.user,
+                blocked_user=user_to_unblock
+            )
+
+            if blocked_entry.exists():
+                blocked_entry.delete()
+
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': True,
+                        'message': f'You have unblocked {user_to_unblock.username}.'
+                    })
+
+                messages.success(request, f'You have unblocked {user_to_unblock.username}.')
+            else:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': 'User is not blocked.'})
+                messages.error(request, 'User is not blocked.')
+
+        except CustomUser.DoesNotExist:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'User not found.'})
+            messages.error(request, 'User not found.')
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': False, 'error': 'Invalid request'})
+    return redirect('blocked_users')
+
+
+@login_required
+def blocked_users(request):
+    """Show list of blocked users"""
+    blocked_users = BlockedUser.objects.filter(user=request.user).select_related('blocked_user')
+
+    context = {
+        'blocked_users': blocked_users,
+    }
+    return render(request, 'chat/blocked_users.html', context)
+
+
+@login_required
+def quick_chat(request, user_id):
+    """Start a quick chat with any user - Updated with friendship check"""
+    try:
+        target_user = CustomUser.objects.get(id=user_id)
+
+        # Check if user is blocked in either direction
+        is_blocked = BlockedUser.objects.filter(
+            Q(user=request.user, blocked_user=target_user) |
+            Q(user=target_user, blocked_user=request.user)
+        ).exists()
+
+        if is_blocked:
+            messages.error(request, 'You cannot start a chat with this user due to blocking.')
+            return redirect('discover_users')
+
+        # Check if friends
+        if not Friendship.are_friends(request.user, target_user):
+            messages.error(request, 'You need to be friends to chat with this user.')
+            return redirect('discover_users')
+
+        # Check if conversation already exists
+        existing_conversation = Conversation.objects.filter(
+            participants=request.user
+        ).filter(
+            participants=target_user
+        ).filter(
+            is_group=False
+        ).first()
+
+        if existing_conversation:
+            return redirect('conversation', conversation_id=existing_conversation.id)
+
+        # Create new conversation
+        conversation = Conversation.objects.create()
+        conversation.participants.add(request.user, target_user)
+
+        messages.success(request, f'Started chat with {target_user.username}')
+        return redirect('conversation', conversation_id=conversation.id)
+
+    except CustomUser.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('discover_users')

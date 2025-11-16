@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Messenger{% endblock %}</title>
+    <title>{% block title %}Connect.io{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
@@ -15,9 +15,24 @@
                 <!-- Logo and Brand -->
                 <div class="flex items-center space-x-3">
                     <div class="flex-shrink-0">
-                        <i class="fas fa-comments text-blue-600 text-2xl"></i>
+                        <!-- Connect.io Logo -->
+                        <div class="relative">
+                            <!-- Main Logo Container -->
+                            <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-sm">
+                                <!-- Message Bubble -->
+                                <div class="w-4 h-3 bg-white rounded-sm relative">
+                                    <!-- Message Tail -->
+                                    <div class="absolute -bottom-1 right-1 w-2 h-2 bg-white transform rotate-45"></div>
+                                    <!-- Message Dots -->
+                                    <div class="absolute top-0.5 left-1 flex space-x-0.5">
+                                        <div class="w-1 h-1 bg-blue-500 rounded-full"></div>
+                                        <div class="w-1 h-1 bg-purple-500 rounded-full"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <span class="text-xl font-bold text-gray-800">Messenger</span>
+                    <span class="text-xl font-bold text-gray-800">Connect<span class="text-blue-500">.</span>io</span>
                 </div>
 
                 <!-- Navigation Links -->
@@ -30,10 +45,36 @@
                        class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
                         <i class="fas fa-comment-medical mr-1"></i> New Chat
                     </a>
-                    <a href="{% url 'search_users' %}"
-                       class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
-                        <i class="fas fa-search mr-1"></i> Find People
-                    </a>
+
+                    <!-- Friends Dropdown -->
+                    <div class="relative">
+                        <button id="friends-menu-button" class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200 flex items-center">
+                            <i class="fas fa-user-friends mr-1"></i> Friends
+                            <i class="fas fa-chevron-down ml-1 text-xs"></i>
+                        </button>
+
+                        <!-- Friends Dropdown Menu -->
+                        <div id="friends-dropdown" class="hidden absolute left-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+                            <a href="{% url 'discover_users' %}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition duration-200 group">
+                                <i class="fas fa-search mr-3 text-gray-400 group-hover:text-blue-600 transition duration-200"></i>
+                                Find People
+                            </a>
+                            <a href="{% url 'friend_requests' %}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition duration-200 group">
+                                <i class="fas fa-user-plus mr-3 text-gray-400 group-hover:text-blue-600 transition duration-200"></i>
+                                Friend Requests
+                                {% if pending_friend_requests_count > 0 %}
+                                <span class="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                                    {{ pending_friend_requests_count }}
+                                </span>
+                                {% endif %}
+                            </a>
+                            <a href="{% url 'friend_requests' %}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition duration-200 group">
+                                <i class="fas fa-users mr-3 text-gray-400 group-hover:text-blue-600 transition duration-200"></i>
+                                My Friends
+                            </a>
+                        </div>
+                    </div>
+
                     <a href="{% url 'profile' %}"
                        class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
                         <i class="fas fa-user mr-1"></i> Profile
@@ -50,97 +91,102 @@
                     <div class="relative">
                         <button id="notifications-button" class="text-gray-600 hover:text-blue-600 p-2 rounded-full hover:bg-gray-100 transition duration-200 relative">
                             <i class="fas fa-bell"></i>
-                            {% if user.is_authenticated %}
-                            <span class="notification-badge absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center {% if not user.notifications.filter.is_read %}hidden{% endif %}">
-                                {{ user.notifications.filter.is_read|length }}
+                            <span class="notification-badge absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center hidden">
+                                0
                             </span>
-                            {% endif %}
                         </button>
 
                         <!-- Notifications Dropdown -->
-                        <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 max-h-96 overflow-y-auto">
-                            <div class="px-4 py-2 border-b border-gray-200">
+                        <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 max-h-96 overflow-y-auto">
+                            <div class="px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                                 <div class="flex items-center justify-between">
                                     <h3 class="font-semibold text-gray-900">Notifications</h3>
-                                    <a href="{% url 'notifications' %}" class="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                                        View All
-                                    </a>
+                                    <div class="flex space-x-2">
+                                        <button onclick="markAllNotificationsRead()"
+                                                class="text-blue-600 hover:text-blue-700 text-sm font-medium px-2 py-1 rounded hover:bg-blue-50 transition duration-200">
+                                            Mark All Read
+                                        </button>
+                                        <a href="{% url 'notifications' %}" class="text-blue-600 hover:text-blue-700 text-sm font-medium px-2 py-1 rounded hover:bg-blue-50 transition duration-200">
+                                            View All
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="notifications-list">
-                                {% if user.is_authenticated %}
-                                    {% for notification in user.account_notifications.all|slice:":5" %}
-                                    <div class="px-4 py-3 hover:bg-gray-50 border-b border-gray-100 {% if not notification.is_read %}bg-blue-50{% endif %}">
-                                        <div class="flex items-start space-x-3">
-                                            <div class="flex-shrink-0">
-                                                {% if notification.notification_type == 'message' %}
-                                                <i class="fas fa-comment text-green-600"></i>
-                                                {% elif notification.notification_type == 'friend_request' %}
-                                                <i class="fas fa-user-plus text-blue-600"></i>
-                                                {% else %}
-                                                <i class="fas fa-info-circle text-gray-600"></i>
-                                                {% endif %}
-                                            </div>
-                                            <div class="flex-1">
-                                                <p class="text-sm font-medium text-gray-900">{{ notification.title }}</p>
-                                                <p class="text-sm text-gray-600 mt-1">{{ notification.message|truncatewords:10 }}</p>
-                                                <p class="text-xs text-gray-500 mt-1">{{ notification.created_at|timesince }} ago</p>
-                                            </div>
-                                            {% if not notification.is_read %}
-                                            <form method="POST" action="{% url 'mark_notification_read' notification.id %}" class="flex-shrink-0">
-                                                {% csrf_token %}
-                                                <button type="submit" class="text-blue-600 hover:text-blue-700 text-xs">
-                                                    Mark read
-                                                </button>
-                                            </form>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    {% empty %}
-                                    <div class="px-4 py-8 text-center">
-                                        <i class="fas fa-bell-slash text-gray-400 text-2xl mb-2"></i>
-                                        <p class="text-sm text-gray-600">No notifications</p>
-                                    </div>
-                                    {% endfor %}
-                                {% endif %}
+                            <div class="notifications-list" id="notifications-list">
+                                <div class="px-4 py-8 text-center">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                                    <p class="text-sm text-gray-600">Loading notifications...</p>
+                                </div>
                             </div>
 
-                            <div class="px-4 py-2 border-t border-gray-200">
-                                <a href="{% url 'notifications' %}" class="block text-center text-blue-600 hover:text-blue-700 text-sm font-medium">
-                                    See all notifications
-                                </a>
+                            <div class="px-4 py-3 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+                                <div class="flex justify-between items-center">
+                                    <a href="{% url 'notification_settings' %}" class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                                        <i class="fas fa-cog mr-1"></i>Settings
+                                    </a>
+                                    <a href="{% url 'notifications' %}" class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                                        See all notifications <i class="fas fa-arrow-right ml-1"></i>
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- User Profile Dropdown -->
                     <div class="relative">
-                        <button id="user-menu-button" class="flex items-center space-x-2 text-sm rounded-full focus:outline-none">
+                        <button id="user-menu-button" class="flex items-center space-x-2 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200">
                             {% if user.profile_picture %}
-                            <img class="h-8 w-8 rounded-full border-2 border-gray-300 object-cover"
+                            <img class="h-8 w-8 rounded-full border-2 border-gray-300 object-cover hover:border-blue-500 transition duration-200"
                                  src="{{ user.profile_picture.url }}" alt="Profile">
                             {% else %}
-                            <div class="h-8 w-8 rounded-full bg-gray-300 border-2 border-gray-300 flex items-center justify-center">
+                            <div class="h-8 w-8 rounded-full bg-gray-300 border-2 border-gray-300 flex items-center justify-center hover:border-blue-500 transition duration-200">
                                 <i class="fas fa-user text-gray-500 text-sm"></i>
                             </div>
                             {% endif %}
-                            <span class="text-gray-700 font-medium">{{ user.username }}</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-xs"></i>
+                            <span class="text-gray-700 font-medium hidden md:block">{{ user.username }}</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs hidden md:block"></i>
                         </button>
 
                         <!-- Dropdown Menu -->
-                        <div id="user-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                            <a href="{% url 'profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                <i class="fas fa-user mr-2"></i> Your Profile
-                            </a>
-                            <a href="{% url 'settings_main' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                <i class="fas fa-cog mr-2"></i> Settings
-                            </a>
-                            <div class="border-t border-gray-200 my-1"></div>
-                            <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
-                                <i class="fas fa-sign-out-alt mr-2"></i> Sign out
-                            </a>
+                        <div id="user-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+                            <!-- User Info -->
+                            <div class="px-4 py-3 border-b border-gray-200">
+                                <div class="flex items-center space-x-3">
+                                    {% if user.profile_picture %}
+                                    <img class="h-10 w-10 rounded-full border-2 border-gray-300 object-cover"
+                                         src="{{ user.profile_picture.url }}" alt="Profile">
+                                    {% else %}
+                                    <div class="h-10 w-10 rounded-full bg-gray-300 border-2 border-gray-300 flex items-center justify-center">
+                                        <i class="fas fa-user text-gray-500"></i>
+                                    </div>
+                                    {% endif %}
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-semibold text-gray-900 truncate">{{ user.username }}</p>
+                                        <p class="text-sm text-gray-500 truncate">{{ user.email }}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Dropdown Items -->
+                            <div class="py-1">
+                                <a href="{% url 'profile' %}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition duration-200 group">
+                                    <i class="fas fa-user mr-3 text-gray-400 group-hover:text-blue-600 transition duration-200"></i>
+                                    Your Profile
+                                </a>
+                                <a href="{% url 'settings_main' %}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition duration-200 group">
+                                    <i class="fas fa-cog mr-3 text-gray-400 group-hover:text-blue-600 transition duration-200"></i>
+                                    Settings
+                                </a>
+
+                                <!-- Divider -->
+                                <div class="border-t border-gray-200 my-1"></div>
+
+                                <a href="{% url 'logout' %}" class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition duration-200 group">
+                                    <i class="fas fa-sign-out-alt mr-3 group-hover:text-red-700 transition duration-200"></i>
+                                    Sign out
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -151,25 +197,53 @@
     <!-- Mobile menu button -->
     <div class="md:hidden bg-white border-b border-gray-200">
         <div class="flex justify-around py-2">
-            <a href="{% url 'chat_home' %}" class="flex flex-col items-center text-gray-600 hover:text-blue-600">
+            <a href="{% url 'chat_home' %}" class="flex flex-col items-center text-gray-600 hover:text-blue-600 transition duration-200">
                 <i class="fas fa-home"></i>
                 <span class="text-xs mt-1">Home</span>
             </a>
-            <a href="{% url 'start_chat' %}" class="flex flex-col items-center text-gray-600 hover:text-blue-600">
+            <a href="{% url 'start_chat' %}" class="flex flex-col items-center text-gray-600 hover:text-blue-600 transition duration-200">
                 <i class="fas fa-comment-medical"></i>
                 <span class="text-xs mt-1">New Chat</span>
             </a>
-            <a href="{% url 'search_users' %}" class="flex flex-col items-center text-gray-600 hover:text-blue-600">
-                <i class="fas fa-search"></i>
-                <span class="text-xs mt-1">Find</span>
-            </a>
-            <a href="{% url 'profile' %}" class="flex flex-col items-center text-gray-600 hover:text-blue-600">
+            <button id="mobile-friends-button" class="flex flex-col items-center text-gray-600 hover:text-blue-600 transition duration-200">
+                <i class="fas fa-user-friends"></i>
+                <span class="text-xs mt-1">Friends</span>
+            </button>
+            <button id="mobile-profile-button" class="flex flex-col items-center text-gray-600 hover:text-blue-600 transition duration-200">
                 <i class="fas fa-user"></i>
                 <span class="text-xs mt-1">Profile</span>
+            </button>
+        </div>
+
+        <!-- Mobile Friends Dropdown -->
+        <div id="mobile-friends-dropdown" class="hidden bg-white border-t border-gray-200 py-2">
+            <a href="{% url 'discover_users' %}" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition duration-200 border-b border-gray-100">
+                <i class="fas fa-search mr-3 text-gray-400"></i>
+                Find People
             </a>
-            <a href="{% url 'settings_main' %}" class="flex flex-col items-center text-blue-600">
-                <i class="fas fa-cog"></i>
-                <span class="text-xs mt-1">Settings</span>
+            <a href="{% url 'friend_requests' %}" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition duration-200 border-b border-gray-100">
+                <i class="fas fa-user-plus mr-3 text-gray-400"></i>
+                Friend Requests
+            </a>
+            <a href="{% url 'friend_requests' %}" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition duration-200">
+                <i class="fas fa-users mr-3 text-gray-400"></i>
+                My Friends
+            </a>
+        </div>
+
+        <!-- Mobile Profile Dropdown -->
+        <div id="mobile-profile-dropdown" class="hidden bg-white border-t border-gray-200 py-2">
+            <a href="{% url 'profile' %}" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition duration-200 border-b border-gray-100">
+                <i class="fas fa-user mr-3 text-gray-400"></i>
+                Your Profile
+            </a>
+            <a href="{% url 'settings_main' %}" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition duration-200 border-b border-gray-100">
+                <i class="fas fa-cog mr-3 text-gray-400"></i>
+                Settings
+            </a>
+            <a href="{% url 'logout' %}" class="flex items-center px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition duration-200">
+                <i class="fas fa-sign-out-alt mr-3"></i>
+                Sign out
             </a>
         </div>
     </div>
@@ -186,41 +260,133 @@
         document.addEventListener('DOMContentLoaded', function() {
             const userMenuButton = document.getElementById('user-menu-button');
             const userDropdown = document.getElementById('user-dropdown');
+            const notificationsButton = document.getElementById('notifications-button');
+            const notificationsDropdown = document.getElementById('notifications-dropdown');
+            const mobileProfileButton = document.getElementById('mobile-profile-button');
+            const mobileProfileDropdown = document.getElementById('mobile-profile-dropdown');
+            const friendsMenuButton = document.getElementById('friends-menu-button');
+            const friendsDropdown = document.getElementById('friends-dropdown');
+            const mobileFriendsButton = document.getElementById('mobile-friends-button');
+            const mobileFriendsDropdown = document.getElementById('mobile-friends-dropdown');
 
+            // Desktop User dropdown
             if (userMenuButton && userDropdown) {
-                userMenuButton.addEventListener('click', function() {
+                userMenuButton.addEventListener('click', function(e) {
+                    e.stopPropagation();
                     userDropdown.classList.toggle('hidden');
-                });
 
-                // Close dropdown when clicking outside
-                document.addEventListener('click', function(event) {
-                    if (!userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
+                    // Close other dropdowns if open
+                    if (notificationsDropdown) {
+                        notificationsDropdown.classList.add('hidden');
+                    }
+                    if (friendsDropdown) {
+                        friendsDropdown.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Friends dropdown
+            if (friendsMenuButton && friendsDropdown) {
+                friendsMenuButton.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    friendsDropdown.classList.toggle('hidden');
+
+                    // Close other dropdowns if open
+                    if (userDropdown) {
                         userDropdown.classList.add('hidden');
+                    }
+                    if (notificationsDropdown) {
+                        notificationsDropdown.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Mobile Profile dropdown
+            if (mobileProfileButton && mobileProfileDropdown) {
+                mobileProfileButton.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    mobileProfileDropdown.classList.toggle('hidden');
+
+                    // Close friends dropdown if open
+                    if (mobileFriendsDropdown) {
+                        mobileFriendsDropdown.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Mobile Friends dropdown
+            if (mobileFriendsButton && mobileFriendsDropdown) {
+                mobileFriendsButton.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    mobileFriendsDropdown.classList.toggle('hidden');
+
+                    // Close profile dropdown if open
+                    if (mobileProfileDropdown) {
+                        mobileProfileDropdown.classList.add('hidden');
                     }
                 });
             }
 
             // Notifications dropdown functionality
-            const notificationsButton = document.getElementById('notifications-button');
-            const notificationsDropdown = document.getElementById('notifications-dropdown');
-
             if (notificationsButton && notificationsDropdown) {
-                notificationsButton.addEventListener('click', function() {
+                notificationsButton.addEventListener('click', function(e) {
+                    e.stopPropagation();
                     notificationsDropdown.classList.toggle('hidden');
+
+                    // Load notifications when dropdown opens
+                    if (!notificationsDropdown.classList.contains('hidden')) {
+                        loadNotifications();
+                    }
 
                     // Close user dropdown if open
                     if (userDropdown) {
                         userDropdown.classList.add('hidden');
                     }
-                });
 
-                // Close dropdown when clicking outside
-                document.addEventListener('click', function(event) {
-                    if (!notificationsButton.contains(event.target) && !notificationsDropdown.contains(event.target)) {
-                        notificationsDropdown.classList.add('hidden');
+                    // Close friends dropdown if open
+                    if (friendsDropdown) {
+                        friendsDropdown.classList.add('hidden');
+                    }
+
+                    // Close mobile profile dropdown if open
+                    if (mobileProfileDropdown) {
+                        mobileProfileDropdown.classList.add('hidden');
+                    }
+
+                    // Close mobile friends dropdown if open
+                    if (mobileFriendsDropdown) {
+                        mobileFriendsDropdown.classList.add('hidden');
                     }
                 });
             }
+
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', function(event) {
+                // Close user dropdown
+                if (userMenuButton && userDropdown && !userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
+                    userDropdown.classList.add('hidden');
+                }
+
+                // Close friends dropdown
+                if (friendsMenuButton && friendsDropdown && !friendsMenuButton.contains(event.target) && !friendsDropdown.contains(event.target)) {
+                    friendsDropdown.classList.add('hidden');
+                }
+
+                // Close notifications dropdown
+                if (notificationsButton && notificationsDropdown && !notificationsButton.contains(event.target) && !notificationsDropdown.contains(event.target)) {
+                    notificationsDropdown.classList.add('hidden');
+                }
+
+                // Close mobile profile dropdown
+                if (mobileProfileButton && mobileProfileDropdown && !mobileProfileButton.contains(event.target) && !mobileProfileDropdown.contains(event.target)) {
+                    mobileProfileDropdown.classList.add('hidden');
+                }
+
+                // Close mobile friends dropdown
+                if (mobileFriendsButton && mobileFriendsDropdown && !mobileFriendsButton.contains(event.target) && !mobileFriendsDropdown.contains(event.target)) {
+                    mobileFriendsDropdown.classList.add('hidden');
+                }
+            });
 
             // Add active state to current page in navigation
             const currentUrl = window.location.pathname;
@@ -241,26 +407,185 @@
                 }
             });
 
-            // Auto-update notification count
-            function updateNotificationCount() {
-                fetch('{% url "get_unread_count" %}')
-                    .then(response => response.json())
-                    .then(data => {
-                        const badge = document.querySelector('.notification-badge');
-                        if (badge) {
-                            if (data.unread_count > 0) {
-                                badge.textContent = data.unread_count;
-                                badge.classList.remove('hidden');
-                            } else {
-                                badge.classList.add('hidden');
-                            }
-                        }
-                    });
-            }
-
+            // Auto-update notification count on page load
+            updateNotificationCount();
             // Update count every 30 seconds
             setInterval(updateNotificationCount, 30000);
         });
+
+        // Load notifications via AJAX
+        function loadNotifications() {
+            fetch('{% url "get_notifications" %}')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateNotificationsList(data.notifications);
+                        updateNotificationBadge(data.unread_count);
+                    }
+                })
+                .catch(error => console.error('Error loading notifications:', error));
+        }
+
+        function updateNotificationsList(notifications) {
+            const notificationsList = document.getElementById('notifications-list');
+
+            if (notifications.length === 0) {
+                notificationsList.innerHTML = `
+                    <div class="px-4 py-8 text-center">
+                        <i class="fas fa-bell-slash text-gray-400 text-2xl mb-2"></i>
+                        <p class="text-sm text-gray-600">No notifications</p>
+                    </div>
+                `;
+                return;
+            }
+
+            notificationsList.innerHTML = notifications.map(notification => `
+                <div class="px-4 py-3 hover:bg-gray-50 border-b border-gray-100 ${!notification.is_read ? 'bg-blue-50' : ''}">
+                    <div class="flex items-start space-x-3">
+                        <div class="flex-shrink-0">
+                            ${getNotificationIcon(notification.type)}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900">${notification.title || notification.content}</p>
+                            <p class="text-sm text-gray-600 mt-1">${notification.content}</p>
+                            <p class="text-xs text-gray-500 mt-1">${notification.created_at}</p>
+                        </div>
+                        <div class="flex-shrink-0">
+                            ${!notification.is_read ? `
+                                <button onclick="markNotificationRead(${notification.id})"
+                                        class="text-blue-600 hover:text-blue-700 text-xs p-1 rounded hover:bg-blue-50 transition duration-200"
+                                        title="Mark as read">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                    ${notification.related_url ? `
+                        <div class="mt-2">
+                            <a href="${notification.related_url}"
+                               class="inline-flex items-center px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition duration-200">
+                                <i class="fas fa-external-link-alt mr-1"></i>View
+                            </a>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        function getNotificationIcon(type) {
+            const icons = {
+                'message': '<i class="fas fa-comment text-green-600"></i>',
+                'friend_request': '<i class="fas fa-user-plus text-blue-600"></i>',
+                'group_invite': '<i class="fas fa-users text-purple-600"></i>',
+                'system': '<i class="fas fa-cog text-gray-600"></i>',
+                'invitation': '<i class="fas fa-envelope text-orange-600"></i>'
+            };
+            return icons[type] || '<i class="fas fa-bell text-gray-600"></i>';
+        }
+
+        function updateNotificationBadge(count) {
+            const badge = document.querySelector('.notification-badge');
+            if (badge) {
+                if (count > 0) {
+                    badge.textContent = count > 99 ? '99+' : count;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+        }
+
+        // Mark notification as read
+        function markNotificationRead(notificationId) {
+            fetch(`/accounts/notifications/mark-read/${notificationId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadNotifications(); // Reload notifications
+                    updateNotificationCount(); // Update badge count
+                }
+            })
+            .catch(error => console.error('Error marking notification as read:', error));
+        }
+
+        // Mark all notifications as read
+        function markAllNotificationsRead() {
+            fetch('{% url "mark_all_notifications_read" %}', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadNotifications(); // Reload notifications
+                    updateNotificationCount(); // Update badge count
+                    showToast('All notifications marked as read', 'success');
+                }
+            })
+            .catch(error => console.error('Error marking all notifications as read:', error));
+        }
+
+        // Auto-update notification count
+        function updateNotificationCount() {
+            fetch('{% url "get_unread_count" %}')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.unread_count !== undefined) {
+                        updateNotificationBadge(data.unread_count);
+                    }
+                })
+                .catch(error => console.error('Error updating notification count:', error));
+        }
+
+        // Helper function to get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white ${
+                type === 'success' ? 'bg-green-500' :
+                type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+            } z-50 transform transition-transform duration-300 translate-x-full`;
+            toast.textContent = message;
+
+            document.body.appendChild(toast);
+
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+            }, 100);
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
     </script>
     {% endblock %}
 </body>

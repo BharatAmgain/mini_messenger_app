@@ -2,8 +2,11 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 import uuid
+import emoji
 from django.utils import timezone
 import json
+from django.db.models import Q
+import os
 
 User = get_user_model()
 
@@ -34,7 +37,6 @@ class Conversation(models.Model):
             return f"Chat between {', '.join([user.username for user in participants])}"
 
     def get_display_name(self, current_user):
-        """Get display name for conversation"""
         if self.is_group:
             return self.group_name
         else:
@@ -42,7 +44,6 @@ class Conversation(models.Model):
             return other_user.username if other_user else "Unknown User"
 
     def get_display_photo(self, current_user):
-        """Get display photo for conversation"""
         if self.is_group:
             if self.group_photo:
                 return self.group_photo.url
@@ -53,42 +54,29 @@ class Conversation(models.Model):
                 return other_user.profile_picture.url
             return None
 
-    def add_participant(self, user, added_by=None):
-        """Add a participant to group conversation"""
-        if not self.is_group:
-            return False
-
-        if user not in self.participants.all():
-            self.participants.add(user)
-            return True
-        return False
-
-    def remove_participant(self, user, removed_by=None):
-        """Remove participant from group conversation"""
-        if not self.is_group:
-            return False
-
-        if user in self.participants.all():
-            self.participants.remove(user)
-            return True
-        return False
-
-    def make_admin(self, user):
-        """Make user a group admin"""
-        if not self.is_group:
-            return False
-
-        if user in self.participants.all() and user not in self.admins.all():
-            self.admins.add(user)
-            return True
-        return False
+    def get_unread_count(self, user):
+        return self.messages.filter(is_read=False).exclude(sender=user).count()
 
 
 class Message(models.Model):
+    MESSAGE_TYPES = [
+        ('text', 'Text'),
+        ('image', 'Image'),
+        ('video', 'Video'),
+        ('file', 'File'),
+        ('audio', 'Audio'),
+        ('emoji', 'Emoji'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField()
+    message_type = models.CharField(max_length=10, choices=MESSAGE_TYPES, default='text')
+    file = models.FileField(upload_to='message_files/', blank=True, null=True)
+    file_name = models.CharField(max_length=255, blank=True, null=True)
+    file_size = models.BigIntegerField(blank=True, null=True)
+    thumbnail = models.ImageField(upload_to='message_thumbnails/', blank=True, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
     read_by = models.ManyToManyField(User, related_name='read_messages', blank=True)
@@ -97,7 +85,7 @@ class Message(models.Model):
     is_edited = models.BooleanField(default=False)
     is_unsent = models.BooleanField(default=False)
     edited_at = models.DateTimeField(null=True, blank=True)
-    reactions = models.JSONField(default=dict, blank=True)  # Store reactions as JSON
+    reactions = models.JSONField(default=dict, blank=True)
 
     class Meta:
         ordering = ['timestamp']
@@ -107,8 +95,31 @@ class Message(models.Model):
             return f"{self.sender.username}: [Message unsent]"
         return f"{self.sender.username}: {self.content[:50]}"
 
+    def save(self, *args, **kwargs):
+        # Auto-detect if content is primarily emoji
+        if self.message_type == 'text' and self._is_emoji_message():
+            self.message_type = 'emoji'
+        super().save(*args, **kwargs)
+
+    def _is_emoji_message(self):
+        """Check if message is primarily emoji"""
+        if not self.content:
+            return False
+
+        # Count emoji characters vs regular characters
+        emoji_count = sum(1 for char in self.content if emoji.is_emoji(char))
+        total_chars = len(self.content.strip())
+
+        # If more than 70% of characters are emoji or it's a single emoji
+        return (emoji_count > 0 and total_chars <= 3) or (total_chars > 0 and emoji_count / total_chars > 0.7)
+
+    def mark_as_read(self, user):
+        if not self.is_read and user != self.sender:
+            self.is_read = True
+            self.read_by.add(user)
+            self.save()
+
     def add_reaction(self, user, reaction):
-        """Add or update reaction from a user"""
         if self.is_unsent:
             return False
 
@@ -116,7 +127,6 @@ class Message(models.Model):
         user_id = str(user.id)
 
         if user_id in reactions:
-            # User already reacted, remove reaction if same emoji
             if reactions[user_id] == reaction:
                 del reactions[user_id]
             else:
@@ -129,7 +139,6 @@ class Message(models.Model):
         return True
 
     def get_reaction_summary(self):
-        """Get summary of reactions (emoji: count)"""
         if not self.reactions:
             return {}
 
@@ -140,8 +149,39 @@ class Message(models.Model):
         return summary
 
     def get_user_reaction(self, user):
-        """Get user's reaction to this message"""
         return self.reactions.get(str(user.id))
+
+    def get_file_extension(self):
+        if self.file and self.file.name:
+            return os.path.splitext(self.file.name)[1].lower()
+        return ''
+
+    def is_image_file(self):
+        image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
+        return self.get_file_extension() in image_extensions
+
+    def is_video_file(self):
+        video_extensions = ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm']
+        return self.get_file_extension() in video_extensions
+
+    def is_audio_file(self):
+        audio_extensions = ['.mp3', '.wav', '.ogg', '.m4a', '.flac']
+        return self.get_file_extension() in audio_extensions
+
+    def get_file_type_display(self):
+        if self.message_type != 'text' and self.message_type != 'emoji':
+            return self.get_message_type_display()
+        return 'Text'
+
+    def get_file_size_display(self):
+        if self.file_size:
+            bytes = self.file_size
+            # Convert bytes to human readable format
+            for unit in ['B', 'KB', 'MB', 'GB']:
+                if bytes < 1024.0:
+                    return f"{bytes:.1f} {unit}"
+                bytes /= 1024.0
+        return ''
 
 
 class UserStatus(models.Model):
@@ -177,6 +217,10 @@ class ChatNotification(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.notification_type}"
 
+    def mark_as_read(self):
+        self.is_read = True
+        self.save()
+
 
 class GroupInvitation(models.Model):
     group = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='invitations')
@@ -191,3 +235,21 @@ class GroupInvitation(models.Model):
 
     class Meta:
         unique_together = ['group', 'invited_user']
+
+    def __str__(self):
+        return f"{self.invited_by.username} invited {self.invited_user.username} to {self.group.group_name}"
+
+
+class BlockedUser(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='blocked_users')
+    blocked_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='blocked_by')
+    created_at = models.DateTimeField(auto_now_add=True)
+    reason = models.TextField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ['user', 'blocked_user']
+        verbose_name = 'Blocked User'
+        verbose_name_plural = 'Blocked Users'
+
+    def __str__(self):
+        return f"{self.user.username} blocked {self.blocked_user.username}"

@@ -1,7 +1,7 @@
 <!-- templates/chat/start_chat.html -->
 {% extends 'base.html' %}
 
-{% block title %}Start New Chat - Messenger{% endblock %}
+{% block title %}Start New Chat - Connect.io{% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-gray-50 py-8">
@@ -34,6 +34,7 @@
                             type="text"
                             id="email_or_phone"
                             name="email_or_phone"
+                            value="{{ prefilled_email_or_phone|default:'' }}"
                             required
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             placeholder="Enter email address or phone number"
@@ -43,6 +44,17 @@
                             Enter the email address or phone number of the person you want to chat with
                         </p>
                     </div>
+
+                    <!-- Error Messages -->
+                    {% if messages %}
+                    <div class="mb-4">
+                        {% for message in messages %}
+                        <div class="p-3 rounded-lg {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                            {{ message }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
 
                     <!-- Form Actions -->
                     <div class="flex justify-end space-x-3 pt-4">
@@ -103,7 +115,7 @@
                             <p class="text-sm text-gray-500">{{ contact.contact_user.email }}</p>
                         </div>
                     </div>
-                    <a href="{% url 'start_chat' %}?email_or_phone={{ contact.contact_user.email }}" class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition duration-200">
+                    <a href="{% url 'start_chat_with_user' contact.contact_user.id %}" class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition duration-200">
                         Chat
                     </a>
                 </div>

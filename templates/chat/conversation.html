@@ -16,9 +16,44 @@
 
             <!-- Main Chat Area -->
             <div class="flex-1 flex flex-col">
-                <!-- Chat Header (keep your existing header) -->
+                <!-- In the chat header section of conversation.html -->
                 <div class="bg-white border-b border-gray-200 p-4">
-                    <!-- Your existing header code remains the same -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            {% if is_group %}
+                                {% if conversation.group_photo %}
+                                <img src="{{ conversation.group_photo.url }}" alt="{{ conversation.group_name }}" class="w-12 h-12 rounded-full object-cover">
+                                {% else %}
+                                <div class="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center">
+                                    <i class="fas fa-users text-white text-xl"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <h2 class="text-lg font-semibold text-gray-900">{{ conversation.group_name }}</h2>
+                                    <p class="text-sm text-gray-600">{{ group_members.count }} members</p>
+                                </div>
+                            {% else %}
+                                <!-- Keep existing direct chat header -->
+                            {% endif %}
+                        </div>
+
+                        <div class="flex items-center space-x-2">
+                            {% if is_group %}
+                            <a href="{% url 'group_settings' conversation.id %}" class="text-gray-600 hover:text-gray-900 p-2 rounded-lg hover:bg-gray-100" title="Group Settings">
+                                <i class="fas fa-cog"></i>
+                            </a>
+
+                            <!-- Leave Group Button -->
+                            <form method="POST" action="{% url 'leave_group' conversation.id %}"
+                                  onsubmit="return confirm('Are you sure you want to leave this group? You will need to be invited back to rejoin.');">
+                                {% csrf_token %}
+                                <button type="submit" class="text-orange-600 hover:text-orange-800 p-2 rounded-lg hover:bg-orange-50" title="Leave Group">
+                                    <i class="fas fa-sign-out-alt"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Messages Area -->
@@ -41,7 +76,67 @@
                                 {% if message.is_unsent %}
                                 <p class="text-sm italic opacity-70">This message was unsent</p>
                                 {% else %}
-                                <p class="text-sm message-content">{{ message.content }}</p>
+                                    {% if message.message_type == 'text' %}
+                                    <p class="text-sm message-content">{{ message.content }}</p>
+                                    {% elif message.message_type == 'emoji' %}
+                                    <div class="emoji-message text-4xl text-center py-2">
+                                        {{ message.content }}
+                                    </div>
+                                    {% elif message.message_type == 'image' %}
+                                    <div class="mb-2">
+                                        <img src="{{ message.file.url }}" alt="Shared image"
+                                             class="max-w-full h-auto rounded-lg cursor-pointer"
+                                             onclick="openMediaModal('{{ message.file.url }}', 'image')">
+                                    </div>
+                                    {% if message.content %}
+                                    <p class="text-sm message-content mt-2">{{ message.content }}</p>
+                                    {% endif %}
+                                    {% elif message.message_type == 'video' %}
+                                    <div class="mb-2">
+                                        <video controls class="max-w-full h-auto rounded-lg cursor-pointer"
+                                               onclick="openMediaModal('{{ message.file.url }}', 'video')">
+                                            <source src="{{ message.file.url }}" type="video/mp4">
+                                            Your browser does not support the video tag.
+                                        </video>
+                                    </div>
+                                    {% if message.content %}
+                                    <p class="text-sm message-content mt-2">{{ message.content }}</p>
+                                    {% endif %}
+                                    {% elif message.message_type == 'audio' %}
+                                    <div class="mb-2">
+                                        <audio controls class="w-full">
+                                            <source src="{{ message.file.url }}" type="audio/mpeg">
+                                            Your browser does not support the audio element.
+                                        </audio>
+                                    </div>
+                                    {% if message.content %}
+                                    <p class="text-sm message-content mt-2">{{ message.content }}</p>
+                                    {% endif %}
+                                    {% elif message.message_type == 'file' %}
+                                    <div class="mb-2 p-3 bg-{% if message.sender == request.user %}white bg-opacity-20{% else %}gray-100{% endif %} rounded-lg">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="flex-shrink-0 w-10 h-10 bg-{% if message.sender == request.user %}white bg-opacity-30{% else %}blue-100{% endif %} rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-file {% if message.sender == request.user %}text-white{% else %}text-blue-600{% endif %}"></i>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-sm font-medium {% if message.sender == request.user %}text-white{% else %}text-gray-900{% endif %} truncate">
+                                                    {{ message.file_name|default:"File" }}
+                                                </p>
+                                                <p class="text-xs {% if message.sender == request.user %}text-blue-100{% else %}text-gray-500{% endif %}">
+                                                    {{ message.get_file_size_display }}
+                                                </p>
+                                            </div>
+                                            <a href="{{ message.file.url }}" download
+                                               class="flex-shrink-0 p-2 {% if message.sender == request.user %}bg-white bg-opacity-20 hover:bg-opacity-30{% else %}bg-blue-100 hover:bg-blue-200{% endif %} rounded-lg transition duration-200"
+                                               title="Download file">
+                                                <i class="fas fa-download {% if message.sender == request.user %}text-white{% else %}text-blue-600{% endif %} text-sm"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    {% if message.content %}
+                                    <p class="text-sm message-content mt-2">{{ message.content }}</p>
+                                    {% endif %}
+                                    {% endif %}
                                 {% endif %}
 
                                 <!-- Message Meta -->
@@ -81,12 +176,14 @@
                                 <!-- Message Actions (hover menu) -->
                                 {% if message.sender == request.user and not message.is_unsent %}
                                 <div class="message-actions absolute -top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-1 hidden group-hover:flex space-x-1">
-                                    <!-- Edit Button -->
+                                    <!-- Edit Button (only for text messages) -->
+                                    {% if message.message_type == 'text' %}
                                     <button onclick="editMessage('{{ message.id }}')"
                                             class="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition duration-200"
                                             title="Edit message">
                                         <i class="fas fa-edit text-xs"></i>
                                     </button>
+                                    {% endif %}
 
                                     <!-- Unsend Button -->
                                     <button onclick="unsendMessage('{{ message.id }}')"
@@ -175,8 +272,56 @@
 
                 <!-- Message Input -->
                 <div class="bg-white border-t border-gray-200 p-4">
-                    <form method="POST" class="flex space-x-4" id="message-form" action="{% url 'conversation' conversation.id %}">
+                    <form method="POST" class="flex space-x-4" id="message-form" action="{% url 'conversation' conversation.id %}" enctype="multipart/form-data">
                         {% csrf_token %}
+
+                        <!-- File Upload Button -->
+                        <div class="relative">
+                            <input
+                                type="file"
+                                id="file-input"
+                                name="file"
+                                accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip"
+                                class="hidden"
+                            >
+                            <button type="button" onclick="document.getElementById('file-input').click()"
+                                    class="p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-full transition duration-200"
+                                    title="Attach file">
+                                <i class="fas fa-paperclip"></i>
+                            </button>
+                        </div>
+
+                        <!-- Emoji Picker Button -->
+                        <div class="relative">
+                            <button type="button" onclick="toggleEmojiPicker()"
+                                    class="p-2 text-gray-600 hover:text-yellow-500 hover:bg-gray-100 rounded-full transition duration-200"
+                                    title="Add emoji">
+                                <i class="fas fa-smile"></i>
+                            </button>
+
+                            <!-- Emoji Picker -->
+                            <div id="emoji-picker" class="absolute bottom-12 left-0 w-80 h-96 bg-white border border-gray-300 rounded-lg shadow-xl hidden z-50">
+                                <div class="flex flex-col h-full">
+                                    <!-- Search Bar -->
+                                    <div class="p-3 border-b border-gray-200">
+                                        <input type="text" id="emoji-search" placeholder="Search emojis..."
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    </div>
+
+                                    <!-- Categories -->
+                                    <div class="flex border-b border-gray-200 overflow-x-auto" id="emoji-categories">
+                                        <!-- Categories will be loaded here -->
+                                    </div>
+
+                                    <!-- Emoji Grid -->
+                                    <div class="flex-1 overflow-y-auto p-3" id="emoji-grid">
+                                        <!-- Emojis will be loaded here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Message Input -->
                         <div class="flex-1 relative">
                             <input
                                 type="text"
@@ -184,17 +329,46 @@
                                 id="message-input"
                                 placeholder="{% if is_group %}Type a message to the group...{% else %}Type a message...{% endif %}"
                                 class="w-full px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                required
                                 autocomplete="off"
                                 autofocus
                             >
                         </div>
+
+                        <!-- Send Button -->
                         <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition duration-200 font-medium">
                             <i class="fas fa-paper-plane"></i>
                         </button>
                     </form>
+
+                    <!-- File Preview -->
+                    <div id="file-preview" class="hidden mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <i class="fas fa-file text-gray-400 text-xl"></i>
+                                <div>
+                                    <p id="file-name" class="text-sm font-medium text-gray-900"></p>
+                                    <p id="file-size" class="text-xs text-gray-500"></p>
+                                </div>
+                            </div>
+                            <button type="button" onclick="clearFilePreview()" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Media Modal -->
+<div id="mediaModal" class="fixed inset-0 bg-black bg-opacity-90 hidden items-center justify-center z-50 p-4">
+    <div class="relative max-w-4xl max-h-full w-full">
+        <button onclick="closeMediaModal()" class="absolute -top-12 right-0 text-white hover:text-gray-300 text-2xl z-10">
+            <i class="fas fa-times"></i>
+        </button>
+        <div id="media-content" class="bg-transparent rounded-lg overflow-hidden">
+            <!-- Media content will be inserted here -->
         </div>
     </div>
 </div>
@@ -220,6 +394,10 @@
 document.addEventListener('DOMContentLoaded', function() {
     const messageForm = document.getElementById('message-form');
     const messageInput = document.getElementById('message-input');
+    const fileInput = document.getElementById('file-input');
+    const filePreview = document.getElementById('file-preview');
+    const fileName = document.getElementById('file-name');
+    const fileSize = document.getElementById('file-size');
     const messagesList = document.getElementById('messages-list');
     const messagesContainer = document.getElementById('messages-container');
     const typingIndicator = document.getElementById('typing-indicator');
@@ -227,6 +405,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const conversationId = '{{ conversation.id }}';
 
     let currentEditingMessageId = null;
+    let selectedFile = null;
 
     // Scroll to bottom of messages
     function scrollToBottom() {
@@ -241,12 +420,49 @@ document.addEventListener('DOMContentLoaded', function() {
     // Scroll to bottom on page load
     scrollToBottom();
 
+    // Handle file selection
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            selectedFile = file;
+            showFilePreview(file);
+        }
+    });
+
+    function showFilePreview(file) {
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        filePreview.classList.remove('hidden');
+    }
+
+    function clearFilePreview() {
+        fileInput.value = '';
+        selectedFile = null;
+        filePreview.classList.add('hidden');
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
     // Handle message form submission
     messageForm.addEventListener('submit', function(e) {
         e.preventDefault();
 
         const content = messageInput.value.trim();
-        if (!content) return;
+        const file = selectedFile;
+
+        if (!content && !file) return;
+
+        const formData = new FormData();
+        formData.append('content', content);
+        if (file) {
+            formData.append('file', file);
+        }
 
         // Send message via AJAX
         fetch(`/chat/${conversationId}/send-message/`, {
@@ -255,14 +471,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 'X-Requested-With': 'XMLHttpRequest',
                 'X-CSRFToken': getCookie('csrftoken')
             },
-            body: new URLSearchParams({
-                'content': content
-            })
+            body: formData
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 messageInput.value = '';
+                clearFilePreview();
 
                 // Remove empty state
                 if (emptyState) {
@@ -274,6 +489,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Stop typing indicator
                 stopTyping();
+            } else {
+                alert('Error: ' + data.error);
             }
         })
         .catch(error => console.error('Error sending message:', error));
@@ -326,7 +543,77 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isUnsent) {
             messageHTML += `<p class="text-sm italic opacity-70">This message was unsent</p>`;
         } else {
-            messageHTML += `<p class="text-sm message-content">${message.content}</p>`;
+            if (message.message_type === 'text') {
+                messageHTML += `<p class="text-sm message-content">${message.content}</p>`;
+            } else if (message.message_type === 'emoji') {
+                messageHTML += `
+                    <div class="emoji-message text-4xl text-center py-2">
+                        ${message.content}
+                    </div>
+                `;
+            } else if (message.message_type === 'image') {
+                messageHTML += `
+                    <div class="mb-2">
+                        <img src="${message.file_url}" alt="Shared image"
+                             class="max-w-full h-auto rounded-lg cursor-pointer"
+                             onclick="openMediaModal('${message.file_url}', 'image')">
+                    </div>
+                `;
+                if (message.content) {
+                    messageHTML += `<p class="text-sm message-content mt-2">${message.content}</p>`;
+                }
+            } else if (message.message_type === 'video') {
+                messageHTML += `
+                    <div class="mb-2">
+                        <video controls class="max-w-full h-auto rounded-lg cursor-pointer"
+                               onclick="openMediaModal('${message.file_url}', 'video')">
+                            <source src="${message.file_url}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                `;
+                if (message.content) {
+                    messageHTML += `<p class="text-sm message-content mt-2">${message.content}</p>`;
+                }
+            } else if (message.message_type === 'audio') {
+                messageHTML += `
+                    <div class="mb-2">
+                        <audio controls class="w-full">
+                            <source src="${message.file_url}" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                `;
+                if (message.content) {
+                    messageHTML += `<p class="text-sm message-content mt-2">${message.content}</p>`;
+                }
+            } else if (message.message_type === 'file') {
+                messageHTML += `
+                    <div class="mb-2 p-3 ${isOwn ? 'bg-white bg-opacity-20' : 'bg-gray-100'} rounded-lg">
+                        <div class="flex items-center space-x-3">
+                            <div class="flex-shrink-0 w-10 h-10 ${isOwn ? 'bg-white bg-opacity-30' : 'bg-blue-100'} rounded-lg flex items-center justify-center">
+                                <i class="fas fa-file ${isOwn ? 'text-white' : 'text-blue-600'}"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium ${isOwn ? 'text-white' : 'text-gray-900'} truncate">
+                                    ${message.file_name || 'File'}
+                                </p>
+                                <p class="text-xs ${isOwn ? 'text-blue-100' : 'text-gray-500'}">
+                                    ${message.file_size}
+                                </p>
+                            </div>
+                            <a href="${message.file_url}" download
+                               class="flex-shrink-0 p-2 ${isOwn ? 'bg-white bg-opacity-20 hover:bg-opacity-30' : 'bg-blue-100 hover:bg-blue-200'} rounded-lg transition duration-200"
+                               title="Download file">
+                                <i class="fas fa-download ${isOwn ? 'text-white' : 'text-blue-600'} text-sm"></i>
+                            </a>
+                        </div>
+                    </div>
+                `;
+                if (message.content) {
+                    messageHTML += `<p class="text-sm message-content mt-2">${message.content}</p>`;
+                }
+            }
         }
 
         // Message meta
@@ -361,9 +648,18 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isOwn && !isUnsent) {
             messageHTML += `
                 <div class="message-actions absolute -top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-1 hidden group-hover:flex space-x-1">
+            `;
+
+            // Edit button only for text messages
+            if (message.message_type === 'text') {
+                messageHTML += `
                     <button onclick="editMessage('${message.id}')" class="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition duration-200" title="Edit message">
                         <i class="fas fa-edit text-xs"></i>
                     </button>
+                `;
+            }
+
+            messageHTML += `
                     <button onclick="unsendMessage('${message.id}')" class="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition duration-200" title="Unsend message">
                         <i class="fas fa-trash text-xs"></i>
                     </button>
@@ -404,8 +700,6 @@ document.addEventListener('DOMContentLoaded', function() {
         ).join('');
     }
 
-    // ... rest of your existing JavaScript code for typing indicators, etc. ...
-
     // Set up periodic updates
     setInterval(checkForUpdates, 2000);
 
@@ -419,6 +713,330 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('blur', function() {
         updateOnlineStatus(false);
     });
+});
+
+// Emoji Picker Functions
+let currentEmojiCategory = 'smileys_people';
+
+function toggleEmojiPicker() {
+    const emojiPicker = document.getElementById('emoji-picker');
+    emojiPicker.classList.toggle('hidden');
+
+    if (!emojiPicker.classList.contains('hidden')) {
+        loadEmojiCategories();
+        loadEmojisByCategory('smileys_people');
+    }
+}
+
+function loadEmojiCategories() {
+    // Emoji categories data
+    const categories = {
+        'smileys_people': '😀',
+        'animals_nature': '🐶',
+        'food_drink': '🍎',
+        'activities': '⚽',
+        'travel_places': '🚗',
+        'objects': '💡',
+        'symbols': '❤️'
+    };
+
+    const categoriesContainer = document.getElementById('emoji-categories');
+    let html = '';
+
+    for (const category in categories) {
+        html += `
+            <button onclick="loadEmojisByCategory('${category}')"
+                    class="flex-shrink-0 px-3 py-2 text-lg hover:bg-gray-100 ${currentEmojiCategory === category ? 'bg-blue-50 border-b-2 border-blue-500' : ''}">
+                ${categories[category]}
+            </button>
+        `;
+    }
+
+    categoriesContainer.innerHTML = html;
+}
+
+function loadEmojisByCategory(category) {
+    currentEmojiCategory = category;
+    loadEmojiCategories(); // Update active category
+
+    // Complete emoji data for all categories
+    const emojiData = {
+        'smileys_people': [
+            '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚',
+            '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣',
+            '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗',
+            '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐',
+            '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾',
+            '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾'
+        ],
+        'animals_nature': [
+            '🐵', '🐒', '🦍', '🦧', '🐶', '🐕', '🦮', '🐕‍🦺', '🐩', '🐺', '🦊', '🦝', '🐱', '🐈', '🐈‍⬛', '🦁', '🐯', '🐅', '🐆', '🐴',
+            '🐎', '🦄', '🦓', '🦌', '🐮', '🐂', '🐃', '🐄', '🐷', '🐖', '🐗', '🐽', '🐏', '🐑', '🐐', '🐪', '🐫', '🦙', '🦒', '🐘',
+            '🦏', '🦛', '🐭', '🐁', '🐀', '🐹', '🐰', '🐇', '🐿️', '🦔', '🦇', '🐻', '🐻‍❄️', '🐨', '🐼', '🦥', '🦦', '🦨', '🦘', '🦡',
+            '🐾', '🦃', '🐔', '🐓', '🐣', '🐤', '🐥', '🐦', '🐧', '🕊️', '🦅', '🦆', '🦢', '🦉', '🦤', '🪶', '🦩', '🦚', '🦜', '🐸',
+            '🐊', '🐢', '🦎', '🐍', '🐲', '🐉', '🦕', '🦖', '🐳', '🐋', '🐬', '🦭', '🐟', '🐠', '🐡', '🦈', '🐙', '🐚', '🐌', '🦋',
+            '🐛', '🐜', '🐝', '🪲', '🐞', '🦗', '🪳', '🕷️', '🕸️', '🦂', '🦟', '🪰', '🪱', '🦠', '💐', '🌸', '💮', '🏵️', '🌹', '🥀',
+            '🌺', '🌻', '🌼', '🌷', '🌱', '🪴', '🌲', '🌳', '🌴', '🌵', '🌾', '🌿', '☘️', '🍀', '🍁', '🍂', '🍃'
+        ],
+        'food_drink': [
+            '🍇', '🍈', '🍉', '🍊', '🍋', '🍌', '🍍', '🥭', '🍎', '🍏', '🍐', '🍑', '🍒', '🍓', '🫐', '🥝', '🍅', '🫒', '🥥', '🥑',
+            '🍆', '🥔', '🥕', '🌽', '🌶️', '🫑', '🥒', '🥬', '🥦', '🧄', '🧅', '🍄', '🥜', '🌰', '🍞', '🥐', '🥖', '🫓', '🥨', '🥯',
+            '🥞', '🧇', '🧀', '🍖', '🍗', '🥩', '🥓', '🍔', '🍟', '🍕', '🌭', '🥪', '🌮', '🌯', '🫔', '🥙', '🧆', '🥚', '🍳', '🥘',
+            '🍲', '🫕', '🥣', '🥗', '🍿', '🧈', '🧂', '🥫', '🍱', '🍘', '🍙', '🍚', '🍛', '🍜', '🍝', '🍠', '🍢', '🍣', '🍤', '🍥',
+            '🥮', '🍡', '🥟', '🥠', '🥡', '🦀', '🦞', '🦐', '🦑', '🦪', '🍦', '🍧', '🍨', '🍩', '🍪', '🎂', '🍰', '🧁', '🥧', '🍫',
+            '🍬', '🍭', '🍮', '🍯', '🍼', '🥛', '☕', '🫖', '🍵', '🍶', '🍾', '🍷', '🍸', '🍹', '🍺', '🍻', '🥂', '🥃', '🥤', '🧋',
+            '🧃', '🧉', '🧊', '🥢', '🍽️', '🍴', '🥄', '🔪', '🏺'
+        ],
+        'activities': [
+            '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳',
+            '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🪂', '🏋️', '🤼', '🤸', '⛹️',
+            '🤾', '🏌️', '🏇', '🧘', '🏄', '🏊', '🤽', '🚣', '🧗', '🚵', '🎯', '🎮', '🕹️', '🎲', '🧩', '🧸', '♠️', '♥️', '♦️', '♣️',
+            '♟️', '🃏', '🀄', '🎴', '🎭', '🖼️', '🎨', '🧵', '🪡', '🧶', '🪢', '👓', '🕶️', '🥽', '🥼', '🦺', '👔', '👕', '👖', '🧣',
+            '🧤', '🧥', '🧦', '👗', '👘', '🥻', '🩱', '🩲', '🩳', '👙', '👚', '👛', '👜', '👝', '🎒', '🩴', '👞', '👟', '🥾', '🥿',
+            '👠', '👡', '🩰', '👢', '👑', '👒', '🎩', '🎓', '🧢', '🪖', '💄', '💍', '💼'
+        ],
+        'travel_places': [
+            '🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🏍️', '🛵', '🚲', '🛴', '🛹', '🛼',
+            '🚏', '🛣️', '🛤️', '⛽', '🚨', '🚥', '🚦', '🛑', '🚧', '⚓', '⛵', '🛶', '🚤', '🛳️', '⛴️', '🛥️', '🚢', '✈️', '🛩️', '🛫',
+            '🛬', '🪂', '💺', '🚁', '🚟', '🚠', '🚡', '🛰️', '🚀', '🛸', '🛎️', '🧳', '⌛', '⏳', '⌚', '⏰', '⏱️', '⏲️', '🕰️', '🌡️',
+            '🗺️', '🧭', '🏔️', '⛰️', '🌋', '🗻', '🏕️', '🏖️', '🏜️', '🏝️', '🏞️', '🏟️', '🏛️', '🏗️', '🧱', '🪨', '🪵', '🛖', '🏘️',
+            '🏚️', '🏠', '🏡', '🏢', '🏣', '🏤', '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '🏯', '🏰', '💒', '🗼', '🗽', '⛪',
+            '🕌', '🛕', '🕍', '⛩️', '🕋', '⚛️', '🛐', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐'
+        ],
+        'objects': [
+            '⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '🕹️', '🗜️', '💽', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥',
+            '📽️', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋',
+            '🔌', '💡', '🔦', '🕯️', '🪔', '🧯', '🛢️', '💸', '💵', '💴', '💶', '💷', '💰', '💳', '💎', '⚖️', '🧰', '🔧', '🔨', '⚒️',
+            '🛠️', '⛏️', '🔩', '⚙️', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🪓', '🔪', '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '⚱️', '🏺', '🔮',
+            '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳️', '🩹', '🩺', '💊', '💉', '🩸', '🧬', '🦠', '🧫', '🧪', '🌡️', '🧹', '🧺', '🧻',
+            '🚽', '🚰', '🚿', '🛁', '🛀', '🧼', '🪒', '🧽', '🧴', '🛎️', '🔑', '🗝️', '🚪', '🪑', '🛋️', '🛏️', '🛌', '🧸', '🖼️', '🛍️',
+            '🛒', '🎁', '🎈', '🎏', '🎀', '🎊', '🎉', '🎎', '🏮', '🎐', '✉️', '📩', '📨', '📧', '💌', '📥', '📤', '📦', '🏷️', '📪',
+            '📫', '📬', '📭', '📮', '📯', '📜', '📃', '📄', '📑', '🧾', '📊', '📈', '📉', '🗒️', '🗓️', '📆', '📅', '🗑️', '📇', '🗃️',
+            '🗳️', '🗄️', '📋', '📁', '📂', '🗂️', '🗞️', '📰', '📓', '📔', '📒', '📕', '📗', '📘', '📙', '📚', '📖', '🔖', '🧷', '🔗',
+            '📎', '🖇️', '📐', '📏', '🧮', '📌', '📍', '✂️', '🖊️', '🖋️', '✒️', '🖌️', '🖍️', '📝', '✏️', '🔍', '🔎', '🔏', '🔐', '🔒',
+            '🔓'
+        ],
+        'symbols': [
+            '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️',
+            '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑',
+            '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️', '📴', '📳', '🈶', '🈚', '🈸', '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️',
+            '🈴', '🈵', '🈹', '🈲', '🅰️', '🅱️', '🆎', '🆑', '🅾️', '🆘', '❌', '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢', '♨️', '🚷',
+            '🚯', '🚳', '🚱', '🔞', '📵', '🚭', '❗', '❕', '❓', '❔', '‼️', '⁉️', '🔅', '🔆', '〽️', '⚠️', '🚸', '🔱', '⚜️', '🔰',
+            '♻️', '✅', '🈯', '💹', '❇️', '✳️', '❎', '🌐', '💠', 'Ⓜ️', '🌀', '💤', '🏧', '🚾', '♿', '🅿️', '🛗', '🈳', '🈂️', '🛂',
+            '🛃', '🛄', '🛅', '🚹', '🚺', '🚼', '🚻', '🚮', '🎦', '📶', '🈁', '🔣', 'ℹ️', '🔤', '🔡', '🔠', '🆖', '🆗', '🆙', '🆒',
+            '🆕', '🆓', '0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '🔢', '#️⃣', '*️⃣', '⏏️', '▶️', '⏸️', '⏯️',
+            '⏹️', '⏺️', '⏭️', '⏮️', '⏩', '⏪', '⏫', '⏬', '◀️', '🔼', '🔽', '➡️', '⬅️', '⬆️', '⬇️', '↗️', '↘️', '↙️', '↖️', '↕️',
+            '↔️', '↪️', '↩️', '⤴️', '⤵️', '🔀', '🔁', '🔂', '🔄', '🔃', '🎵', '🎶', '➕', '➖', '➗', '♾️', '💲', '💱', '™️', '©️', '®️',
+            '〰️', '➰', '➿', '🔚', '🔙', '🔛', '🔝', '🔜'
+        ]
+    };
+
+    const emojiGrid = document.getElementById('emoji-grid');
+    const emojis = emojiData[category] || [];
+
+    let html = '<div class="grid grid-cols-8 gap-2">';
+    emojis.forEach(emojiChar => {
+        html += `
+            <button onclick="insertEmoji('${emojiChar}')"
+                    class="text-xl p-2 hover:bg-gray-100 rounded-lg transition duration-200">
+                ${emojiChar}
+            </button>
+        `;
+    });
+    html += '</div>';
+
+    emojiGrid.innerHTML = html;
+}
+
+function searchEmojis() {
+    const query = document.getElementById('emoji-search').value.toLowerCase();
+
+    if (query.length === 0) {
+        loadEmojisByCategory(currentEmojiCategory);
+        return;
+    }
+
+    // All emojis for searching with descriptions
+    const allEmojis = {
+        '😀': 'grinning face', '😃': 'grinning face with big eyes', '😄': 'grinning face with smiling eyes',
+        '😁': 'beaming face with smiling eyes', '😆': 'grinning squinting face', '😅': 'grinning face with sweat',
+        '😂': 'face with tears of joy', '🤣': 'rolling on the floor laughing', '😊': 'smiling face with smiling eyes',
+        '😇': 'smiling face with halo', '🙂': 'slightly smiling face', '🙃': 'upside-down face',
+        '😉': 'winking face', '😌': 'relieved face', '😍': 'smiling face with heart-eyes',
+        '🥰': 'smiling face with hearts', '😘': 'face blowing a kiss', '😗': 'kissing face',
+        '😙': 'kissing face with smiling eyes', '😚': 'kissing face with closed eyes', '😋': 'face savoring food',
+        '😛': 'face with tongue', '😝': 'squinting face with tongue', '😜': 'winking face with tongue',
+        '🤪': 'zany face', '🤨': 'face with raised eyebrow', '🧐': 'face with monocle',
+        '🤓': 'nerd face', '😎': 'smiling face with sunglasses', '🤩': 'star-struck',
+        '🥳': 'partying face', '😏': 'smirking face', '😒': 'unamused face',
+        '😞': 'disappointed face', '😔': 'pensive face', '😟': 'worried face',
+        '😕': 'confused face', '🙁': 'slightly frowning face', '☹️': 'frowning face',
+        '😣': 'persevering face', '😖': 'confounded face', '😫': 'tired face',
+        '😩': 'weary face', '🥺': 'pleading face', '😢': 'crying face',
+        '😭': 'loudly crying face', '😤': 'face with steam from nose', '😠': 'angry face',
+        '😡': 'pouting face', '🤬': 'face with symbols on mouth', '🤯': 'exploding head',
+        '😳': 'flushed face', '🥵': 'hot face', '🥶': 'cold face',
+        '😱': 'face screaming in fear', '😨': 'fearful face', '😰': 'anxious face with sweat',
+        '😥': 'sad but relieved face', '😓': 'downcast face with sweat', '🤗': 'hugging face',
+        '🤔': 'thinking face', '🤭': 'face with hand over mouth', '🤫': 'shushing face',
+        '🤥': 'lying face', '😶': 'face without mouth', '😐': 'neutral face',
+        '😑': 'expressionless face', '😬': 'grimacing face', '🙄': 'face with rolling eyes',
+        '😯': 'hushed face', '😦': 'frowning face with open mouth', '😧': 'anguished face',
+        '😮': 'face with open mouth', '😲': 'astonished face', '🥱': 'yawning face',
+        '😴': 'sleeping face', '🤤': 'drooling face', '😪': 'sleepy face',
+        '😵': 'dizzy face', '🤐': 'face with medical mask', '🥴': 'woozy face',
+        '🤢': 'nauseated face', '🤮': 'face vomiting', '🤧': 'sneezing face',
+        '😷': 'face with medical mask', '🤒': 'face with thermometer', '🤕': 'face with head-bandage',
+        '🤑': 'money-mouth face', '🤠': 'cowboy hat face', '😈': 'smiling face with horns',
+        '👿': 'angry face with horns', '👹': 'ogre', '👺': 'goblin',
+        '🤡': 'clown face', '💩': 'pile of poo', '👻': 'ghost',
+        '💀': 'skull', '☠️': 'skull and crossbones', '👽': 'alien',
+        '👾': 'alien monster', '🤖': 'robot', '🎃': 'jack-o-lantern',
+        '🐵': 'monkey face', '🐒': 'monkey', '🦍': 'gorilla', '🦧': 'orangutan',
+        '🐶': 'dog face', '🐕': 'dog', '🦮': 'guide dog', '🐕‍🦺': 'service dog',
+        '🐩': 'poodle', '🐺': 'wolf', '🦊': 'fox', '🦝': 'raccoon',
+        '🐱': 'cat face', '🐈': 'cat', '🐈‍⬛': 'black cat', '🦁': 'lion',
+        '🐯': 'tiger face', '🐅': 'tiger', '🐆': 'leopard', '🐴': 'horse face',
+        '🐎': 'horse', '🦄': 'unicorn', '🦓': 'zebra', '🦌': 'deer',
+        '🐮': 'cow face', '🐂': 'ox', '🐃': 'water buffalo', '🐄': 'cow',
+        '🐷': 'pig face', '🐖': 'pig', '🐗': 'boar', '🐽': 'pig nose',
+        '🐏': 'ram', '🐑': 'ewe', '🐐': 'goat', '🐪': 'camel',
+        '🐫': 'two-hump camel', '🦙': 'llama', '🦒': 'giraffe', '🐘': 'elephant',
+        '🦏': 'rhinoceros', '🦛': 'hippopotamus', '🐭': 'mouse face', '🐁': 'mouse',
+        '🐀': 'rat', '🐹': 'hamster', '🐰': 'rabbit face', '🐇': 'rabbit',
+        '🐿️': 'chipmunk', '🦔': 'hedgehog', '🦇': 'bat', '🐻': 'bear',
+        '🐻‍❄️': 'polar bear', '🐨': 'koala', '🐼': 'panda', '🦥': 'sloth',
+        '🦦': 'otter', '🦨': 'skunk', '🦘': 'kangaroo', '🦡': 'badger',
+        '🐾': 'paw prints', '🦃': 'turkey', '🐔': 'chicken', '🐓': 'rooster',
+        '🐣': 'hatching chick', '🐤': 'baby chick', '🐥': 'front-facing baby chick',
+        '🐦': 'bird', '🐧': 'penguin', '🕊️': 'dove', '🦅': 'eagle',
+        '🦆': 'duck', '🦢': 'swan', '🦉': 'owl', '🦤': 'dodo',
+        '🪶': 'feather', '🦩': 'flamingo', '🦚': 'peacock', '🦜': 'parrot',
+        '🐸': 'frog', '🐊': 'crocodile', '🐢': 'turtle', '🦎': 'lizard',
+        '🐍': 'snake', '🐲': 'dragon face', '🐉': 'dragon', '🦕': 'sauropod',
+        '🦖': 't-rex', '🐳': 'spouting whale', '🐋': 'whale', '🐬': 'dolphin',
+        '🦭': 'seal', '🐟': 'fish', '🐠': 'tropical fish', '🐡': 'blowfish',
+        '🦈': 'shark', '🐙': 'octopus', '🐚': 'spiral shell', '🐌': 'snail',
+        '🦋': 'butterfly', '🐛': 'bug', '🐜': 'ant', '🐝': 'honeybee',
+        '🪲': 'beetle', '🐞': 'lady beetle', '🦗': 'cricket', '🪳': 'cockroach',
+        '🕷️': 'spider', '🕸️': 'spider web', '🦂': 'scorpion', '🦟': 'mosquito',
+        '🪰': 'fly', '🪱': 'worm', '🦠': 'microbe', '💐': 'bouquet',
+        '🌸': 'cherry blossom', '💮': 'white flower', '🏵️': 'rosette',
+        '🌹': 'rose', '🥀': 'wilted flower', '🌺': 'hibiscus',
+        '🌻': 'sunflower', '🌼': 'blossom', '🌷': 'tulip',
+        '🌱': 'seedling', '🪴': 'potted plant', '🌲': 'evergreen tree',
+        '🌳': 'deciduous tree', '🌴': 'palm tree', '🌵': 'cactus',
+        '🌾': 'sheaf of rice', '🌿': 'herb', '☘️': 'shamrock',
+        '🍀': 'four leaf clover', '🍁': 'maple leaf', '🍂': 'fallen leaf',
+        '🍃': 'leaf fluttering in wind'
+    };
+
+    const emojiGrid = document.getElementById('emoji-grid');
+    const results = [];
+
+    for (const [emojiChar, description] of Object.entries(allEmojis)) {
+        if (description.includes(query)) {
+            results.push(emojiChar);
+        }
+        if (results.length >= 48) break; // Limit results to fit grid
+    }
+
+    if (results.length === 0) {
+        emojiGrid.innerHTML = '<p class="text-center text-gray-500 py-4">No emojis found</p>';
+        return;
+    }
+
+    let html = '<div class="grid grid-cols-8 gap-2">';
+    results.forEach(emojiChar => {
+        html += `
+            <button onclick="insertEmoji('${emojiChar}')"
+                    class="text-xl p-2 hover:bg-gray-100 rounded-lg transition duration-200">
+                ${emojiChar}
+            </button>
+        `;
+    });
+    html += '</div>';
+
+    emojiGrid.innerHTML = html;
+}
+
+function insertEmoji(emojiChar) {
+    const messageInput = document.getElementById('message-input');
+    const currentValue = messageInput.value;
+    const cursorPosition = messageInput.selectionStart;
+
+    messageInput.value = currentValue.substring(0, cursorPosition) + emojiChar + currentValue.substring(cursorPosition);
+    messageInput.focus();
+    messageInput.selectionStart = cursorPosition + emojiChar.length;
+    messageInput.selectionEnd = cursorPosition + emojiChar.length;
+
+    // Close emoji picker
+    document.getElementById('emoji-picker').classList.add('hidden');
+
+    // Trigger input event for typing indicator
+    messageInput.dispatchEvent(new Event('input'));
+}
+
+// Close emoji picker when clicking outside
+document.addEventListener('click', function(event) {
+    const emojiPicker = document.getElementById('emoji-picker');
+    const emojiButton = event.target.closest('button[onclick*="toggleEmojiPicker"]');
+
+    if (emojiPicker && !emojiPicker.contains(event.target) && !emojiButton) {
+        emojiPicker.classList.add('hidden');
+    }
+});
+
+// Search emojis on input
+document.getElementById('emoji-search').addEventListener('input', searchEmojis);
+
+// Media Modal Functions
+function openMediaModal(url, type) {
+    const modal = document.getElementById('mediaModal');
+    const content = document.getElementById('media-content');
+
+    if (type === 'image') {
+        content.innerHTML = `<img src="${url}" alt="Shared image" class="w-full h-auto max-h-screen object-contain">`;
+    } else if (type === 'video') {
+        content.innerHTML = `
+            <video controls autoplay class="w-full h-auto max-h-screen">
+                <source src="${url}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        `;
+    }
+
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeMediaModal() {
+    const modal = document.getElementById('mediaModal');
+    const content = document.getElementById('media-content');
+
+    // Stop video playback
+    const video = content.querySelector('video');
+    if (video) {
+        video.pause();
+    }
+
+    modal.classList.add('hidden');
+    document.body.style.overflow = 'auto';
+    content.innerHTML = '';
+}
+
+// Close modal when clicking on background
+document.getElementById('mediaModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeMediaModal();
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeMediaModal();
+    }
 });
 
 // Message Action Functions
@@ -601,8 +1219,9 @@ function getCookie(name) {
     return cookieValue;
 }
 
-// Update the checkForUpdates function to handle new message fields
 function checkForUpdates() {
+    const conversationId = '{{ conversation.id }}';
+
     // Check for new messages
     fetch(`/chat/${conversationId}/new-messages/`)
         .then(response => response.json())
@@ -697,6 +1316,7 @@ document.getElementById('message-input').addEventListener('input', function() {
 });
 
 function startTyping() {
+    const conversationId = '{{ conversation.id }}';
     fetch(`/chat/${conversationId}/typing/`, {
         method: 'POST',
         headers: {
@@ -710,6 +1330,7 @@ function startTyping() {
 }
 
 function stopTyping() {
+    const conversationId = '{{ conversation.id }}';
     fetch(`/chat/${conversationId}/typing/`, {
         method: 'POST',
         headers: {
@@ -721,5 +1342,44 @@ function stopTyping() {
         })
     });
 }
+
+function scrollToBottom() {
+    const messagesContainer = document.getElementById('messages-container');
+    if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+}
 </script>
+
+<style>
+.emoji-message {
+    line-height: 1.2;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#emoji-picker {
+    backdrop-filter: blur(10px);
+}
+
+#emoji-grid::-webkit-scrollbar {
+    width: 6px;
+}
+
+#emoji-grid::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+#emoji-grid::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+#emoji-grid::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+</style>
 {% endblock %}

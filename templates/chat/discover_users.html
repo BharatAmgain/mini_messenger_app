@@ -1,0 +1,561 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_search %}Search Results{% else %}Discover People{% endif %} - Connect.io{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h1 class="text-2xl font-bold text-gray-800">
+                {% if is_search %}
+                Search Results for "{{ query }}"
+                {% else %}
+                Discover People
+                {% endif %}
+            </h1>
+            <p class="text-gray-600 mt-1">{{ total_users }} users found</p>
+
+            <!-- Navigation Tabs -->
+            <div class="flex space-x-4 mt-4">
+                <a href="{% url 'discover_users' %}"
+                   class="px-4 py-2 text-sm font-medium rounded-lg transition duration-200 {% if not is_search %}bg-blue-100 text-blue-700{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                    Discover People
+                </a>
+                <a href="{% url 'blocked_users' %}"
+                   class="px-4 py-2 text-sm font-medium rounded-lg transition duration-200 text-gray-600 hover:text-gray-900">
+                    Blocked Users
+                </a>
+            </div>
+        </div>
+
+        <!-- Search Form -->
+        <div class="p-6 border-b border-gray-200">
+            <form method="get" class="flex space-x-4">
+                <div class="flex-1 relative">
+                    <input type="text" name="q" value="{{ query }}"
+                           placeholder="Search by username, email, or name..."
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
+                    <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+                </div>
+                <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition duration-200">
+                    Search
+                </button>
+                {% if query %}
+                <a href="{% url 'discover_users' %}" class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition duration-200">
+                    Clear
+                </a>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- Users Grid -->
+        <div class="p-6">
+            {% if users_page %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for user_info in users_page %}
+                {% with user=user_info.user friend_status=user_info.friend_status received_request_id=user_info.received_request_id %}
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition duration-200" id="user-{{ user.id }}">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center space-x-3">
+                            {% if user.profile_picture %}
+                            <img class="h-12 w-12 rounded-full object-cover border-2 border-gray-300"
+                                 src="{{ user.profile_picture.url }}"
+                                 alt="{{ user.username }}">
+                            {% else %}
+                            <div class="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center border-2 border-gray-300">
+                                <span class="text-white font-semibold text-sm">{{ user.username|first|upper }}</span>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <h3 class="font-semibold text-gray-800">{{ user.username }}</h3>
+                                <p class="text-sm text-gray-600">{{ user.email }}</p>
+                                <p class="text-xs text-gray-500">
+                                    {% if user_info.is_online %}
+                                    <span class="text-green-600">● Online</span>
+                                    {% else %}
+                                    <span class="text-gray-400">● Offline</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Friend Status and Actions -->
+                    <div class="space-y-2">
+                        {% if friend_status == 'friends' %}
+                        <div class="flex space-x-2">
+                            <a href="{% url 'quick_chat' user.id %}"
+                               class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200 flex items-center justify-center space-x-2">
+                                <i class="fas fa-comment"></i>
+                                <span>Message</span>
+                            </a>
+                            <form method="post" action="{% url 'remove_friend' user.id %}" class="flex-1">
+                                {% csrf_token %}
+                                <button type="submit" class="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition duration-200">
+                                    <i class="fas fa-user-times"></i>
+                                </button>
+                            </form>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="inline-block px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Friends
+                            </span>
+                            <form method="post" action="{% url 'block_user' user.id %}" class="block-form">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="text-red-600 hover:text-red-700 text-xs font-medium px-2 py-1 rounded hover:bg-red-50 transition duration-200"
+                                        onclick="return confirm('Are you sure you want to block {{ user.username }}?')">
+                                    <i class="fas fa-ban mr-1"></i>Block
+                                </button>
+                            </form>
+                        </div>
+
+                        {% elif friend_status == 'request_sent' %}
+                        <div class="flex space-x-2">
+                            <button class="flex-1 bg-gray-400 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center space-x-2" disabled>
+                                <i class="fas fa-comment"></i>
+                                <span>Message</span>
+                            </button>
+                            <form method="post" action="{% url 'cancel_friend_request' user.id %}" class="flex-1 cancel-request-form">
+                                {% csrf_token %}
+                                <button type="submit" class="w-full bg-yellow-600 text-white py-2 px-4 rounded-lg hover:bg-yellow-700 transition duration-200 flex items-center justify-center space-x-2 cancel-btn">
+                                    <i class="fas fa-times"></i>
+                                    <span>Cancel Request</span>
+                                </button>
+                            </form>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="inline-block px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                Request Sent
+                            </span>
+                            <form method="post" action="{% url 'block_user' user.id %}" class="block-form">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="text-red-600 hover:text-red-700 text-xs font-medium px-2 py-1 rounded hover:bg-red-50 transition duration-200"
+                                        onclick="return confirm('Are you sure you want to block {{ user.username }}?')">
+                                    <i class="fas fa-ban mr-1"></i>Block
+                                </button>
+                            </form>
+                        </div>
+
+                        {% elif friend_status == 'request_received' and received_request_id %}
+                        <div class="flex space-x-2">
+                            <form method="post" action="{% url 'accept_friend_request' received_request_id %}" class="flex-1">
+                                {% csrf_token %}
+                                <button type="submit" class="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition duration-200">
+                                    Accept Request
+                                </button>
+                            </form>
+                            <form method="post" action="{% url 'reject_friend_request' received_request_id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition duration-200">
+                                    Reject
+                                </button>
+                            </form>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="inline-block px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                Request Received
+                            </span>
+                            <form method="post" action="{% url 'block_user' user.id %}" class="block-form">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="text-red-600 hover:text-red-700 text-xs font-medium px-2 py-1 rounded hover:bg-red-50 transition duration-200"
+                                        onclick="return confirm('Are you sure you want to block {{ user.username }}? This will also reject their friend request.')">
+                                    <i class="fas fa-ban mr-1"></i>Block
+                                </button>
+                            </form>
+                        </div>
+
+                        {% else %}
+                        <div class="flex space-x-2">
+                            <button class="flex-1 bg-gray-400 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center space-x-2" disabled>
+                                <i class="fas fa-comment"></i>
+                                <span>Message</span>
+                            </button>
+                            <form method="post" action="{% url 'send_friend_request' user.id %}" class="flex-1 friend-request-form">
+                                {% csrf_token %}
+                                <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200 flex items-center justify-center space-x-2 add-friend-btn" data-user-id="{{ user.id }}">
+                                    <i class="fas fa-user-plus"></i>
+                                    <span>Add Friend</span>
+                                </button>
+                            </form>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="inline-block px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                Not Friends
+                            </span>
+                            <form method="post" action="{% url 'block_user' user.id %}" class="block-form">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="text-red-600 hover:text-red-700 text-xs font-medium px-2 py-1 rounded hover:bg-red-50 transition duration-200"
+                                        onclick="return confirm('Are you sure you want to block {{ user.username }}?')">
+                                    <i class="fas fa-ban mr-1"></i>Block
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endwith %}
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if users_page.has_other_pages %}
+            <div class="mt-8 flex justify-center">
+                <nav class="flex space-x-2">
+                    {% if users_page.has_previous %}
+                    <a href="?page={{ users_page.previous_page_number }}{% if query %}&q={{ query }}{% endif %}"
+                       class="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition duration-200">
+                        Previous
+                    </a>
+                    {% endif %}
+
+                    {% for num in users_page.paginator.page_range %}
+                    {% if users_page.number == num %}
+                    <span class="px-3 py-2 border border-blue-500 bg-blue-500 text-white rounded-lg">
+                        {{ num }}
+                    </span>
+                    {% else %}
+                    <a href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}"
+                       class="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition duration-200">
+                        {{ num }}
+                    </a>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if users_page.has_next %}
+                    <a href="?page={{ users_page.next_page_number }}{% if query %}&q={{ query }}{% endif %}"
+                       class="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition duration-200">
+                        Next
+                    </a>
+                    {% endif %}
+                </nav>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="text-center py-12">
+                <i class="fas fa-users text-gray-300 text-5xl mb-4"></i>
+                <h3 class="text-lg font-semibold text-gray-700 mb-2">No users found</h3>
+                <p class="text-gray-500">
+                    {% if query %}
+                    No users match your search criteria.
+                    {% else %}
+                    No users available to discover.
+                    {% endif %}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Toast notification function
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white ${
+            type === 'success' ? 'bg-green-500' :
+            type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+        } z-50 transform transition-transform duration-300 translate-x-full`;
+        toast.textContent = message;
+
+        document.body.appendChild(toast);
+
+        // Animate in
+        setTimeout(() => {
+            toast.classList.remove('translate-x-full');
+        }, 100);
+
+        // Remove after 3 seconds
+        setTimeout(() => {
+            toast.classList.add('translate-x-full');
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 300);
+        }, 3000);
+    }
+
+    // Handle friend request form submissions with AJAX
+    document.addEventListener('DOMContentLoaded', function() {
+        const friendRequestForms = document.querySelectorAll('.friend-request-form');
+
+        friendRequestForms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const formData = new FormData(this);
+                const url = this.action;
+                const button = this.querySelector('.add-friend-btn');
+                const userId = button.dataset.userId;
+                const originalText = button.innerHTML;
+
+                // Show loading state
+                button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Sending...';
+                button.disabled = true;
+
+                fetch(url, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update the button to show "Cancel Request"
+                        const userCard = document.getElementById(`user-${userId}`);
+                        if (userCard) {
+                            const friendForm = userCard.querySelector('.friend-request-form');
+                            if (friendForm) {
+                                friendForm.innerHTML = `
+                                    <button type="submit" class="w-full bg-yellow-600 text-white py-2 px-4 rounded-lg hover:bg-yellow-700 transition duration-200 flex items-center justify-center space-x-2 cancel-btn" data-user-id="${userId}">
+                                        <i class="fas fa-times"></i>
+                                        <span>Cancel Request</span>
+                                    </button>
+                                `;
+                                friendForm.classList.remove('friend-request-form');
+                                friendForm.classList.add('cancel-request-form');
+
+                                // Update the action URL
+                                friendForm.action = `/accounts/cancel-friend-request/${userId}/`;
+
+                                // Add event listener to the new cancel button
+                                const newButton = friendForm.querySelector('.cancel-btn');
+                                newButton.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    handleCancelRequest(userId, friendForm, newButton);
+                                });
+                            }
+
+                            // Update status badge
+                            const statusBadge = userCard.querySelector('.bg-gray-100');
+                            if (statusBadge) {
+                                statusBadge.className = 'inline-block px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800';
+                                statusBadge.textContent = 'Request Sent';
+                            }
+                        }
+
+                        showToast(data.message || 'Friend request sent successfully!', 'success');
+                    } else {
+                        showToast(data.error || 'Error sending friend request', 'error');
+                        button.innerHTML = originalText;
+                        button.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error sending friend request', 'error');
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                });
+            });
+        });
+
+        // Handle cancel request form submissions
+        const cancelRequestForms = document.querySelectorAll('.cancel-request-form');
+
+        cancelRequestForms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const button = this.querySelector('.cancel-btn');
+                const userId = button.dataset.userId;
+                handleCancelRequest(userId, this, button);
+            });
+        });
+    });
+
+    // Function to handle canceling friend requests
+    function handleCancelRequest(userId, form, button) {
+        const url = `/accounts/cancel-friend-request/${userId}/`;
+        const originalText = button.innerHTML;
+
+        // Show loading state
+        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Canceling...';
+        button.disabled = true;
+
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update the button back to "Add Friend"
+                const userCard = document.getElementById(`user-${userId}`);
+                if (userCard) {
+                    const cancelForm = userCard.querySelector('.cancel-request-form');
+                    if (cancelForm) {
+                        cancelForm.innerHTML = `
+                            <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200 flex items-center justify-center space-x-2 add-friend-btn" data-user-id="${userId}">
+                                <i class="fas fa-user-plus"></i>
+                                <span>Add Friend</span>
+                            </button>
+                        `;
+                        cancelForm.classList.remove('cancel-request-form');
+                        cancelForm.classList.add('friend-request-form');
+
+                        // Update the action URL
+                        cancelForm.action = `/accounts/send-friend-request/${userId}/`;
+
+                        // Add event listener to the new add friend button
+                        const newButton = cancelForm.querySelector('.add-friend-btn');
+                        newButton.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            const formData = new FormData(cancelForm);
+                            fetch(cancelForm.action, {
+                                method: 'POST',
+                                body: formData,
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRFToken': getCookie('csrftoken')
+                                }
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    // Convert back to cancel button
+                                    cancelForm.innerHTML = `
+                                        <button type="submit" class="w-full bg-yellow-600 text-white py-2 px-4 rounded-lg hover:bg-yellow-700 transition duration-200 flex items-center justify-center space-x-2 cancel-btn" data-user-id="${userId}">
+                                            <i class="fas fa-times"></i>
+                                            <span>Cancel Request</span>
+                                        </button>
+                                    `;
+                                    cancelForm.classList.remove('friend-request-form');
+                                    cancelForm.classList.add('cancel-request-form');
+                                    cancelForm.action = `/accounts/cancel-friend-request/${userId}/`;
+
+                                    // Update status badge
+                                    const statusBadge = userCard.querySelector('.bg-gray-100, .bg-yellow-100');
+                                    if (statusBadge) {
+                                        statusBadge.className = 'inline-block px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800';
+                                        statusBadge.textContent = 'Request Sent';
+                                    }
+
+                                    showToast(data.message || 'Friend request sent successfully!', 'success');
+                                } else {
+                                    showToast(data.error || 'Error sending friend request', 'error');
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                showToast('Error sending friend request', 'error');
+                            });
+                        });
+                    }
+
+                    // Update status badge
+                    const statusBadge = userCard.querySelector('.bg-yellow-100');
+                    if (statusBadge) {
+                        statusBadge.className = 'inline-block px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800';
+                        statusBadge.textContent = 'Not Friends';
+                    }
+                }
+
+                showToast(data.message || 'Friend request cancelled successfully!', 'success');
+            } else {
+                showToast(data.error || 'Error cancelling friend request', 'error');
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error cancelling friend request', 'error');
+            button.innerHTML = originalText;
+            button.disabled = false;
+        });
+    }
+
+    // Handle block form submissions with AJAX
+    document.addEventListener('DOMContentLoaded', function() {
+        const blockForms = document.querySelectorAll('.block-form');
+
+        blockForms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const formData = new FormData(this);
+                const url = this.action;
+                const button = this.querySelector('button');
+                const originalText = button.innerHTML;
+
+                // Show loading state
+                button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Blocking...';
+                button.disabled = true;
+
+                fetch(url, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Remove the user card from the DOM
+                        const userCard = this.closest('.bg-white.border');
+                        userCard.style.opacity = '0';
+                        userCard.style.transition = 'opacity 0.3s ease';
+
+                        setTimeout(() => {
+                            userCard.remove();
+
+                            // Show success message
+                            showToast(data.message || 'User blocked successfully', 'success');
+
+                            // Update user count if needed
+                            const userCount = document.querySelector('.text-gray-600.mt-1');
+                            if (userCount) {
+                                const currentCount = parseInt(userCount.textContent.match(/\d+/)[0]);
+                                userCount.textContent = userCount.textContent.replace(currentCount, currentCount - 1);
+                            }
+                        }, 300);
+                    } else {
+                        showToast(data.error || 'Error blocking user', 'error');
+                        button.innerHTML = originalText;
+                        button.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error blocking user', 'error');
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

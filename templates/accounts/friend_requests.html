@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Friend Requests - Connect.io</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    {% extends 'base.html' %}
+
+    {% block content %}
+    <div class="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h1 class="text-2xl font-bold text-gray-800">Friend Requests</h1>
+            </div>
+
+            <div class="p-6">
+                <!-- Received Requests -->
+                <div class="mb-8">
+                    <h2 class="text-lg font-semibold text-gray-700 mb-4">Received Requests</h2>
+                    {% if received_requests %}
+                        <div class="space-y-4">
+                            {% for request in received_requests %}
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        {% if request.from_user.profile_picture %}
+                                        <img class="h-12 w-12 rounded-full object-cover"
+                                             src="{{ request.from_user.profile_picture.url }}"
+                                             alt="{{ request.from_user.username }}">
+                                        {% else %}
+                                        <div class="h-12 w-12 rounded-full bg-gray-300 flex items-center justify-center">
+                                            <i class="fas fa-user text-gray-500"></i>
+                                        </div>
+                                        {% endif %}
+                                        <div>
+                                            <h3 class="font-semibold text-gray-800">{{ request.from_user.username }}</h3>
+                                            {% if request.message %}
+                                            <p class="text-sm text-gray-600">{{ request.message }}</p>
+                                            {% endif %}
+                                            <p class="text-xs text-gray-500">{{ request.created_at|timesince }} ago</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <form method="post" action="{% url 'accept_friend_request' request.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200">
+                                                Accept
+                                            </button>
+                                        </form>
+                                        <form method="post" action="{% url 'reject_friend_request' request.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200">
+                                                Reject
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-8">
+                            <i class="fas fa-user-plus text-gray-300 text-4xl mb-3"></i>
+                            <p class="text-gray-500">No pending friend requests</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Sent Requests -->
+                <div class="mb-8">
+                    <h2 class="text-lg font-semibold text-gray-700 mb-4">Sent Requests</h2>
+                    {% if sent_requests %}
+                        <div class="space-y-4">
+                            {% for request in sent_requests %}
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        {% if request.to_user.profile_picture %}
+                                        <img class="h-12 w-12 rounded-full object-cover"
+                                             src="{{ request.to_user.profile_picture.url }}"
+                                             alt="{{ request.to_user.username }}">
+                                        {% else %}
+                                        <div class="h-12 w-12 rounded-full bg-gray-300 flex items-center justify-center">
+                                            <i class="fas fa-user text-gray-500"></i>
+                                        </div>
+                                        {% endif %}
+                                        <div>
+                                            <h3 class="font-semibold text-gray-800">{{ request.to_user.username }}</h3>
+                                            <p class="text-xs text-gray-500">Sent {{ request.created_at|timesince }} ago</p>
+                                        </div>
+                                    </div>
+                                    <form method="post" action="{% url 'cancel_friend_request' request.to_user.id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition duration-200">
+                                            Cancel
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-8">
+                            <i class="fas fa-paper-plane text-gray-300 text-4xl mb-3"></i>
+                            <p class="text-gray-500">No sent friend requests</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Friends List -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-700 mb-4">Friends ({{ friends|length }})</h2>
+                    {% if friends %}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {% for friend in friends %}
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        {% if friend.profile_picture %}
+                                        <img class="h-12 w-12 rounded-full object-cover"
+                                             src="{{ friend.profile_picture.url }}"
+                                             alt="{{ friend.username }}">
+                                        {% else %}
+                                        <div class="h-12 w-12 rounded-full bg-gray-300 flex items-center justify-center">
+                                            <i class="fas fa-user text-gray-500"></i>
+                                        </div>
+                                        {% endif %}
+                                        <div>
+                                            <h3 class="font-semibold text-gray-800">{{ friend.username }}</h3>
+                                            <p class="text-sm text-gray-600">{{ friend.email }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <a href="{% url 'quick_chat' friend.id %}"
+                                           class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200">
+                                            Message
+                                        </a>
+                                        <form method="post" action="{% url 'remove_friend' friend.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200">
+                                                Remove
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-8">
+                            <i class="fas fa-users text-gray-300 text-4xl mb-3"></i>
+                            <p class="text-gray-500">No friends yet</p>
+                            <a href="{% url 'discover_users' %}" class="text-blue-600 hover:text-blue-700 mt-2 inline-block">
+                                Find people to add as friends
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endblock %}
+</body>
+</html>

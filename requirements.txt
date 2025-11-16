@@ -1,8 +1,10 @@
-Django==4.2.7
+Django>=4.0
 channels==4.0.0
 channels-redis==4.1.0
 daphne==4.0.0
 redis==5.0.1
-Pillow==10.0.1
+Pillow>=9.0
 asgiref==3.7.2
 sqlparse==0.4.4
+social-auth-app-django>=5.0
+python-decouple>=3.8
