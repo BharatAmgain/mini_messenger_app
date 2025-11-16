@@ -9,4 +9,4 @@ sqlparse==0.4.4
 social-auth-app-django>=5.0
 python-decouple>=3.8
 gunicorn
-ynicorn
+unicorn
