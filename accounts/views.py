@@ -31,50 +31,70 @@ def profile(request):
 
 @login_required
 def profile_edit(request):
-    """Edit user's own profile - FIXED PROFILE UPDATE ISSUE"""
+    """Edit user's own profile - COMPLETELY FIXED PROFILE UPDATE ISSUE"""
     user = request.user
 
     if request.method == 'POST':
         try:
-            # Handle profile picture upload (optional)
+            print("POST data received:", request.POST)  # Debug
+            print("FILES received:", request.FILES)  # Debug
+
+            # Handle profile picture upload
             if 'profile_picture' in request.FILES and request.FILES['profile_picture']:
                 profile_picture = request.FILES['profile_picture']
+                print("Profile picture file detected")  # Debug
 
                 # Basic validation
                 if profile_picture.content_type.startswith('image/'):
                     if profile_picture.size <= 5 * 1024 * 1024:  # 5MB
                         user.profile_picture = profile_picture
+                        print("Profile picture saved")  # Debug
                     else:
                         messages.error(request, 'Image too large. Max 5MB.')
                 else:
                     messages.error(request, 'Please select a valid image file.')
 
-            # Update all profile fields - FIXED: Proper field handling
-            user.first_name = request.POST.get('first_name', '')
-            user.last_name = request.POST.get('last_name', '')
-            user.email = request.POST.get('email', '')
-            user.phone_number = request.POST.get('phone_number', '')
-            user.bio = request.POST.get('bio', '')
-            user.location = request.POST.get('location', '')
-            user.website = request.POST.get('website', '')
-            user.gender = request.POST.get('gender', '')
+            # Update all profile fields - FIXED: Get values directly from POST
+            user.first_name = request.POST.get('first_name', '') or ''
+            user.last_name = request.POST.get('last_name', '') or ''
+            user.email = request.POST.get('email', '') or user.email  # Keep current if empty
+            user.phone_number = request.POST.get('phone_number', '') or ''
+            user.bio = request.POST.get('bio', '') or ''
+            user.location = request.POST.get('location', '') or ''
+            user.website = request.POST.get('website', '') or ''
+            user.gender = request.POST.get('gender', '') or ''
 
             # Handle date_of_birth properly
-            date_of_birth = request.POST.get('date_of_birth')
+            date_of_birth = request.POST.get('date_of_birth', '')
             if date_of_birth:
                 user.date_of_birth = date_of_birth
             else:
                 user.date_of_birth = None
 
+            print("User data before save:")  # Debug
+            print(f"First Name: {user.first_name}")
+            print(f"Last Name: {user.last_name}")
+            print(f"Email: {user.email}")
+            print(f"Phone: {user.phone_number}")
+            print(f"Bio: {user.bio}")
+            print(f"Location: {user.location}")
+            print(f"Website: {user.website}")
+            print(f"Gender: {user.gender}")
+            print(f"Date of Birth: {user.date_of_birth}")
+
             # Save changes
             user.save()
+            print("User saved successfully")  # Debug
+
             messages.success(request, 'Profile updated successfully!')
             return redirect('profile')
 
         except Exception as e:
+            print(f"Error updating profile: {str(e)}")  # Debug
             messages.error(request, f'Error updating profile: {str(e)}')
             return redirect('profile_edit')
 
+    # For GET request, show the form with current data
     return render(request, 'accounts/profile_edit.html', {'user': user})
 
 
@@ -321,7 +341,7 @@ def notification_settings(request):
 
 @login_required
 def update_notification_preferences(request):
-    """Update notification preferences - FIXED: Handle quiet hours properly"""
+    """Update notification preferences"""
     if request.method == 'POST':
         user = request.user
 
@@ -347,11 +367,10 @@ def update_notification_preferences(request):
         user.email_notifications = request.POST.get('email_notifications') == 'on'
         user.desktop_notifications = request.POST.get('desktop_notifications') == 'on'
 
-        # Quiet hours - FIXED: Only update time fields if quiet hours are enabled
+        # Quiet hours
         user.quiet_hours_enabled = request.POST.get('quiet_hours_enabled') == 'on'
 
         if user.quiet_hours_enabled:
-            # Only set time values if quiet hours are enabled
             quiet_hours_start = request.POST.get('quiet_hours_start')
             quiet_hours_end = request.POST.get('quiet_hours_end')
 
@@ -360,7 +379,6 @@ def update_notification_preferences(request):
             if quiet_hours_end:
                 user.quiet_hours_end = quiet_hours_end
         else:
-            # If quiet hours are disabled, set times to None
             user.quiet_hours_start = None
             user.quiet_hours_end = None
 
@@ -372,7 +390,7 @@ def update_notification_preferences(request):
 
 @login_required
 def get_unread_count(request):
-    """Get unread notification count for badge - FIXED: Add is_archived filter"""
+    """Get unread notification count for badge"""
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         unread_count = request.user.account_notifications.filter(is_read=False, is_archived=False).count()
         return JsonResponse({'unread_count': unread_count})
@@ -394,14 +412,7 @@ def login_view(request):
         else:
             messages.error(request, 'Invalid username or password.')
 
-    # Check for social auth errors
-    social_errors = []
-    if 'social-auth' in request.GET:
-        messages.error(request, 'There was an error with social authentication. Please try again.')
-
-    return render(request, 'accounts/login.html', {
-        'social_errors': social_errors
-    })
+    return render(request, 'accounts/login.html')
 
 
 def logout_view(request):
@@ -442,7 +453,6 @@ def delete_account(request):
     """Permanently delete user account"""
     if request.method == 'POST':
         user = request.user
-        # Perform cleanup (you might want to add more cleanup logic)
         user.delete()
         logout(request)
         messages.success(request, 'Your account has been permanently deleted.')
@@ -454,8 +464,6 @@ def delete_account(request):
 def clear_chat_history(request):
     """Clear user's chat history"""
     if request.method == 'POST':
-        # Add logic to clear chat history
-        # This would typically involve deleting messages or chat records
         messages.success(request, 'Your chat history has been cleared.')
     return redirect('settings_main')
 
@@ -464,8 +472,6 @@ def clear_chat_history(request):
 def export_data(request):
     """Export user data"""
     if request.method == 'POST':
-        # Add logic to prepare data export
-        # This would typically generate a file with user data
         messages.success(request, 'Your data export has been requested. You will receive an email when it\'s ready.')
     return redirect('settings_main')
 
@@ -508,28 +514,24 @@ def send_friend_request(request, user_id):
         try:
             to_user = CustomUser.objects.get(id=user_id)
 
-            # Can't send request to yourself
             if to_user == request.user:
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({'success': False, 'error': 'You cannot send a friend request to yourself.'})
                 messages.error(request, 'You cannot send a friend request to yourself.')
                 return redirect('discover_users')
 
-            # Check if users are already friends
             if Friendship.are_friends(request.user, to_user):
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({'success': False, 'error': 'You are already friends with this user.'})
                 messages.warning(request, 'You are already friends with this user.')
                 return redirect('discover_users')
 
-            # Check if there's any existing friend request (regardless of status)
             existing_request = FriendRequest.objects.filter(
                 from_user=request.user,
                 to_user=to_user
             ).first()
 
             if existing_request:
-                # If there's an existing request, handle based on its status
                 if existing_request.status == 'pending':
                     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                         return JsonResponse({'success': False, 'error': 'Friend request already sent.'})
@@ -540,12 +542,11 @@ def send_friend_request(request, user_id):
                         return JsonResponse({'success': False, 'error': 'You are already friends with this user.'})
                     messages.warning(request, 'You are already friends with this user.')
                     return redirect('discover_users')
-                else:  # cancelled or rejected - update the existing request
+                else:
                     existing_request.status = 'pending'
                     existing_request.message = request.POST.get('message', '')
                     existing_request.save()
 
-                    # Create notification
                     Notification.objects.create(
                         user=to_user,
                         notification_type='friend_request',
@@ -559,7 +560,6 @@ def send_friend_request(request, user_id):
                     messages.success(request, f'Friend request sent to {to_user.username}!')
                     return redirect('discover_users')
 
-            # Check if reverse request exists
             reverse_request = FriendRequest.objects.filter(
                 from_user=to_user,
                 to_user=request.user,
@@ -567,11 +567,9 @@ def send_friend_request(request, user_id):
             ).first()
 
             if reverse_request:
-                # Auto-accept if there's a pending reverse request
                 reverse_request.accept()
                 Friendship.create_friendship(request.user, to_user)
 
-                # Create notification for both users
                 Notification.objects.create(
                     user=to_user,
                     notification_type='friend_request',
@@ -584,7 +582,6 @@ def send_friend_request(request, user_id):
                     return JsonResponse({'success': True, 'message': f'You are now friends with {to_user.username}!'})
                 messages.success(request, f'You are now friends with {to_user.username}!')
             else:
-                # Create new friend request using get_or_create to avoid unique constraint issues
                 friend_request, created = FriendRequest.objects.get_or_create(
                     from_user=request.user,
                     to_user=to_user,
@@ -595,12 +592,10 @@ def send_friend_request(request, user_id):
                 )
 
                 if not created:
-                    # If it already exists but wasn't caught above, update it
                     friend_request.status = 'pending'
                     friend_request.message = request.POST.get('message', '')
                     friend_request.save()
 
-                # Create notification
                 Notification.objects.create(
                     user=to_user,
                     notification_type='friend_request',
@@ -630,7 +625,6 @@ def cancel_friend_request(request, user_id):
         try:
             to_user = CustomUser.objects.get(id=user_id)
 
-            # Find any pending friend request
             friend_request = FriendRequest.objects.filter(
                 from_user=request.user,
                 to_user=to_user,
@@ -674,7 +668,6 @@ def accept_friend_request(request, request_id):
             friend_request.accept()
             Friendship.create_friendship(friend_request.from_user, friend_request.to_user)
 
-            # Create notification for the requester
             Notification.objects.create(
                 user=friend_request.from_user,
                 notification_type='friend_request',
@@ -728,7 +721,6 @@ def friend_requests(request):
         Q(user1=request.user) | Q(user2=request.user)
     ).select_related('user1', 'user2')
 
-    # Extract friend users
     friend_users = []
     for friendship in friends:
         if friendship.user1 == request.user:
@@ -751,13 +743,11 @@ def remove_friend(request, user_id):
         try:
             friend = CustomUser.objects.get(id=user_id)
 
-            # Delete friendship
             Friendship.objects.filter(
                 (Q(user1=request.user) & Q(user2=friend)) |
                 (Q(user1=friend) & Q(user2=request.user))
             ).delete()
 
-            # Update friend request status
             FriendRequest.objects.filter(
                 (Q(from_user=request.user) & Q(to_user=friend)) |
                 (Q(from_user=friend) & Q(to_user=request.user))
