@@ -13,8 +13,203 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 import os
 from django.conf import settings
-from .utils import EmojiManager
 import emoji
+
+
+class EmojiManager:
+    """Enhanced emoji manager with all emojis and mobile support"""
+
+    @staticmethod
+    def get_all_emojis():
+        """Get all available emojis organized by category"""
+        return {
+            'smileys_people': [
+                '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚',
+                '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣',
+                '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗',
+                '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐',
+                '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾',
+                '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾', '🙈', '🙉', '🙊'
+            ],
+            'animals_nature': [
+                '🐵', '🐒', '🦍', '🦧', '🐶', '🐕', '🦮', '🐕‍🦺', '🐩', '🐺', '🦊', '🦝', '🐱', '🐈', '🐈‍⬛', '🦁', '🐯', '🐅', '🐆', '🐴',
+                '🐎', '🦄', '🦓', '🦌', '🐮', '🐂', '🐃', '🐄', '🐷', '🐖', '🐗', '🐽', '🐏', '🐑', '🐐', '🐪', '🐫', '🦙', '🦒', '🐘',
+                '🦏', '🦛', '🐭', '🐁', '🐀', '🐹', '🐰', '🐇', '🐿️', '🦔', '🦇', '🐻', '🐻‍❄️', '🐨', '🐼', '🦥', '🦦', '🦨', '🦘', '🦡',
+                '🐾', '🦃', '🐔', '🐓', '🐣', '🐤', '🐥', '🐦', '🐧', '🕊️', '🦅', '🦆', '🦢', '🦉', '🦤', '🪶', '🦩', '🦚', '🦜', '🐸',
+                '🐊', '🐢', '🦎', '🐍', '🐲', '🐉', '🦕', '🦖', '🐳', '🐋', '🐬', '🦭', '🐟', '🐠', '🐡', '🦈', '🐙', '🐚', '🐌', '🦋',
+                '🐛', '🐜', '🐝', '🪲', '🐞', '🦗', '🪳', '🕷️', '🕸️', '🦂', '🦟', '🪰', '🪱', '🦠', '💐', '🌸', '💮', '🏵️', '🌹', '🥀',
+                '🌺', '🌻', '🌼', '🌷', '🌱', '🪴', '🌲', '🌳', '🌴', '🌵', '🌾', '🌿', '☘️', '🍀', '🍁', '🍂', '🍃'
+            ],
+            'food_drink': [
+                '🍇', '🍈', '🍉', '🍊', '🍋', '🍌', '🍍', '🥭', '🍎', '🍏', '🍐', '🍑', '🍒', '🍓', '🫐', '🥝', '🍅', '🫒', '🥥', '🥑',
+                '🍆', '🥔', '🥕', '🌽', '🌶️', '🫑', '🥒', '🥬', '🥦', '🧄', '🧅', '🍄', '🥜', '🌰', '🍞', '🥐', '🥖', '🫓', '🥨', '🥯',
+                '🥞', '🧇', '🧀', '🍖', '🍗', '🥩', '🥓', '🍔', '🍟', '🍕', '🌭', '🥪', '🌮', '🌯', '🫔', '🥙', '🧆', '🥚', '🍳', '🥘',
+                '🍲', '🫕', '🥣', '🥗', '🍿', '🧈', '🧂', '🥫', '🍱', '🍘', '🍙', '🍚', '🍛', '🍜', '🍝', '🍠', '🍢', '🍣', '🍤', '🍥',
+                '🥮', '🍡', '🥟', '🥠', '🥡', '🦀', '🦞', '🦐', '🦑', '🦪', '🍦', '🍧', '🍨', '🍩', '🍪', '🎂', '🍰', '🧁', '🥧', '🍫',
+                '🍬', '🍭', '🍮', '🍯', '🍼', '🥛', '☕', '🫖', '🍵', '🍶', '🍾', '🍷', '🍸', '🍹', '🍺', '🍻', '🥂', '🥃', '🥤', '🧋',
+                '🧃', '🧉', '🧊', '🥢', '🍽️', '🍴', '🥄', '🔪', '🏺'
+            ],
+            'activities': [
+                '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳',
+                '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🪂', '🏋️', '🤼', '🤸', '⛹️',
+                '🤾', '🏌️', '🏇', '🧘', '🏄', '🏊', '🤽', '🚣', '🧗', '🚵', '🎯', '🎮', '🕹️', '🎲', '🧩', '🧸', '♠️', '♥️', '♦️',
+                '♣️',
+                '♟️', '🃏', '🀄', '🎴', '🎭', '🖼️', '🎨', '🧵', '🪡', '🧶', '🪢', '👓', '🕶️', '🥽', '🥼', '🦺', '👔', '👕', '👖', '🧣',
+                '🧤', '🧥', '🧦', '👗', '👘', '🥻', '🩱', '🩲', '🩳', '👙', '👚', '👛', '👜', '👝', '🎒', '🩴', '👞', '👟', '🥾', '🥿',
+                '👠', '👡', '🩰', '👢', '👑', '👒', '🎩', '🎓', '🧢', '🪖', '💄', '💍', '💼'
+            ],
+            'travel_places': [
+                '🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🏍️', '🛵', '🚲', '🛴', '🛹', '🛼',
+                '🚏', '🛣️', '🛤️', '⛽', '🚨', '🚥', '🚦', '🛑', '🚧', '⚓', '⛵', '🛶', '🚤', '🛳️', '⛴️', '🛥️', '🚢', '✈️', '🛩️',
+                '🛫',
+                '🛬', '🪂', '💺', '🚁', '🚟', '🚠', '🚡', '🛰️', '🚀', '🛸', '🛎️', '🧳', '⌛', '⏳', '⌚', '⏰', '⏱️', '⏲️', '🕰️',
+                '🌡️',
+                '🗺️', '🧭', '🏔️', '⛰️', '🌋', '🗻', '🏕️', '🏖️', '🏜️', '🏝️', '🏞️', '🏟️', '🏛️', '🏗️', '🧱', '🪨', '🪵', '🛖',
+                '🏘️',
+                '🏚️', '🏠', '🏡', '🏢', '🏣', '🏤', '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '🏯', '🏰', '💒', '🗼', '🗽', '⛪',
+                '🕌', '🛕', '🕍', '⛩️', '🕋', '⚛️', '🛐', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐'
+            ],
+            'objects': [
+                '⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '🕹️', '🗜️', '💽', '💾', '💿', '📀', '📼', '📷', '📸', '📹',
+                '🎥',
+                '📽️', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡',
+                '🔋',
+                '🔌', '💡', '🔦', '🕯️', '🪔', '🧯', '🛢️', '💸', '💵', '💴', '💶', '💷', '💰', '💳', '💎', '⚖️', '🧰', '🔧', '🔨', '⚒️',
+                '🛠️', '⛏️', '🔩', '⚙️', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🪓', '🔪', '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '⚱️', '🏺',
+                '🔮',
+                '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳️', '🩹', '🩺', '💊', '💉', '🩸', '🧬', '🦠', '🧫', '🧪', '🌡️', '🧹', '🧺', '🧻',
+                '🚽', '🚰', '🚿', '🛁', '🛀', '🧼', '🪒', '🧽', '🧴', '🛎️', '🔑', '🗝️', '🚪', '🪑', '🛋️', '🛏️', '🛌', '🧸', '🖼️',
+                '🛍️',
+                '🛒', '🎁', '🎈', '🎏', '🎀', '🎊', '🎉', '🎎', '🏮', '🎐', '✉️', '📩', '📨', '📧', '💌', '📥', '📤', '📦', '🏷️', '📪',
+                '📫', '📬', '📭', '📮', '📯', '📜', '📃', '📄', '📑', '🧾', '📊', '📈', '📉', '🗒️', '🗓️', '📆', '📅', '🗑️', '📇', '🗃️',
+                '🗳️', '🗄️', '📋', '📁', '📂', '🗂️', '🗞️', '📰', '📓', '📔', '📒', '📕', '📗', '📘', '📙', '📚', '📖', '🔖', '🧷', '🔗',
+                '📎', '🖇️', '📐', '📏', '🧮', '📌', '📍', '✂️', '🖊️', '🖋️', '✒️', '🖌️', '🖍️', '📝', '✏️', '🔍', '🔎', '🔏', '🔐',
+                '🔒',
+                '🔓'
+            ],
+            'symbols': [
+                '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️',
+                '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏',
+                '♐', '♑',
+                '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️', '📴', '📳', '🈶', '🈚', '🈸', '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️',
+                '㊗️',
+                '🈴', '🈵', '🈹', '🈲', '🅰️', '🅱️', '🆎', '🆑', '🅾️', '🆘', '❌', '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢', '♨️', '🚷',
+                '🚯', '🚳', '🚱', '🔞', '📵', '🚭', '❗', '❕', '❓', '❔', '‼️', '⁉️', '🔅', '🔆', '〽️', '⚠️', '🚸', '🔱', '⚜️', '🔰',
+                '♻️', '✅', '🈯', '💹', '❇️', '✳️', '❎', '🌐', '💠', 'Ⓜ️', '🌀', '💤', '🏧', '🚾', '♿', '🅿️', '🛗', '🈳', '🈂️',
+                '🛂',
+                '🛃', '🛄', '🛅', '🚹', '🚺', '🚼', '🚻', '🚮', '🎦', '📶', '🈁', '🔣', 'ℹ️', '🔤', '🔡', '🔠', '🆖', '🆗', '🆙', '🆒',
+                '🆕', '🆓', '0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '🔢', '#️⃣', '*️⃣',
+                '⏏️', '▶️', '⏸️', '⏯️',
+                '⏹️', '⏺️', '⏭️', '⏮️', '⏩', '⏪', '⏫', '⏬', '◀️', '🔼', '🔽', '➡️', '⬅️', '⬆️', '⬇️', '↗️', '↘️', '↙️',
+                '↖️', '↕️',
+                '↔️', '↪️', '↩️', '⤴️', '⤵️', '🔀', '🔁', '🔂', '🔄', '🔃', '🎵', '🎶', '➕', '➖', '➗', '♾️', '💲', '💱', '™️',
+                '©️', '®️',
+                '〰️', '➰', '➿', '🔚', '🔙', '🔛', '🔝', '🔜'
+            ]
+        }
+
+    @staticmethod
+    def get_emoji_categories():
+        """Get list of emoji categories"""
+        return {
+            'smileys_people': '😀',
+            'animals_nature': '🐶',
+            'food_drink': '🍎',
+            'activities': '⚽',
+            'travel_places': '🚗',
+            'objects': '💡',
+            'symbols': '❤️'
+        }
+
+    @staticmethod
+    def search_emojis(query):
+        """Search emojis by name"""
+        # Emoji database with descriptions
+        emoji_database = {
+            '😀': 'grinning face', '😃': 'grinning face with big eyes', '😄': 'grinning face with smiling eyes',
+            '😁': 'beaming face with smiling eyes', '😆': 'grinning squinting face', '😅': 'grinning face with sweat',
+            '😂': 'face with tears of joy', '🤣': 'rolling on the floor laughing', '😊': 'smiling face with smiling eyes',
+            '😇': 'smiling face with halo', '🙂': 'slightly smiling face', '🙃': 'upside-down face',
+            '😉': 'winking face', '😌': 'relieved face', '😍': 'smiling face with heart-eyes',
+            '🥰': 'smiling face with hearts', '😘': 'face blowing a kiss', '😗': 'kissing face',
+            '😙': 'kissing face with smiling eyes', '😚': 'kissing face with closed eyes', '😋': 'face savoring food',
+            '😛': 'face with tongue', '😝': 'squinting face with tongue', '😜': 'winking face with tongue',
+            '🤪': 'zany face', '🤨': 'face with raised eyebrow', '🧐': 'face with monocle',
+            '🤓': 'nerd face', '😎': 'smiling face with sunglasses', '🤩': 'star-struck',
+            '🥳': 'partying face', '😏': 'smirking face', '😒': 'unamused face',
+            '😞': 'disappointed face', '😔': 'pensive face', '😟': 'worried face',
+            '😕': 'confused face', '🙁': 'slightly frowning face', '☹️': 'frowning face',
+            '😣': 'persevering face', '😖': 'confounded face', '😫': 'tired face',
+            '😩': 'weary face', '🥺': 'pleading face', '😢': 'crying face',
+            '😭': 'loudly crying face', '😤': 'face with steam from nose', '😠': 'angry face',
+            '😡': 'pouting face', '🤬': 'face with symbols on mouth', '🤯': 'exploding head',
+            '😳': 'flushed face', '🥵': 'hot face', '🥶': 'cold face',
+            '😱': 'face screaming in fear', '😨': 'fearful face', '😰': 'anxious face with sweat',
+            '😥': 'sad but relieved face', '😓': 'downcast face with sweat', '🤗': 'hugging face',
+            '🤔': 'thinking face', '🤭': 'face with hand over mouth', '🤫': 'shushing face',
+            '🤥': 'lying face', '😶': 'face without mouth', '😐': 'neutral face',
+            '😑': 'expressionless face', '😬': 'grimacing face', '🙄': 'face with rolling eyes',
+            '😯': 'hushed face', '😦': 'frowning face with open mouth', '😧': 'anguished face',
+            '😮': 'face with open mouth', '😲': 'astonished face', '🥱': 'yawning face',
+            '😴': 'sleeping face', '🤤': 'drooling face', '😪': 'sleepy face',
+            '😵': 'dizzy face', '🤐': 'face with medical mask', '🥴': 'woozy face',
+            '🤢': 'nauseated face', '🤮': 'face vomiting', '🤧': 'sneezing face',
+            '😷': 'face with medical mask', '🤒': 'face with thermometer', '🤕': 'face with head-bandage',
+            '🤑': 'money-mouth face', '🤠': 'cowboy hat face', '😈': 'smiling face with horns',
+            '👿': 'angry face with horns', '👹': 'ogre', '👺': 'goblin',
+            '🤡': 'clown face', '💩': 'pile of poo', '👻': 'ghost',
+            '💀': 'skull', '☠️': 'skull and crossbones', '👽': 'alien',
+            '👾': 'alien monster', '🤖': 'robot', '🎃': 'jack-o-lantern',
+            '🐵': 'monkey face', '🐒': 'monkey', '🦍': 'gorilla', '🦧': 'orangutan',
+            '🐶': 'dog face', '🐕': 'dog', '🦮': 'guide dog', '🐕‍🦺': 'service dog',
+            '🐩': 'poodle', '🐺': 'wolf', '🦊': 'fox', '🦝': 'raccoon',
+            '🐱': 'cat face', '🐈': 'cat', '🐈‍⬛': 'black cat', '🦁': 'lion',
+            '🐯': 'tiger face', '🐅': 'tiger', '🐆': 'leopard', '🐴': 'horse face',
+            '🐎': 'horse', '🦄': 'unicorn', '🦓': 'zebra', '🦌': 'deer',
+            '🐮': 'cow face', '🐂': 'ox', '🐃': 'water buffalo', '🐄': 'cow',
+            '🐷': 'pig face', '🐖': 'pig', '🐗': 'boar', '🐽': 'pig nose',
+            '🐏': 'ram', '🐑': 'ewe', '🐐': 'goat', '🐪': 'camel',
+            '🐫': 'two-hump camel', '🦙': 'llama', '🦒': 'giraffe', '🐘': 'elephant',
+            '🦏': 'rhinoceros', '🦛': 'hippopotamus', '🐭': 'mouse face', '🐁': 'mouse',
+            '🐀': 'rat', '🐹': 'hamster', '🐰': 'rabbit face', '🐇': 'rabbit',
+            '🐿️': 'chipmunk', '🦔': 'hedgehog', '🦇': 'bat', '🐻': 'bear',
+            '🐻‍❄️': 'polar bear', '🐨': 'koala', '🐼': 'panda', '🦥': 'sloth',
+            '🦦': 'otter', '🦨': 'skunk', '🦘': 'kangaroo', '🦡': 'badger',
+            '🐾': 'paw prints', '🦃': 'turkey', '🐔': 'chicken', '🐓': 'rooster',
+            '🐣': 'hatching chick', '🐤': 'baby chick', '🐥': 'front-facing baby chick',
+            '🐦': 'bird', '🐧': 'penguin', '🕊️': 'dove', '🦅': 'eagle',
+            '🦆': 'duck', '🦢': 'swan', '🦉': 'owl', '🦤': 'dodo',
+            '🪶': 'feather', '🦩': 'flamingo', '🦚': 'peacock', '🦜': 'parrot',
+            '🐸': 'frog', '🐊': 'crocodile', '🐢': 'turtle', '🦎': 'lizard',
+            '🐍': 'snake', '🐲': 'dragon face', '🐉': 'dragon', '🦕': 'sauropod',
+            '🦖': 't-rex', '🐳': 'spouting whale', '🐋': 'whale', '🐬': 'dolphin',
+            '🦭': 'seal', '🐟': 'fish', '🐠': 'tropical fish', '🐡': 'blowfish',
+            '🦈': 'shark', '🐙': 'octopus', '🐚': 'spiral shell', '🐌': 'snail',
+            '🦋': 'butterfly', '🐛': 'bug', '🐜': 'ant', '🐝': 'honeybee',
+            '🪲': 'beetle', '🐞': 'lady beetle', '🦗': 'cricket', '🪳': 'cockroach',
+            '🕷️': 'spider', '🕸️': 'spider web', '🦂': 'scorpion', '🦟': 'mosquito',
+            '🪰': 'fly', '🪱': 'worm', '🦠': 'microbe', '💐': 'bouquet',
+            '🌸': 'cherry blossom', '💮': 'white flower', '🏵️': 'rosette',
+            '🌹': 'rose', '🥀': 'wilted flower', '🌺': 'hibiscus',
+            '🌻': 'sunflower', '🌼': 'blossom', '🌷': 'tulip',
+            '🌱': 'seedling', '🪴': 'potted plant', '🌲': 'evergreen tree',
+            '🌳': 'deciduous tree', '🌴': 'palm tree', '🌵': 'cactus',
+            '🌾': 'sheaf of rice', '🌿': 'herb', '☘️': 'shamrock',
+            '🍀': 'four leaf clover', '🍁': 'maple leaf', '🍂': 'fallen leaf',
+            '🍃': 'leaf fluttering in wind'
+        }
+
+        query = query.lower()
+        results = []
+
+        for emoji_char, description in emoji_database.items():
+            if query in description.lower():
+                results.append(emoji_char)
+            if len(results) >= 50:  # Limit results
+                break
+
+        return results
+
 
 @login_required
 def chat_home(request):
@@ -54,7 +249,7 @@ def chat_home(request):
             'is_group': conversation.is_group
         })
 
-    # Get unread notifications count - FIXED: Use account_notifications
+    # Get unread notifications count
     unread_notifications_count = request.user.account_notifications.filter(is_read=False).count()
 
     # Get pending group invitations
@@ -154,7 +349,7 @@ def create_group(request):
                 user = CustomUser.objects.get(id=user_id)
                 if user != request.user:
                     conversation.participants.add(user)
-                    # Create account notification - FIXED: Use Notification model
+                    # Create account notification
                     Notification.objects.create(
                         user=user,
                         notification_type='group_invite',
@@ -242,7 +437,7 @@ def conversation(request, conversation_id):
         message.is_read = True
         message.save()
 
-    # Mark notifications as read when viewing conversation - FIXED: Use account_notifications
+    # Mark notifications as read when viewing conversation
     request.user.account_notifications.filter(
         notification_type='message',
         related_url=f"/chat/{conversation.id}/"
@@ -297,7 +492,7 @@ def group_settings(request, conversation_id):
 
                 if user not in conversation.participants.all():
                     conversation.participants.add(user)
-                    # FIXED: Use Notification model
+                    # Use Notification model
                     Notification.objects.create(
                         user=user,
                         notification_type='group_invite',
@@ -472,7 +667,7 @@ def invite_to_group(request, conversation_id):
                 user = CustomUser.objects.get(id=user_id)
                 if user not in conversation.participants.all():
                     conversation.participants.add(user)
-                    # FIXED: Use Notification model
+                    # Use Notification model
                     Notification.objects.create(
                         user=user,
                         notification_type='group_invite',
@@ -582,7 +777,7 @@ def get_new_messages(request, conversation_id):
 
 @login_required
 def get_notifications(request):
-    """Get user notifications for dropdown - FIXED: Use account_notifications"""
+    """Get user notifications for dropdown"""
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         notifications = request.user.account_notifications.filter(
             is_read=False,
@@ -612,7 +807,7 @@ def get_notifications(request):
 
 @login_required
 def send_message_ajax(request, conversation_id):
-    """Send message via AJAX - Now supports emojis"""
+    """Send message via AJAX - Enhanced with all emoji support and mobile optimization"""
     if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
         conversation = get_object_or_404(Conversation, id=conversation_id, participants=request.user)
 
@@ -661,12 +856,14 @@ def send_message_ajax(request, conversation_id):
                 else:
                     message_type = 'file'
             else:
-                # Check if it's an emoji message
-                emoji_count = sum(1 for char in content if emoji.is_emoji(char))
+                # Enhanced emoji detection - check if content is primarily emojis
+                emoji_chars = [char for char in content if emoji.is_emoji(char)]
                 total_chars = len(content.strip())
 
-                if (emoji_count > 0 and total_chars <= 3) or (total_chars > 0 and emoji_count / total_chars > 0.7):
-                    message_type = 'emoji'
+                if total_chars > 0 and len(emoji_chars) > 0:
+                    # If it's a single emoji or mostly emojis, treat as emoji message
+                    if total_chars <= 3 or len(emoji_chars) / total_chars > 0.6:
+                        message_type = 'emoji'
 
             # Create message
             message = Message.objects.create(
@@ -747,7 +944,7 @@ def search_emojis(request):
             results = EmojiManager.search_emojis(query)
         else:
             # Return popular emojis if no query
-            results = EmojiManager.get_all_emojis()[:30]
+            results = list(EmojiManager.get_all_emojis().values())[0][:30]  # Get first category emojis
 
         return JsonResponse({
             'success': True,
@@ -769,6 +966,8 @@ def get_emoji_categories(request):
         })
 
     return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+
 @login_required
 def get_messages_ajax(request, conversation_id):
     """Get messages via AJAX"""
@@ -886,7 +1085,7 @@ def unsend_message(request, message_id):
 @login_required
 @csrf_exempt
 def react_to_message(request, message_id):
-    """Add reaction to a message"""
+    """Enhanced reaction system with all emojis"""
     if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
         try:
             message = Message.objects.get(id=message_id)
@@ -897,8 +1096,8 @@ def react_to_message(request, message_id):
             data = json.loads(request.body)
             reaction = data.get('reaction', '')
 
-            # Validate reaction (basic emoji validation)
-            if reaction and len(reaction) <= 10:  # Basic length check for emojis
+            # Enhanced emoji validation - allow any emoji
+            if reaction and any(char in reaction for char in reaction if emoji.is_emoji(char)):
                 success = message.add_reaction(request.user, reaction)
 
                 if success:

@@ -33,7 +33,7 @@ def profile(request):
 
 @login_required
 def profile_edit(request):
-    """Edit user's own profile - COMPLETELY FIXED PROFILE PICTURE UPLOAD"""
+    """Edit user's own profile - COMPLETELY FIXED VERSION"""
     user = request.user
 
     if request.method == 'POST':
@@ -55,12 +55,12 @@ def profile_edit(request):
                 allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg', 'image/webp']
                 if profile_picture_file.content_type not in allowed_types:
                     messages.error(request, 'Please select a valid image file (JPEG, PNG, GIF, WebP).')
-                    return redirect('profile_edit')
+                    return render(request, 'accounts/profile_edit.html', {'user': user})
 
                 # Validate file size (5MB limit)
                 if profile_picture_file.size > 5 * 1024 * 1024:
                     messages.error(request, 'Image file is too large. Maximum size is 5MB.')
-                    return redirect('profile_edit')
+                    return render(request, 'accounts/profile_edit.html', {'user': user})
 
                 # Delete old profile picture if exists
                 if user.profile_picture:
@@ -87,7 +87,7 @@ def profile_edit(request):
                 # Check if email is already taken by another user
                 if CustomUser.objects.filter(email=new_email).exclude(id=user.id).exists():
                     messages.error(request, 'This email is already taken by another user.')
-                    return redirect('profile_edit')
+                    return render(request, 'accounts/profile_edit.html', {'user': user})
                 user.email = new_email
 
             user.phone_number = request.POST.get('phone_number', '') or ''
@@ -140,7 +140,7 @@ def profile_edit(request):
             import traceback
             print(f"!!! Traceback: {traceback.format_exc()}")
             messages.error(request, f'Error updating profile: {str(e)}')
-            return redirect('profile_edit')
+            return render(request, 'accounts/profile_edit.html', {'user': user})
 
     # For GET request, show the form with current data
     return render(request, 'accounts/profile_edit.html', {'user': user})
