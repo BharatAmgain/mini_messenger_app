@@ -31,7 +31,7 @@ def profile(request):
 
 @login_required
 def profile_edit(request):
-    """Edit user's own profile - Anytime, any changes"""
+    """Edit user's own profile - FIXED PROFILE UPDATE ISSUE"""
     user = request.user
 
     if request.method == 'POST':
@@ -49,23 +49,22 @@ def profile_edit(request):
                 else:
                     messages.error(request, 'Please select a valid image file.')
 
-            # Update all profile fields - FIXED: Use get() method with proper fallback
-            user.first_name = request.POST.get('first_name', user.first_name)
-            user.last_name = request.POST.get('last_name', user.last_name)
-            user.email = request.POST.get('email', user.email)
-            user.phone_number = request.POST.get('phone_number', user.phone_number)
-            user.bio = request.POST.get('bio', user.bio)
-            user.location = request.POST.get('location', user.location)
-            user.website = request.POST.get('website', user.website)
+            # Update all profile fields - FIXED: Proper field handling
+            user.first_name = request.POST.get('first_name', '')
+            user.last_name = request.POST.get('last_name', '')
+            user.email = request.POST.get('email', '')
+            user.phone_number = request.POST.get('phone_number', '')
+            user.bio = request.POST.get('bio', '')
+            user.location = request.POST.get('location', '')
+            user.website = request.POST.get('website', '')
+            user.gender = request.POST.get('gender', '')
 
             # Handle date_of_birth properly
             date_of_birth = request.POST.get('date_of_birth')
             if date_of_birth:
                 user.date_of_birth = date_of_birth
-            elif date_of_birth == '':  # If empty string, set to None
+            else:
                 user.date_of_birth = None
-
-            user.gender = request.POST.get('gender', user.gender)
 
             # Save changes
             user.save()
@@ -74,6 +73,7 @@ def profile_edit(request):
 
         except Exception as e:
             messages.error(request, f'Error updating profile: {str(e)}')
+            return redirect('profile_edit')
 
     return render(request, 'accounts/profile_edit.html', {'user': user})
 
