@@ -33,7 +33,7 @@ def profile(request):
 
 @login_required
 def profile_edit(request):
-    """Edit user's own profile - COMPLETELY FIXED PROFILE PICTURE UPLOAD"""
+    """Edit user's own profile - COMPLETELY FIXED PROFILE PICTURE"""
     user = request.user
 
     if request.method == 'POST':
@@ -42,9 +42,8 @@ def profile_edit(request):
             print(f"POST data: {dict(request.POST)}")
             print(f"FILES data: {dict(request.FILES)}")
             print(f"User ID: {user.id}")
-            print(f"User before update: {user.username}")
 
-            # Handle profile picture upload - COMPLETELY FIXED
+            # Handle profile picture upload - FIXED FOR 10MB FILES
             if 'profile_picture' in request.FILES and request.FILES['profile_picture']:
                 profile_picture_file = request.FILES['profile_picture']
                 print(f"Profile picture file: {profile_picture_file.name}")
@@ -57,25 +56,24 @@ def profile_edit(request):
                     messages.error(request, 'Please select a valid image file (JPEG, PNG, GIF, WebP).')
                     return redirect('profile_edit')
 
-                # Validate file size (5MB limit)
-                if profile_picture_file.size > 5 * 1024 * 1024:
-                    messages.error(request, 'Image file is too large. Maximum size is 5MB.')
+                # Validate file size (10MB limit as requested)
+                if profile_picture_file.size > 10 * 1024 * 1024:
+                    messages.error(request, 'Image file is too large. Maximum size is 10MB.')
                     return redirect('profile_edit')
 
                 # Delete old profile picture if exists
                 if user.profile_picture:
                     try:
-                        # Get the path of the old file
                         old_file_path = user.profile_picture.path
                         if os.path.isfile(old_file_path):
                             os.remove(old_file_path)
-                            print("Old profile picture file deleted from filesystem")
+                            print("Old profile picture deleted")
                     except Exception as e:
-                        print(f"Error deleting old profile picture file: {e}")
+                        print(f"Error deleting old profile picture: {e}")
 
-                # Assign new profile picture - THIS IS THE KEY FIX
+                # Assign new profile picture
                 user.profile_picture = profile_picture_file
-                print("New profile picture assigned to user")
+                print("New profile picture assigned")
 
             # Update all other fields
             user.first_name = request.POST.get('first_name', '') or ''
@@ -84,7 +82,6 @@ def profile_edit(request):
             # Email validation
             new_email = request.POST.get('email', '').strip()
             if new_email and new_email != user.email:
-                # Check if email is already taken by another user
                 if CustomUser.objects.filter(email=new_email).exclude(id=user.id).exists():
                     messages.error(request, 'This email is already taken by another user.')
                     return redirect('profile_edit')
@@ -104,18 +101,9 @@ def profile_edit(request):
                 user.date_of_birth = None
 
             print("User data before save:")
-            print(f"First Name: '{user.first_name}'")
-            print(f"Last Name: '{user.last_name}'")
-            print(f"Email: '{user.email}'")
-            print(f"Phone: '{user.phone_number}'")
-            print(f"Bio: '{user.bio}'")
-            print(f"Location: '{user.location}'")
-            print(f"Website: '{user.website}'")
-            print(f"Gender: '{user.gender}'")
-            print(f"Date of Birth: '{user.date_of_birth}'")
             print(f"Profile Picture exists: {bool(user.profile_picture)}")
 
-            # CRITICAL: Save the user object
+            # Save the user object
             user.save()
             print("User saved successfully!")
 
@@ -124,7 +112,9 @@ def profile_edit(request):
                 try:
                     print(f"Profile picture name: {user.profile_picture.name}")
                     print(f"Profile picture URL: {user.profile_picture.url}")
-                    print(f"Profile picture path: {user.profile_picture.path}")
+                    # Force refresh from database
+                    user.refresh_from_db()
+                    print(f"After refresh - Profile picture URL: {user.profile_picture.url}")
                 except Exception as e:
                     print(f"Error accessing profile picture: {e}")
             else:
@@ -142,7 +132,6 @@ def profile_edit(request):
             messages.error(request, f'Error updating profile: {str(e)}')
             return redirect('profile_edit')
 
-    # For GET request, show the form with current data
     return render(request, 'accounts/profile_edit.html', {'user': user})
 
 
