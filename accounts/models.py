@@ -5,12 +5,26 @@ import uuid
 from django.utils import timezone
 from django.db.models import Q
 from django.core.exceptions import ValidationError
+import os
+
+
+def user_profile_picture_path(instance, filename):
+    """Generate file path for user profile picture"""
+    # Get file extension
+    ext = filename.split('.')[-1]
+    # Create unique filename
+    filename = f"profile_picture_{instance.id}.{ext}"
+    return os.path.join('profile_pics', f"user_{instance.id}", filename)
 
 
 class CustomUser(AbstractUser):
     online_status = models.BooleanField(default=False)
-    profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True,
-                                        default='profile_pics/default.png')
+    profile_picture = models.ImageField(
+        upload_to=user_profile_picture_path,
+        blank=True,
+        null=True,
+        default=None  # CHANGED: Remove default image to avoid issues
+    )
     last_seen = models.DateTimeField(auto_now=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True, unique=True)
     email = models.EmailField(unique=True)
@@ -55,8 +69,8 @@ class CustomUser(AbstractUser):
 
     # Quiet hours - make null=True to handle disabled state
     quiet_hours_enabled = models.BooleanField(default=False)
-    quiet_hours_start = models.TimeField(default='22:00', blank=True, null=True)
-    quiet_hours_end = models.TimeField(default='08:00', blank=True, null=True)
+    quiet_hours_start = models.TimeField(blank=True, null=True)
+    quiet_hours_end = models.TimeField(blank=True, null=True)
 
     # Security settings
     two_factor_enabled = models.BooleanField(default=False)
@@ -132,6 +146,15 @@ class CustomUser(AbstractUser):
             return 'request_received'
 
         return 'not_friends'
+
+    def get_profile_picture_url(self):
+        """Get profile picture URL with fallback"""
+        if self.profile_picture and hasattr(self.profile_picture, 'url'):
+            return self.profile_picture.url
+        elif self.social_avatar:
+            return self.social_avatar
+        else:
+            return '/static/images/default-avatar.png'  # Add this static file
 
 
 class SocialAccount(models.Model):

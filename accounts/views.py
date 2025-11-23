@@ -8,6 +8,8 @@ from django.db.models import Q
 from .forms import CustomUserCreationForm
 from .models import CustomUser, Notification
 from .models import FriendRequest, Friendship
+import os
+from django.conf import settings
 
 
 def register(request):
@@ -31,66 +33,112 @@ def profile(request):
 
 @login_required
 def profile_edit(request):
-    """Edit user's own profile - COMPLETELY FIXED PROFILE UPDATE ISSUE"""
+    """Edit user's own profile - COMPLETELY FIXED PROFILE PICTURE UPLOAD"""
     user = request.user
 
     if request.method == 'POST':
         try:
-            print("POST data received:", request.POST)  # Debug
-            print("FILES received:", request.FILES)  # Debug
+            print("=== PROFILE EDIT DEBUG ===")
+            print(f"POST data: {dict(request.POST)}")
+            print(f"FILES data: {dict(request.FILES)}")
+            print(f"User ID: {user.id}")
+            print(f"User before update: {user.username}")
 
-            # Handle profile picture upload
+            # Handle profile picture upload - COMPLETELY FIXED
             if 'profile_picture' in request.FILES and request.FILES['profile_picture']:
-                profile_picture = request.FILES['profile_picture']
-                print("Profile picture file detected")  # Debug
+                profile_picture_file = request.FILES['profile_picture']
+                print(f"Profile picture file: {profile_picture_file.name}")
+                print(f"File size: {profile_picture_file.size}")
+                print(f"Content type: {profile_picture_file.content_type}")
 
-                # Basic validation
-                if profile_picture.content_type.startswith('image/'):
-                    if profile_picture.size <= 5 * 1024 * 1024:  # 5MB
-                        user.profile_picture = profile_picture
-                        print("Profile picture saved")  # Debug
-                    else:
-                        messages.error(request, 'Image too large. Max 5MB.')
-                else:
-                    messages.error(request, 'Please select a valid image file.')
+                # Validate file type
+                allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg', 'image/webp']
+                if profile_picture_file.content_type not in allowed_types:
+                    messages.error(request, 'Please select a valid image file (JPEG, PNG, GIF, WebP).')
+                    return redirect('profile_edit')
 
-            # Update all profile fields - FIXED: Get values directly from POST
+                # Validate file size (5MB limit)
+                if profile_picture_file.size > 5 * 1024 * 1024:
+                    messages.error(request, 'Image file is too large. Maximum size is 5MB.')
+                    return redirect('profile_edit')
+
+                # Delete old profile picture if exists
+                if user.profile_picture:
+                    try:
+                        # Get the path of the old file
+                        old_file_path = user.profile_picture.path
+                        if os.path.isfile(old_file_path):
+                            os.remove(old_file_path)
+                            print("Old profile picture file deleted from filesystem")
+                    except Exception as e:
+                        print(f"Error deleting old profile picture file: {e}")
+
+                # Assign new profile picture - THIS IS THE KEY FIX
+                user.profile_picture = profile_picture_file
+                print("New profile picture assigned to user")
+
+            # Update all other fields
             user.first_name = request.POST.get('first_name', '') or ''
             user.last_name = request.POST.get('last_name', '') or ''
-            user.email = request.POST.get('email', '') or user.email  # Keep current if empty
+
+            # Email validation
+            new_email = request.POST.get('email', '').strip()
+            if new_email and new_email != user.email:
+                # Check if email is already taken by another user
+                if CustomUser.objects.filter(email=new_email).exclude(id=user.id).exists():
+                    messages.error(request, 'This email is already taken by another user.')
+                    return redirect('profile_edit')
+                user.email = new_email
+
             user.phone_number = request.POST.get('phone_number', '') or ''
             user.bio = request.POST.get('bio', '') or ''
             user.location = request.POST.get('location', '') or ''
             user.website = request.POST.get('website', '') or ''
             user.gender = request.POST.get('gender', '') or ''
 
-            # Handle date_of_birth properly
-            date_of_birth = request.POST.get('date_of_birth', '')
-            if date_of_birth:
-                user.date_of_birth = date_of_birth
+            # Handle date_of_birth
+            date_of_birth_str = request.POST.get('date_of_birth', '').strip()
+            if date_of_birth_str:
+                user.date_of_birth = date_of_birth_str
             else:
                 user.date_of_birth = None
 
-            print("User data before save:")  # Debug
-            print(f"First Name: {user.first_name}")
-            print(f"Last Name: {user.last_name}")
-            print(f"Email: {user.email}")
-            print(f"Phone: {user.phone_number}")
-            print(f"Bio: {user.bio}")
-            print(f"Location: {user.location}")
-            print(f"Website: {user.website}")
-            print(f"Gender: {user.gender}")
-            print(f"Date of Birth: {user.date_of_birth}")
+            print("User data before save:")
+            print(f"First Name: '{user.first_name}'")
+            print(f"Last Name: '{user.last_name}'")
+            print(f"Email: '{user.email}'")
+            print(f"Phone: '{user.phone_number}'")
+            print(f"Bio: '{user.bio}'")
+            print(f"Location: '{user.location}'")
+            print(f"Website: '{user.website}'")
+            print(f"Gender: '{user.gender}'")
+            print(f"Date of Birth: '{user.date_of_birth}'")
+            print(f"Profile Picture exists: {bool(user.profile_picture)}")
 
-            # Save changes
+            # CRITICAL: Save the user object
             user.save()
-            print("User saved successfully")  # Debug
+            print("User saved successfully!")
+
+            # Verify the profile picture was saved
+            if user.profile_picture:
+                try:
+                    print(f"Profile picture name: {user.profile_picture.name}")
+                    print(f"Profile picture URL: {user.profile_picture.url}")
+                    print(f"Profile picture path: {user.profile_picture.path}")
+                except Exception as e:
+                    print(f"Error accessing profile picture: {e}")
+            else:
+                print("No profile picture after save")
+
+            print("=== END DEBUG ===")
 
             messages.success(request, 'Profile updated successfully!')
             return redirect('profile')
 
         except Exception as e:
-            print(f"Error updating profile: {str(e)}")  # Debug
+            print(f"!!! ERROR updating profile: {str(e)}")
+            import traceback
+            print(f"!!! Traceback: {traceback.format_exc()}")
             messages.error(request, f'Error updating profile: {str(e)}')
             return redirect('profile_edit')
 
