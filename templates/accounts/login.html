@@ -14,7 +14,7 @@
                 Welcome Back
             </h2>
             <p class="mt-2 text-sm text-gray-600">
-                Don't have an account?{' '}
+                Don't have an account?
                 <a href="{% url 'register' %}" class="font-medium text-blue-600 hover:text-blue-500 transition duration-200">
                     Create one here
                 </a>
@@ -147,7 +147,7 @@
                 <!-- Bottom Text with Create Account Link -->
                 <div class="mt-6 text-center pt-4 border-t border-gray-200">
                     <p class="text-sm text-gray-600 mb-4">
-                        Don't have an account?{' '}
+                        Don't have an account?
                         <a href="{% url 'register' %}" class="font-medium text-blue-600 hover:text-blue-500 transition duration-200">
                             Create one here
                         </a>
@@ -261,16 +261,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Form input enhancements
     const formInputs = document.querySelectorAll('input, select, textarea');
     formInputs.forEach(input => {
-        // Add focus styles
         input.addEventListener('focus', function() {
             this.parentElement.classList.add('transform', 'scale-105');
         });
-
         input.addEventListener('blur', function() {
             this.parentElement.classList.remove('transform', 'scale-105');
         });
-
-        // Add validation styling
         input.addEventListener('input', function() {
             if (this.value.length > 0) {
                 this.classList.add('border-green-300');
