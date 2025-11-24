@@ -1,280 +1,303 @@
-<!-- templates/chat/chat_home.html -->
+<!-- templates/chat/discover_users.html -->
 {% extends 'base.html' %}
-{% load static %}
 
-{% block title %}Chat - Messenger{% endblock %}
+{% block title %}{% if is_search %}Search Results{% else %}Discover People{% endif %} - Messenger{% endblock %}
+
+{% block mobile_title %}{% if is_search %}Search{% else %}Discover{% endif %}{% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-gray-50">
-    <div class="max-w-7xl mx-auto">
-        <div class="flex h-screen">
-            <!-- Sidebar -->
-            <div class="w-80 bg-white border-r border-gray-200">
-                <!-- Header -->
-                <div class="p-4 border-b border-gray-200">
-                    <div class="flex items-center justify-between">
-                        <h1 class="text-xl font-bold text-gray-900">Messages</h1>
-                        <div class="flex space-x-2">
-                            <a href="{% url 'start_chat' %}" class="p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-full transition duration-200" title="New Chat">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <a href="{% url 'create_group' %}" class="p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-full transition duration-200" title="Create Group">
-                                <i class="fas fa-users"></i>
-                            </a>
-                            <button id="notifications-btn" class="p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-full transition duration-200 relative">
-                                <i class="fas fa-bell"></i>
-                                {% if unread_notifications_count > 0 %}
-                                <span id="notification-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                                    {{ unread_notifications_count }}
-                                </span>
-                                {% else %}
-                                <span id="notification-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center hidden">0</span>
-                                {% endif %}
-                            </button>
-                        </div>
-                    </div>
-                </div>
+    <!-- Mobile Header -->
+    <div class="md:hidden bg-white border-b border-gray-200 p-4">
+        <div class="flex items-center justify-between">
+            <h1 class="text-xl font-bold text-gray-900">
+                {% if is_search %}Search{% else %}Discover{% endif %}
+            </h1>
+            <div class="flex items-center space-x-2">
+                <a href="{% url 'blocked_users' %}" class="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+                    <i class="fas fa-ban"></i>
+                </a>
+            </div>
+        </div>
+    </div>
 
-                <!-- Search -->
-                <div class="p-4 border-b border-gray-200">
-                    <form method="GET" action="{% url 'search_users' %}">
-                        <div class="relative">
-                            <input
-                                type="text"
-                                name="q"
-                                placeholder="Search users..."
-                                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            >
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="fas fa-search text-gray-400"></i>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Notifications Dropdown -->
-                <div id="notifications-dropdown" class="hidden absolute z-50 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg max-h-96 overflow-y-auto">
-                    <div class="p-4 border-b border-gray-200">
-                        <h3 class="font-semibold text-gray-900">Notifications</h3>
-                    </div>
-                    <div id="notifications-list" class="p-2">
-                        <!-- Notifications will be loaded here via AJAX -->
-                    </div>
-                </div>
-
-                <!-- Conversations List -->
-                <div class="overflow-y-auto h-full">
-                    {% if conversation_data %}
-                        {% for conv_data in conversation_data %}
-                        <a href="{% url 'conversation' conv_data.conversation.id %}"
-                           class="flex items-center p-4 border-b border-gray-100 hover:bg-gray-50 transition duration-200">
-                            <div class="relative flex-shrink-0">
-                                {% if conv_data.display_photo %}
-                                <img src="{{ conv_data.display_photo }}"
-                                     alt="{{ conv_data.display_name }}"
-                                     class="w-12 h-12 rounded-full border-2 border-gray-300 object-cover">
-                                {% else %}
-                                <div class="w-12 h-12 rounded-full bg-gray-300 border-2 border-gray-300 flex items-center justify-center">
-                                    {% if conv_data.is_group %}
-                                    <i class="fas fa-users text-gray-500"></i>
-                                    {% else %}
-                                    <i class="fas fa-user text-gray-500"></i>
-                                    {% endif %}
-                                </div>
-                                {% endif %}
-                                {% if not conv_data.is_group and conv_data.is_online %}
-                                <div class="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-                                {% endif %}
-                                {% if conv_data.is_group %}
-                                <div class="absolute -bottom-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white"></div>
-                                {% endif %}
-                            </div>
-
-                            <div class="ml-3 flex-1 min-w-0">
-                                <div class="flex items-center justify-between">
-                                    <h3 class="font-semibold text-gray-900 truncate">
-                                        {{ conv_data.display_name }}
-                                        {% if conv_data.is_group %}
-                                        <i class="fas fa-users text-blue-500 text-xs ml-1"></i>
-                                        {% endif %}
-                                    </h3>
-                                    {% with last_message=conv_data.last_message %}
-                                        {% if last_message %}
-                                        <span class="text-xs text-gray-500">{{ last_message.timestamp|time }}</span>
-                                        {% endif %}
-                                    {% endwith %}
-                                </div>
-                                <p class="text-sm text-gray-600 truncate">
-                                    {% with last_message=conv_data.last_message %}
-                                        {% if last_message %}
-                                            {% if last_message.sender == request.user %}
-                                                You: {{ last_message.content|truncatewords:8 }}
-                                            {% else %}
-                                                {% if conv_data.is_group %}
-                                                    {{ last_message.sender.username }}: {{ last_message.content|truncatewords:8 }}
-                                                {% else %}
-                                                    {{ last_message.content|truncatewords:8 }}
-                                                {% endif %}
-                                            {% endif %}
-                                        {% else %}
-                                            Start a conversation...
-                                        {% endif %}
-                                    {% endwith %}
-                                </p>
-                            </div>
-
-                            {% if conv_data.unread_count > 0 %}
-                            <span class="bg-blue-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center ml-2">
-                                {{ conv_data.unread_count }}
-                            </span>
+    <div class="max-w-7xl mx-auto py-4 md:py-6 px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <!-- Desktop Header -->
+            <div class="hidden md:block px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800">
+                            {% if is_search %}
+                            Search Results for "{{ query }}"
+                            {% else %}
+                            Discover People
                             {% endif %}
-                        </a>
-                        {% endfor %}
-                    {% else %}
-                    <div class="text-center py-8">
-                        <div class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                            <i class="fas fa-comments text-gray-400 text-xl"></i>
-                        </div>
-                        <h3 class="text-lg font-medium text-gray-900 mb-2">No conversations yet</h3>
-                        <p class="text-gray-600 mb-4">Start a new chat or create a group to begin messaging</p>
-                        <div class="space-x-2">
-                            <a href="{% url 'start_chat' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200">
-                                <i class="fas fa-edit mr-2"></i>New Chat
-                            </a>
-                            <a href="{% url 'create_group' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition duration-200">
-                                <i class="fas fa-users mr-2"></i>Create Group
-                            </a>
-                        </div>
+                        </h1>
+                        <p class="text-gray-600 mt-1">{{ total_users }} users found</p>
                     </div>
-                    {% endif %}
+
+                    <!-- Navigation Tabs -->
+                    <div class="flex space-x-4">
+                        <a href="{% url 'discover_users' %}"
+                           class="px-4 py-2 text-sm font-medium rounded-lg transition-colors {% if not is_search %}bg-blue-100 text-blue-700{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                            Discover People
+                        </a>
+                        <a href="{% url 'blocked_users' %}"
+                           class="px-4 py-2 text-sm font-medium rounded-lg transition-colors text-gray-600 hover:text-gray-900">
+                            Blocked Users
+                        </a>
+                    </div>
                 </div>
             </div>
 
-            <!-- Welcome/Empty State -->
-            <div class="flex-1 flex items-center justify-center bg-gray-50">
-                <div class="text-center">
-                    <div class="mx-auto w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 shadow-sm">
-                        <i class="fas fa-comments text-blue-500 text-3xl"></i>
-                    </div>
-                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Welcome to connect.io</h2>
-                    <p class="text-gray-600 mb-6 max-w-md">
-                        Start a conversation with friends or create a group chat to stay connected with multiple people at once.
-                    </p>
-                    <div class="space-x-3">
-                        <a href="{% url 'start_chat' %}" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 font-medium">
-                            <i class="fas fa-edit mr-2"></i>Start New Chat
-                        </a>
-                        <a href="{% url 'create_group' %}" class="inline-flex items-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition duration-200 font-medium">
-                            <i class="fas fa-users mr-2"></i>Create Group
-                        </a>
-                    </div>
+            <!-- Mobile Navigation Tabs -->
+            <div class="md:hidden border-b border-gray-200">
+                <div class="flex overflow-x-auto">
+                    <a href="{% url 'discover_users' %}"
+                       class="flex-1 px-4 py-3 text-center text-sm font-medium border-b-2 transition-colors {% if not is_search %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-600{% endif %}">
+                        Discover
+                    </a>
+                    <a href="{% url 'blocked_users' %}"
+                       class="flex-1 px-4 py-3 text-center text-sm font-medium border-b-2 border-transparent text-gray-600 hover:text-gray-900 transition-colors">
+                        Blocked
+                    </a>
                 </div>
+            </div>
+
+            <!-- Search Form -->
+            <div class="p-4 md:p-6 border-b border-gray-200">
+                <form method="get" class="flex flex-col md:flex-row gap-3">
+                    <div class="flex-1 relative">
+                        <input type="text" name="q" value="{{ query }}"
+                               placeholder="Search by username, email, or name..."
+                               class="w-full px-4 py-3 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                        <i class="fas fa-search absolute right-3 top-3 md:top-2 text-gray-400"></i>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="submit" class="bg-blue-600 text-white px-6 py-3 md:py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium flex-1 md:flex-none">
+                            Search
+                        </button>
+                        {% if query %}
+                        <a href="{% url 'discover_users' %}" class="bg-gray-600 text-white px-6 py-3 md:py-2 rounded-lg hover:bg-gray-700 transition-colors font-medium flex items-center justify-center">
+                            <i class="fas fa-times"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+
+            <!-- Users Grid -->
+            <div class="p-4 md:p-6">
+                {% if users_page %}
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                    {% for user_info in users_page %}
+                    {% with user=user_info.user friend_status=user_info.friend_status received_request_id=user_info.received_request_id %}
+                    <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200 desktop-hover" id="user-{{ user.id }}">
+                        <!-- User Header -->
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center space-x-3">
+                                {% if user.profile_picture %}
+                                <img class="h-12 w-12 rounded-full object-cover border-2 border-gray-300"
+                                     src="{{ user.profile_picture.url }}"
+                                     alt="{{ user.username }}">
+                                {% else %}
+                                <div class="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center border-2 border-gray-300">
+                                    <span class="text-white font-semibold text-sm">{{ user.username|first|upper }}</span>
+                                </div>
+                                {% endif %}
+                                <div class="min-w-0 flex-1">
+                                    <h3 class="font-semibold text-gray-800 truncate text-sm md:text-base">{{ user.username }}</h3>
+                                    <p class="text-sm text-gray-600 truncate hidden md:block">{{ user.email }}</p>
+                                    <p class="text-xs text-gray-500">
+                                        {% if user_info.is_online %}
+                                        <span class="text-green-600">● Online</span>
+                                        {% else %}
+                                        <span class="text-gray-400">● Offline</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Friend Status and Actions -->
+                        <div class="space-y-3">
+                            {% if friend_status == 'friends' %}
+                            <div class="flex space-x-2">
+                                <a href="{% url 'quick_chat' user.id %}"
+                                   class="flex-1 bg-blue-600 text-white py-2 px-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-1 text-sm">
+                                    <i class="fas fa-comment"></i>
+                                    <span class="hidden sm:inline">Message</span>
+                                </a>
+                                <form method="post" action="{% url 'remove_friend' user.id %}" class="flex-shrink-0">
+                                    {% csrf_token %}
+                                    <button type="submit" class="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 transition-colors" title="Remove Friend">
+                                        <i class="fas fa-user-times"></i>
+                                    </button>
+                                </form>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="inline-block px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    Friends
+                                </span>
+                                <form method="post" action="{% url 'block_user' user.id %}" class="block-form">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                            class="text-red-600 hover:text-red-700 text-xs font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                                            onclick="return confirm('Are you sure you want to block {{ user.username }}?')">
+                                        <i class="fas fa-ban"></i>
+                                    </button>
+                                </form>
+                            </div>
+
+                            {% elif friend_status == 'request_sent' %}
+                            <div class="flex space-x-2">
+                                <button class="flex-1 bg-gray-400 text-white py-2 px-3 rounded-lg transition-colors flex items-center justify-center space-x-1 text-sm" disabled>
+                                    <i class="fas fa-comment"></i>
+                                    <span class="hidden sm:inline">Message</span>
+                                </button>
+                                <form method="post" action="{% url 'cancel_friend_request' user.id %}" class="flex-shrink-0 cancel-request-form">
+                                    {% csrf_token %}
+                                    <button type="submit" class="w-full bg-yellow-600 text-white p-2 rounded-lg hover:bg-yellow-700 transition-colors" title="Cancel Request">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </form>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="inline-block px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    Request Sent
+                                </span>
+                                <form method="post" action="{% url 'block_user' user.id %}" class="block-form">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                            class="text-red-600 hover:text-red-700 text-xs font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                                            onclick="return confirm('Are you sure you want to block {{ user.username }}?')">
+                                        <i class="fas fa-ban"></i>
+                                    </button>
+                                </form>
+                            </div>
+
+                            {% elif friend_status == 'request_received' and received_request_id %}
+                            <div class="grid grid-cols-2 gap-2">
+                                <form method="post" action="{% url 'accept_friend_request' received_request_id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="w-full bg-green-600 text-white py-2 px-3 rounded-lg hover:bg-green-700 transition-colors text-sm">
+                                        Accept
+                                    </button>
+                                </form>
+                                <form method="post" action="{% url 'reject_friend_request' received_request_id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="w-full bg-red-600 text-white py-2 px-3 rounded-lg hover:bg-red-700 transition-colors text-sm">
+                                        Reject
+                                    </button>
+                                </form>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="inline-block px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    Request Received
+                                </span>
+                                <form method="post" action="{% url 'block_user' user.id %}" class="block-form">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                            class="text-red-600 hover:text-red-700 text-xs font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                                            onclick="return confirm('Are you sure you want to block {{ user.username }}? This will also reject their friend request.')">
+                                        <i class="fas fa-ban"></i>
+                                    </button>
+                                </form>
+                            </div>
+
+                            {% else %}
+                            <div class="flex space-x-2">
+                                <button class="flex-1 bg-gray-400 text-white py-2 px-3 rounded-lg transition-colors flex items-center justify-center space-x-1 text-sm" disabled>
+                                    <i class="fas fa-comment"></i>
+                                    <span class="hidden sm:inline">Message</span>
+                                </button>
+                                <form method="post" action="{% url 'send_friend_request' user.id %}" class="flex-shrink-0 friend-request-form">
+                                    {% csrf_token %}
+                                    <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors" title="Add Friend" data-user-id="{{ user.id }}">
+                                        <i class="fas fa-user-plus"></i>
+                                    </button>
+                                </form>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="inline-block px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    Not Friends
+                                </span>
+                                <form method="post" action="{% url 'block_user' user.id %}" class="block-form">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                            class="text-red-600 hover:text-red-700 text-xs font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                                            onclick="return confirm('Are you sure you want to block {{ user.username }}?')">
+                                        <i class="fas fa-ban"></i>
+                                    </button>
+                                </form>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endwith %}
+                    {% endfor %}
+                </div>
+
+                <!-- Pagination -->
+                {% if users_page.has_other_pages %}
+                <div class="mt-8 flex justify-center">
+                    <nav class="flex space-x-2">
+                        {% if users_page.has_previous %}
+                        <a href="?page={{ users_page.previous_page_number }}{% if query %}&q={{ query }}{% endif %}"
+                           class="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors text-sm">
+                            Previous
+                        </a>
+                        {% endif %}
+
+                        {% for num in users_page.paginator.page_range %}
+                        {% if users_page.number == num %}
+                        <span class="px-3 py-2 border border-blue-500 bg-blue-500 text-white rounded-lg text-sm">
+                            {{ num }}
+                        </span>
+                        {% elif num > users_page.number|add:'-3' and num < users_page.number|add:'3' %}
+                        <a href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}"
+                           class="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors text-sm">
+                            {{ num }}
+                        </a>
+                        {% endif %}
+                        {% endfor %}
+
+                        {% if users_page.has_next %}
+                        <a href="?page={{ users_page.next_page_number }}{% if query %}&q={{ query }}{% endif %}"
+                           class="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors text-sm">
+                            Next
+                        </a>
+                        {% endif %}
+                    </nav>
+                </div>
+                {% endif %}
+
+                {% else %}
+                <!-- Empty State -->
+                <div class="text-center py-12">
+                    <i class="fas fa-users text-gray-300 text-5xl mb-4"></i>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">No users found</h3>
+                    <p class="text-gray-500 mb-6">
+                        {% if query %}
+                        No users match your search criteria.
+                        {% else %}
+                        No users available to discover.
+                        {% endif %}
+                    </p>
+                    {% if query %}
+                    <a href="{% url 'discover_users' %}" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                        View All Users
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
 
 <script>
-// Notifications functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const notificationsBtn = document.getElementById('notifications-btn');
-    const notificationsDropdown = document.getElementById('notifications-dropdown');
-    const notificationsList = document.getElementById('notifications-list');
-    const notificationBadge = document.getElementById('notification-badge');
-
-    // Toggle notifications dropdown
-    notificationsBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        notificationsDropdown.classList.toggle('hidden');
-        loadNotifications();
-    });
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', function() {
-        notificationsDropdown.classList.add('hidden');
-    });
-
-    // Load notifications via AJAX
-    function loadNotifications() {
-        fetch('{% url "get_notifications" %}')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateNotificationsList(data.notifications);
-                    updateNotificationBadge(data.unread_count);
-                }
-            })
-            .catch(error => console.error('Error loading notifications:', error));
-    }
-
-    function updateNotificationsList(notifications) {
-        if (notifications.length === 0) {
-            notificationsList.innerHTML = `
-                <div class="p-4 text-center text-gray-500">
-                    <i class="fas fa-bell-slash text-2xl mb-2"></i>
-                    <p>No notifications</p>
-                </div>
-            `;
-            return;
-        }
-
-        notificationsList.innerHTML = notifications.map(notification => `
-            <div class="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
-                 onclick="markNotificationRead(${notification.id})">
-                <div class="flex items-start space-x-3">
-                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                        <i class="fas fa-${getNotificationIcon(notification.type)} text-blue-600 text-sm"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm text-gray-900">${notification.content}</p>
-                        <p class="text-xs text-gray-500 mt-1">${notification.created_at}</p>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    function getNotificationIcon(type) {
-        const icons = {
-            'message': 'comment',
-            'typing': 'keyboard',
-            'online': 'circle',
-            'group_invite': 'users'
-        };
-        return icons[type] || 'bell';
-    }
-
-    function updateNotificationBadge(count) {
-        if (count > 0) {
-            notificationBadge.textContent = count;
-            notificationBadge.classList.remove('hidden');
-        } else {
-            notificationBadge.classList.add('hidden');
-        }
-    }
-
-    // Auto-refresh notifications every 30 seconds
-    setInterval(loadNotifications, 30000);
-});
-
-// Global function to mark notification as read
-function markNotificationRead(notificationId) {
-    fetch(`/chat/notifications/${notificationId}/read/`, {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': getCookie('csrftoken')
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Reload notifications
-            document.getElementById('notifications-btn').click();
-        }
-    });
-}
-
 // Helper function to get CSRF token
 function getCookie(name) {
     let cookieValue = null;
@@ -290,5 +313,369 @@ function getCookie(name) {
     }
     return cookieValue;
 }
+
+// Toast notification function
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white ${
+        type === 'success' ? 'bg-green-500' :
+        type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+    } z-50 transform transition-transform duration-300 translate-x-full`;
+    toast.textContent = message;
+
+    document.body.appendChild(toast);
+
+    // Animate in
+    setTimeout(() => {
+        toast.classList.remove('translate-x-full');
+    }, 100);
+
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.classList.add('translate-x-full');
+        setTimeout(() => {
+            document.body.removeChild(toast);
+        }, 300);
+    }, 3000);
+}
+
+// Enhanced responsive friend request handling
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle friend request form submissions with AJAX
+    const friendRequestForms = document.querySelectorAll('.friend-request-form');
+
+    friendRequestForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const url = this.action;
+            const button = this.querySelector('button');
+            const userId = button.dataset.userId;
+
+            // Show loading state
+            const originalHTML = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            button.disabled = true;
+
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateUserCardToCancel(userId);
+                    showToast(data.message || 'Friend request sent successfully!', 'success');
+                } else {
+                    showToast(data.error || 'Error sending friend request', 'error');
+                    button.innerHTML = originalHTML;
+                    button.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error sending friend request', 'error');
+                button.innerHTML = originalHTML;
+                button.disabled = false;
+            });
+        });
+    });
+
+    // Handle cancel request form submissions
+    const cancelRequestForms = document.querySelectorAll('.cancel-request-form');
+
+    cancelRequestForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const button = this.querySelector('button');
+            const userId = button.dataset.userId;
+            handleCancelRequest(userId, this, button);
+        });
+    });
+});
+
+// Function to update user card to cancel state
+function updateUserCardToCancel(userId) {
+    const userCard = document.getElementById(`user-${userId}`);
+    if (userCard) {
+        const friendForm = userCard.querySelector('.friend-request-form');
+        if (friendForm) {
+            friendForm.innerHTML = `
+                <button type="submit" class="w-full bg-yellow-600 text-white p-2 rounded-lg hover:bg-yellow-700 transition-colors" title="Cancel Request" data-user-id="${userId}">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            friendForm.classList.remove('friend-request-form');
+            friendForm.classList.add('cancel-request-form');
+
+            // Update the action URL
+            friendForm.action = `/accounts/cancel-friend-request/${userId}/`;
+
+            // Add event listener to the new cancel button
+            const newButton = friendForm.querySelector('button');
+            newButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                handleCancelRequest(userId, friendForm, newButton);
+            });
+        }
+
+        // Update status badge
+        const statusBadge = userCard.querySelector('.bg-gray-100');
+        if (statusBadge) {
+            statusBadge.className = 'inline-block px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800';
+            statusBadge.textContent = 'Request Sent';
+        }
+    }
+}
+
+// Function to handle canceling friend requests
+function handleCancelRequest(userId, form, button) {
+    const url = `/accounts/cancel-friend-request/${userId}/`;
+
+    // Show loading state
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+
+    fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateUserCardToAddFriend(userId);
+            showToast(data.message || 'Friend request cancelled successfully!', 'success');
+        } else {
+            showToast(data.error || 'Error cancelling friend request', 'error');
+            button.innerHTML = originalHTML;
+            button.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error cancelling friend request', 'error');
+        button.innerHTML = originalHTML;
+        button.disabled = false;
+    });
+}
+
+// Function to update user card back to add friend state
+function updateUserCardToAddFriend(userId) {
+    const userCard = document.getElementById(`user-${userId}`);
+    if (userCard) {
+        const cancelForm = userCard.querySelector('.cancel-request-form');
+        if (cancelForm) {
+            cancelForm.innerHTML = `
+                <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors" title="Add Friend" data-user-id="${userId}">
+                    <i class="fas fa-user-plus"></i>
+                </button>
+            `;
+            cancelForm.classList.remove('cancel-request-form');
+            cancelForm.classList.add('friend-request-form');
+
+            // Update the action URL
+            cancelForm.action = `/accounts/send-friend-request/${userId}/`;
+
+            // Add event listener to the new add friend button
+            const newButton = cancelForm.querySelector('button');
+            newButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                const formData = new FormData(cancelForm);
+                fetch(cancelForm.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateUserCardToCancel(userId);
+                        showToast(data.message || 'Friend request sent successfully!', 'success');
+                    } else {
+                        showToast(data.error || 'Error sending friend request', 'error');
+                    newButton.innerHTML = '<i class="fas fa-user-plus"></i>';
+                        newButton.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error sending friend request', 'error');
+                    newButton.innerHTML = '<i class="fas fa-user-plus"></i>';
+                    newButton.disabled = false;
+                });
+            });
+        }
+
+        // Update status badge
+        const statusBadge = userCard.querySelector('.bg-yellow-100');
+        if (statusBadge) {
+            statusBadge.className = 'inline-block px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800';
+            statusBadge.textContent = 'Not Friends';
+        }
+    }
+}
+
+// Enhanced responsive block form handling
+document.addEventListener('DOMContentLoaded', function() {
+    const blockForms = document.querySelectorAll('.block-form');
+
+    blockForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const url = this.action;
+            const button = this.querySelector('button');
+            const originalHTML = button.innerHTML;
+
+            // Show loading state
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            button.disabled = true;
+
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove the user card from the DOM with animation
+                    const userCard = this.closest('.bg-white.border');
+                    userCard.style.opacity = '0';
+                    userCard.style.transform = 'scale(0.8)';
+                    userCard.style.transition = 'all 0.3s ease';
+
+                    setTimeout(() => {
+                        userCard.remove();
+
+                        // Show success message
+                        showToast(data.message || 'User blocked successfully', 'success');
+
+                        // Update user count
+                        const userCountElement = document.querySelector('.text-gray-600.mt-1');
+                        if (userCountElement) {
+                            const currentCount = parseInt(userCountElement.textContent);
+                            if (!isNaN(currentCount)) {
+                                userCountElement.textContent = `${currentCount - 1} users found`;
+                            }
+                        }
+                    }, 300);
+                } else {
+                    showToast(data.error || 'Error blocking user', 'error');
+                    button.innerHTML = originalHTML;
+                    button.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error blocking user', 'error');
+                button.innerHTML = originalHTML;
+                button.disabled = false;
+            });
+        });
+    });
+});
+
+// Enhanced responsive grid adjustments
+function adjustGridLayout() {
+    const grid = document.querySelector('.grid');
+    if (!grid) return;
+
+    if (window.innerWidth < 640) {
+        grid.className = 'grid grid-cols-1 gap-4';
+    } else if (window.innerWidth < 1024) {
+        grid.className = 'grid grid-cols-2 gap-4 md:gap-6';
+    } else if (window.innerWidth < 1280) {
+        grid.className = 'grid grid-cols-3 gap-4 md:gap-6';
+    } else {
+        grid.className = 'grid grid-cols-4 gap-4 md:gap-6';
+    }
+}
+
+// Initialize on load and resize
+window.addEventListener('load', adjustGridLayout);
+window.addEventListener('resize', adjustGridLayout);
 </script>
+
+<style>
+/* Enhanced responsive styles */
+@media (max-width: 768px) {
+    .user-card {
+        padding: 16px;
+    }
+
+    .user-avatar {
+        width: 48px;
+        height: 48px;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .user-card {
+        padding: 20px;
+    }
+
+    .user-avatar {
+        width: 56px;
+        height: 56px;
+    }
+}
+
+@media (min-width: 1025px) {
+    .user-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+}
+
+/* Smooth transitions */
+.user-card {
+    transition: all 0.3s ease;
+}
+
+/* Better touch targets for mobile */
+@media (max-width: 768px) {
+    button, .btn-like {
+        min-height: 44px;
+        min-width: 44px;
+    }
+}
+
+/* Enhanced focus states for accessibility */
+button:focus-visible,
+a:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+/* Loading state animations */
+.fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+</style>
 {% endblock %}
