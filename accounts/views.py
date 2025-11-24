@@ -5,11 +5,12 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.db.models import Q
+import os
+from django.conf import settings
+
 from .forms import CustomUserCreationForm
 from .models import CustomUser, Notification
 from .models import FriendRequest, Friendship
-import os
-from django.conf import settings
 
 
 def register(request):

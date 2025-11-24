@@ -1,31 +1,46 @@
 <!-- templates/accounts/profile_edit.html -->
 {% extends 'base.html' %}
 
-{% block title %}Edit Profile - Messenger{% endblock %}
+{% block title %}Edit Profile - Connect.io{% endblock %}
+
+{% block mobile_title %}Edit Profile{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50 py-8">
+<div class="min-h-screen bg-gray-50 py-4 md:py-8">
     <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div class="px-6 py-4 border-b border-gray-200">
+            <!-- Header -->
+            <div class="px-4 md:px-6 py-4 border-b border-gray-200">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <h1 class="text-2xl font-bold text-gray-900">Edit Your Profile</h1>
-                        <p class="text-gray-600">Update your personal information</p>
+                    <div class="flex-1 min-w-0">
+                        <!-- Mobile Back Button -->
+                        <div class="md:hidden flex items-center mb-2">
+                            <a href="{% url 'profile' %}" class="flex items-center text-blue-600 hover:text-blue-700 font-medium">
+                                <i class="fas fa-arrow-left mr-2"></i>
+                                Back
+                            </a>
+                        </div>
+                        <h1 class="text-xl md:text-2xl font-bold text-gray-900">Edit Your Profile</h1>
+                        <p class="text-sm md:text-base text-gray-600 mt-1">Update your personal information</p>
                     </div>
-                    <a href="{% url 'profile' %}" class="text-blue-600 hover:text-blue-700 font-medium">
-                        ← Back to Profile
+                    <!-- Desktop Back Button -->
+                    <a href="{% url 'profile' %}" class="hidden md:flex text-blue-600 hover:text-blue-700 font-medium items-center">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        Back to Profile
                     </a>
                 </div>
             </div>
 
-            <div class="p-6">
+            <div class="p-4 md:p-6">
                 <!-- Error Messages -->
                 {% if messages %}
                 <div class="mb-6">
                     {% for message in messages %}
-                    <div class="p-4 rounded-md {% if message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200{% else %}bg-green-50 text-green-700 border border-green-200{% endif %}">
-                        {{ message }}
+                    <div class="p-3 md:p-4 rounded-md {% if message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200{% else %}bg-green-50 text-green-700 border border-green-200{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} mr-2"></i>
+                            {{ message }}
+                        </div>
                     </div>
                     {% endfor %}
                 </div>
@@ -37,25 +52,27 @@
                     <!-- Profile Picture Section -->
                     <div class="border-b border-gray-200 pb-6">
                         <h3 class="text-lg font-medium text-gray-900 mb-4">Profile Picture</h3>
-                        <div class="flex items-center space-x-6">
-                            <div class="flex-shrink-0">
+                        <div class="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
+                            <div class="flex-shrink-0 flex justify-center sm:justify-start">
                                 {% if user.profile_picture %}
                                 <img id="current-photo" src="{{ user.profile_picture.url }}" alt="{{ user.username }}"
-                                     class="w-20 h-20 rounded-full border-2 border-gray-300 object-cover">
+                                     class="w-20 h-20 md:w-24 md:h-24 rounded-full border-2 border-gray-300 object-cover shadow-sm">
                                 {% else %}
-                                <div id="current-photo" class="w-20 h-20 rounded-full bg-gray-300 border-2 border-gray-300 flex items-center justify-center">
-                                    <i class="fas fa-user text-gray-500 text-2xl"></i>
+                                <div id="current-photo" class="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 border-2 border-gray-300 flex items-center justify-center shadow-sm">
+                                    <i class="fas fa-user text-white text-xl md:text-2xl"></i>
                                 </div>
                                 {% endif %}
                             </div>
-                            <div class="flex-1">
+                            <div class="flex-1 text-center sm:text-left">
                                 <label for="profile_picture" class="block text-sm font-medium text-gray-700 mb-2">
                                     Upload New Photo
                                 </label>
-                                <input type="file" id="profile_picture" name="profile_picture"
-                                       accept="image/*"
-                                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                                <p class="text-xs text-gray-500 mt-1">JPG, PNG, GIF • Max 5MB</p>
+                                <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                                    <input type="file" id="profile_picture" name="profile_picture"
+                                           accept="image/*"
+                                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2">JPG, PNG, GIF • Max 5MB</p>
                             </div>
                         </div>
                     </div>
@@ -69,14 +86,14 @@
                                 <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
                                 <input type="text" id="first_name" name="first_name"
                                        value="{{ user.first_name|default:'' }}"
-                                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
                             </div>
 
                             <div>
                                 <label for="last_name" class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
                                 <input type="text" id="last_name" name="last_name"
                                        value="{{ user.last_name|default:'' }}"
-                                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
                             </div>
                         </div>
 
@@ -84,7 +101,7 @@
                             <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
                             <input type="email" id="email" name="email"
                                    value="{{ user.email }}" required
-                                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
                         </div>
 
                         <div class="mt-4">
@@ -92,7 +109,7 @@
                             <input type="text" id="phone_number" name="phone_number"
                                    value="{{ user.phone_number|default:'' }}"
                                    placeholder="+1234567890"
-                                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
                         </div>
                     </div>
 
@@ -103,7 +120,8 @@
                         <div class="mb-4">
                             <label for="bio" class="block text-sm font-medium text-gray-700 mb-1">Bio</label>
                             <textarea id="bio" name="bio" rows="3" placeholder="Tell us about yourself..."
-                                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">{{ user.bio|default:'' }}</textarea>
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 resize-none">{{ user.bio|default:'' }}</textarea>
+                            <p class="text-xs text-gray-500 mt-1">Brief description about yourself</p>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -112,7 +130,7 @@
                                 <input type="text" id="location" name="location"
                                        value="{{ user.location|default:'' }}"
                                        placeholder="Your city or country"
-                                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
                             </div>
 
                             <div>
@@ -120,7 +138,7 @@
                                 <input type="url" id="website" name="website"
                                        value="{{ user.website|default:'' }}"
                                        placeholder="https://example.com"
-                                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
                             </div>
                         </div>
 
@@ -129,31 +147,34 @@
                                 <label for="date_of_birth" class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
                                 <input type="date" id="date_of_birth" name="date_of_birth"
                                        value="{% if user.date_of_birth %}{{ user.date_of_birth|date:'Y-m-d' }}{% endif %}"
-                                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
                             </div>
 
                             <div>
                                 <label for="gender" class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
                                 <select id="gender" name="gender"
-                                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 appearance-none bg-white">
                                     <option value="">Select Gender</option>
                                     <option value="male" {% if user.gender == 'male' %}selected{% endif %}>Male</option>
                                     <option value="female" {% if user.gender == 'female' %}selected{% endif %}>Female</option>
                                     <option value="other" {% if user.gender == 'other' %}selected{% endif %}>Other</option>
                                     <option value="prefer_not" {% if user.gender == 'prefer_not' %}selected{% endif %}>Prefer not to say</option>
                                 </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Action Buttons -->
-                    <div class="flex justify-end space-x-3 pt-4">
+                    <div class="flex flex-col-reverse sm:flex-row justify-end space-y-4 sm:space-y-0 space-y-reverse sm:space-x-3 pt-4">
                         <a href="{% url 'profile' %}"
-                            class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-200 font-medium">
+                            class="w-full sm:w-auto px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition duration-200 font-medium text-center">
                             Cancel
                         </a>
                         <button type="submit" id="save-button"
-                                class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200 font-medium flex items-center">
+                                class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 font-medium flex items-center justify-center">
                             <span id="button-text">Save Changes</span>
                             <div id="loading-spinner" class="hidden ml-2">
                                 <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -166,6 +187,7 @@
     </div>
 </div>
 
+<!-- Enhanced JavaScript for better mobile experience -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('profile-form');
@@ -173,36 +195,254 @@ document.addEventListener('DOMContentLoaded', function() {
     const buttonText = document.getElementById('button-text');
     const loadingSpinner = document.getElementById('loading-spinner');
 
-    // Photo preview
-    document.getElementById('profile_picture').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const currentPhoto = document.getElementById('current-photo');
-                if (currentPhoto.tagName === 'IMG') {
-                    currentPhoto.src = e.target.result;
-                } else {
-                    const container = currentPhoto.parentElement;
-                    const newImg = document.createElement('img');
-                    newImg.src = e.target.result;
-                    newImg.alt = 'Preview';
-                    newImg.className = 'w-20 h-20 rounded-full border-2 border-gray-300 object-cover';
-                    newImg.id = 'current-photo';
-                    container.innerHTML = '';
-                    container.appendChild(newImg);
+    // Enhanced photo preview with better mobile handling
+    const profilePictureInput = document.getElementById('profile_picture');
+    if (profilePictureInput) {
+        profilePictureInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Validate file size (5MB limit)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File size must be less than 5MB');
+                    this.value = '';
+                    return;
                 }
-            };
-            reader.readAsDataURL(file);
-        }
-    });
 
-    // Form submission feedback
-    form.addEventListener('submit', function() {
-        buttonText.textContent = 'Saving...';
+                // Validate file type
+                const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
+                if (!validTypes.includes(file.type)) {
+                    alert('Please select a valid image file (JPEG, PNG, GIF)');
+                    this.value = '';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const currentPhoto = document.getElementById('current-photo');
+                    if (currentPhoto.tagName === 'IMG') {
+                        currentPhoto.src = e.target.result;
+                    } else {
+                        const container = currentPhoto.parentElement;
+                        const newImg = document.createElement('img');
+                        newImg.src = e.target.result;
+                        newImg.alt = 'Profile Preview';
+                        newImg.className = 'w-20 h-20 md:w-24 md:h-24 rounded-full border-2 border-gray-300 object-cover shadow-sm';
+                        newImg.id = 'current-photo';
+                        container.innerHTML = '';
+                        container.appendChild(newImg);
+                    }
+
+                    // Show success feedback
+                    showToast('Photo selected successfully', 'success');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Enhanced form submission with better mobile feedback
+    form.addEventListener('submit', function(e) {
+        // Basic validation
+        const email = document.getElementById('email').value;
+        if (!email) {
+            e.preventDefault();
+            showToast('Email address is required', 'error');
+            return;
+        }
+
+        // Show loading state
+        buttonText.textContent = 'Saving Changes...';
         loadingSpinner.classList.remove('hidden');
         saveButton.disabled = true;
+        saveButton.classList.add('opacity-75');
+
+        // Add a small delay to show the loading state
+        setTimeout(() => {
+            // Form will submit normally after this
+        }, 100);
+    });
+
+    // Enhanced input validation with real-time feedback
+    const inputs = form.querySelectorAll('input, textarea, select');
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            if (this.value.trim() !== '') {
+                this.classList.add('border-green-300');
+                this.classList.remove('border-red-300');
+            } else if (this.required && this.value.trim() === '') {
+                this.classList.add('border-red-300');
+                this.classList.remove('border-green-300');
+            } else {
+                this.classList.remove('border-green-300', 'border-red-300');
+            }
+        });
+
+        input.addEventListener('input', function() {
+            // Remove validation classes during input
+            this.classList.remove('border-green-300', 'border-red-300');
+        });
+    });
+
+    // Mobile-specific enhancements
+    function isMobile() {
+        return window.innerWidth <= 768;
+    }
+
+    // Better date input handling for mobile
+    const dateInput = document.getElementById('date_of_birth');
+    if (dateInput && isMobile()) {
+        dateInput.addEventListener('focus', function() {
+            // Ensure proper date picker experience on mobile
+            this.type = 'date';
+        });
+    }
+
+    // Enhanced select styling for mobile
+    const selectInputs = form.querySelectorAll('select');
+    selectInputs.forEach(select => {
+        select.addEventListener('focus', function() {
+            this.style.background = 'white';
+        });
+        select.addEventListener('blur', function() {
+            this.style.background = '';
+        });
     });
 });
+
+// Toast notification function for better user feedback
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 left-4 sm:left-auto px-4 py-3 rounded-lg shadow-lg text-white ${
+        type === 'success' ? 'bg-green-500' :
+        type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+    } z-50 transform transition-transform duration-300 translate-x-full sm:translate-x-0 sm:translate-y-full`;
+    toast.innerHTML = `
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <i class="fas ${
+                    type === 'success' ? 'fa-check-circle' :
+                    type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'
+                } mr-2"></i>
+                <span class="text-sm font-medium">${message}</span>
+            </div>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+
+    document.body.appendChild(toast);
+
+    // Animate in
+    setTimeout(() => {
+        toast.classList.remove('translate-x-full', 'sm:translate-y-full');
+    }, 100);
+
+    // Remove after 4 seconds
+    setTimeout(() => {
+        toast.classList.add('translate-x-full', 'sm:translate-y-full');
+        setTimeout(() => {
+            if (toast.parentElement) {
+                document.body.removeChild(toast);
+            }
+        }, 300);
+    }, 4000);
+}
+
+// Enhanced mobile keyboard handling
+function handleMobileKeyboard() {
+    const activeElement = document.activeElement;
+    if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+        // Scroll to ensure input is visible when keyboard opens
+        setTimeout(() => {
+            activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+    }
+}
+
+// Add keyboard event listeners for mobile
+document.addEventListener('focusin', handleMobileKeyboard);
+
+// Handle viewport height changes on mobile
+function setViewportHeight() {
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
+}
+
+window.addEventListener('resize', setViewportHeight);
+window.addEventListener('orientationchange', setViewportHeight);
+setViewportHeight();
 </script>
+
+<style>
+/* Enhanced mobile styles */
+@media (max-width: 768px) {
+    .min-h-screen {
+        min-height: calc(var(--vh, 1vh) * 100);
+    }
+
+    input, textarea, select {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    /* Better touch targets */
+    button, a {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    /* Improved form spacing */
+    .space-y-6 > * + * {
+        margin-top: 1.5rem;
+    }
+}
+
+/* Custom select arrow */
+select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+/* Focus styles for better accessibility */
+input:focus, textarea:focus, select:focus {
+    outline: none;
+    ring: 2px;
+}
+
+/* Smooth transitions for all interactive elements */
+button, input, textarea, select, a {
+    transition: all 0.2s ease-in-out;
+}
+
+/* Loading state styles */
+#save-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Custom scrollbar for better mobile experience */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 2px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 2px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+</style>
 {% endblock %}

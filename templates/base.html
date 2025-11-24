@@ -1,16 +1,123 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Connect.io{% endblock %}</title>
+
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Mobile-specific meta tags -->
+    <meta name="theme-color" content="#3B82F6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+    <style>
+        /* Mobile-responsive styles */
+        @media (max-width: 768px) {
+            .mobile-hidden {
+                display: none !important;
+            }
+
+            .mobile-full {
+                width: 100% !important;
+            }
+
+            .mobile-sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease-in-out;
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                z-index: 50;
+                background: white;
+            }
+
+            .mobile-sidebar.open {
+                transform: translateX(0);
+            }
+
+            .message-bubble {
+                max-width: 85% !important;
+            }
+
+            .emoji-picker-mobile {
+                height: 300px !important;
+                bottom: 60px !important;
+            }
+        }
+
+        /* Enhanced emoji styles */
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 0.25rem;
+        }
+
+        @media (max-width: 640px) {
+            .emoji-grid {
+                grid-template-columns: repeat(6, 1fr);
+            }
+        }
+
+        /* Smooth transitions */
+        .transition-all {
+            transition: all 0.3s ease;
+        }
+
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Typing animation */
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .typing-dot {
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        /* Mobile viewport height fix */
+        :root {
+            --vh: 1vh;
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
 </head>
-<body class="bg-gray-100">
-    <!-- Navigation Bar -->
-    <nav class="bg-white shadow-lg border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4">
+<body class="h-full bg-gray-50">
+    <!-- Desktop Navigation -->
+    <nav class="hidden md:flex bg-white shadow-lg border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 w-full">
             <div class="flex justify-between items-center h-16">
                 <!-- Logo and Brand -->
                 <div class="flex items-center space-x-3">
@@ -36,7 +143,7 @@
                 </div>
 
                 <!-- Navigation Links -->
-                <div class="hidden md:flex items-center space-x-8">
+                <div class="flex items-center space-x-8">
                     <a href="{% url 'chat_home' %}"
                        class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
                         <i class="fas fa-home mr-1"></i> Home
@@ -144,8 +251,8 @@
                                 <i class="fas fa-user text-gray-500 text-sm"></i>
                             </div>
                             {% endif %}
-                            <span class="text-gray-700 font-medium hidden md:block">{{ user.username }}</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-xs hidden md:block"></i>
+                            <span class="text-gray-700 font-medium">{{ user.username }}</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs"></i>
                         </button>
 
                         <!-- Dropdown Menu -->
@@ -194,94 +301,171 @@
         </div>
     </nav>
 
-    <!-- Mobile menu button -->
-    <div class="md:hidden bg-white border-b border-gray-200">
-        <div class="flex justify-around py-2">
-            <a href="{% url 'chat_home' %}" class="flex flex-col items-center text-gray-600 hover:text-blue-600 transition duration-200">
-                <i class="fas fa-home"></i>
-                <span class="text-xs mt-1">Home</span>
-            </a>
-            <a href="{% url 'start_chat' %}" class="flex flex-col items-center text-gray-600 hover:text-blue-600 transition duration-200">
-                <i class="fas fa-comment-medical"></i>
-                <span class="text-xs mt-1">New Chat</span>
-            </a>
-            <button id="mobile-friends-button" class="flex flex-col items-center text-gray-600 hover:text-blue-600 transition duration-200">
-                <i class="fas fa-user-friends"></i>
-                <span class="text-xs mt-1">Friends</span>
+    <!-- Mobile Navigation -->
+    <div class="md:hidden fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-40">
+        <div class="flex items-center justify-between p-4">
+            <button id="mobile-menu-btn" class="p-2 text-gray-600">
+                <i class="fas fa-bars text-xl"></i>
             </button>
-            <button id="mobile-profile-button" class="flex flex-col items-center text-gray-600 hover:text-blue-600 transition duration-200">
-                <i class="fas fa-user"></i>
+
+            <h1 class="text-lg font-bold text-gray-900">
+                {% block mobile_title %}Connect.io{% endblock %}
+            </h1>
+
+            <div class="flex items-center space-x-2">
+                <button id="mobile-notifications-btn" class="p-2 text-gray-600 relative">
+                    <i class="fas fa-bell"></i>
+                    <span id="mobile-notification-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center hidden">0</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Sidebar -->
+    <div id="mobile-sidebar" class="mobile-sidebar w-80 bg-white border-r border-gray-200 custom-scrollbar md:relative md:transform-none md:block hidden">
+        <div class="pt-16 md:pt-4 h-full flex flex-col">
+            <!-- Mobile Navigation Links -->
+            <div class="p-4 border-b border-gray-200">
+                <div class="space-y-2">
+                    <a href="{% url 'chat_home' %}" class="flex items-center space-x-3 p-3 text-gray-700 hover:bg-gray-100 rounded-lg transition duration-200">
+                        <i class="fas fa-home w-5"></i>
+                        <span>Home</span>
+                    </a>
+                    <a href="{% url 'start_chat' %}" class="flex items-center space-x-3 p-3 text-gray-700 hover:bg-gray-100 rounded-lg transition duration-200">
+                        <i class="fas fa-comment-medical w-5"></i>
+                        <span>New Chat</span>
+                    </a>
+                    <a href="{% url 'discover_users' %}" class="flex items-center space-x-3 p-3 text-gray-700 hover:bg-gray-100 rounded-lg transition duration-200">
+                        <i class="fas fa-search w-5"></i>
+                        <span>Find People</span>
+                    </a>
+                    <a href="{% url 'friend_requests' %}" class="flex items-center space-x-3 p-3 text-gray-700 hover:bg-gray-100 rounded-lg transition duration-200">
+                        <i class="fas fa-user-plus w-5"></i>
+                        <span>Friend Requests</span>
+                    </a>
+                    <a href="{% url 'profile' %}" class="flex items-center space-x-3 p-3 text-gray-700 hover:bg-gray-100 rounded-lg transition duration-200">
+                        <i class="fas fa-user w-5"></i>
+                        <span>Profile</span>
+                    </a>
+                    <a href="{% url 'settings_main' %}" class="flex items-center space-x-3 p-3 text-gray-700 hover:bg-gray-100 rounded-lg transition duration-200">
+                        <i class="fas fa-cog w-5"></i>
+                        <span>Settings</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- User Info -->
+            <div class="p-4 border-b border-gray-200">
+                <div class="flex items-center space-x-3">
+                    {% if user.profile_picture %}
+                    <img class="h-10 w-10 rounded-full border-2 border-gray-300 object-cover"
+                         src="{{ user.profile_picture.url }}" alt="Profile">
+                    {% else %}
+                    <div class="h-10 w-10 rounded-full bg-gray-300 border-2 border-gray-300 flex items-center justify-center">
+                        <i class="fas fa-user text-gray-500"></i>
+                    </div>
+                    {% endif %}
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-gray-900 truncate">{{ user.username }}</p>
+                        <p class="text-sm text-gray-500 truncate">{{ user.email }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="p-4">
+                <a href="{% url 'logout' %}" class="flex items-center space-x-3 p-3 text-red-600 hover:bg-red-50 rounded-lg transition duration-200">
+                    <i class="fas fa-sign-out-alt w-5"></i>
+                    <span>Sign out</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Overlay -->
+    <div id="mobile-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden hidden"></div>
+
+    <!-- Main Content -->
+    <div class="min-h-screen md:ml-80 pt-16 md:pt-0">
+        {% if messages %}
+        <div class="fixed top-16 md:top-0 left-0 right-0 z-30">
+            {% for message in messages %}
+            <div class="{% if message.tags %}{{ message.tags }}{% endif %} p-4 text-center">
+                <div class="max-w-7xl mx-auto">
+                    {{ message }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <main class="min-h-screen">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Mobile Bottom Navigation -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
+        <div class="flex justify-around items-center p-2">
+            <a href="{% url 'chat_home' %}" class="flex flex-col items-center p-2 text-blue-600">
+                <i class="fas fa-comments text-lg"></i>
+                <span class="text-xs mt-1">Chats</span>
+            </a>
+
+            <a href="{% url 'discover_users' %}" class="flex flex-col items-center p-2 text-gray-600">
+                <i class="fas fa-search text-lg"></i>
+                <span class="text-xs mt-1">Discover</span>
+            </a>
+
+            <a href="{% url 'profile' %}" class="flex flex-col items-center p-2 text-gray-600">
+                <i class="fas fa-user text-lg"></i>
                 <span class="text-xs mt-1">Profile</span>
-            </button>
-        </div>
+            </a>
 
-        <!-- Mobile Friends Dropdown -->
-        <div id="mobile-friends-dropdown" class="hidden bg-white border-t border-gray-200 py-2">
-            <a href="{% url 'discover_users' %}" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition duration-200 border-b border-gray-100">
-                <i class="fas fa-search mr-3 text-gray-400"></i>
-                Find People
-            </a>
-            <a href="{% url 'friend_requests' %}" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition duration-200 border-b border-gray-100">
-                <i class="fas fa-user-plus mr-3 text-gray-400"></i>
-                Friend Requests
-            </a>
-            <a href="{% url 'friend_requests' %}" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition duration-200">
-                <i class="fas fa-users mr-3 text-gray-400"></i>
-                My Friends
-            </a>
-        </div>
-
-        <!-- Mobile Profile Dropdown -->
-        <div id="mobile-profile-dropdown" class="hidden bg-white border-t border-gray-200 py-2">
-            <a href="{% url 'profile' %}" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition duration-200 border-b border-gray-100">
-                <i class="fas fa-user mr-3 text-gray-400"></i>
-                Your Profile
-            </a>
-            <a href="{% url 'settings_main' %}" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition duration-200 border-b border-gray-100">
-                <i class="fas fa-cog mr-3 text-gray-400"></i>
-                Settings
-            </a>
-            <a href="{% url 'logout' %}" class="flex items-center px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition duration-200">
-                <i class="fas fa-sign-out-alt mr-3"></i>
-                Sign out
+            <a href="{% url 'settings_main' %}" class="flex flex-col items-center p-2 text-gray-600">
+                <i class="fas fa-cog text-lg"></i>
+                <span class="text-xs mt-1">Settings</span>
             </a>
         </div>
     </div>
 
-    <!-- Main Content -->
-    <main>
-        {% block content %}
-        {% endblock %}
-    </main>
-
-    {% block scripts %}
+    <!-- JavaScript -->
     <script>
-        // User dropdown functionality
+        // Mobile menu functionality
         document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const mobileSidebar = document.getElementById('mobile-sidebar');
+            const mobileOverlay = document.getElementById('mobile-overlay');
+
+            if (mobileMenuBtn && mobileSidebar) {
+                mobileMenuBtn.addEventListener('click', function() {
+                    mobileSidebar.classList.toggle('hidden');
+                    mobileOverlay.classList.toggle('hidden');
+                    document.body.style.overflow = !mobileSidebar.classList.contains('hidden') ? 'hidden' : '';
+                });
+
+                mobileOverlay.addEventListener('click', function() {
+                    mobileSidebar.classList.add('hidden');
+                    mobileOverlay.classList.add('hidden');
+                    document.body.style.overflow = '';
+                });
+            }
+
+            // Desktop dropdown functionality
             const userMenuButton = document.getElementById('user-menu-button');
             const userDropdown = document.getElementById('user-dropdown');
-            const notificationsButton = document.getElementById('notifications-button');
-            const notificationsDropdown = document.getElementById('notifications-dropdown');
-            const mobileProfileButton = document.getElementById('mobile-profile-button');
-            const mobileProfileDropdown = document.getElementById('mobile-profile-dropdown');
             const friendsMenuButton = document.getElementById('friends-menu-button');
             const friendsDropdown = document.getElementById('friends-dropdown');
-            const mobileFriendsButton = document.getElementById('mobile-friends-button');
-            const mobileFriendsDropdown = document.getElementById('mobile-friends-dropdown');
+            const notificationsButton = document.getElementById('notifications-button');
+            const notificationsDropdown = document.getElementById('notifications-dropdown');
 
-            // Desktop User dropdown
+            // User dropdown
             if (userMenuButton && userDropdown) {
                 userMenuButton.addEventListener('click', function(e) {
                     e.stopPropagation();
                     userDropdown.classList.toggle('hidden');
-
-                    // Close other dropdowns if open
-                    if (notificationsDropdown) {
-                        notificationsDropdown.classList.add('hidden');
-                    }
-                    if (friendsDropdown) {
-                        friendsDropdown.classList.add('hidden');
-                    }
+                    friendsDropdown.classList.add('hidden');
+                    notificationsDropdown.classList.add('hidden');
                 });
             }
 
@@ -290,126 +474,44 @@
                 friendsMenuButton.addEventListener('click', function(e) {
                     e.stopPropagation();
                     friendsDropdown.classList.toggle('hidden');
-
-                    // Close other dropdowns if open
-                    if (userDropdown) {
-                        userDropdown.classList.add('hidden');
-                    }
-                    if (notificationsDropdown) {
-                        notificationsDropdown.classList.add('hidden');
-                    }
+                    userDropdown.classList.add('hidden');
+                    notificationsDropdown.classList.add('hidden');
                 });
             }
 
-            // Mobile Profile dropdown
-            if (mobileProfileButton && mobileProfileDropdown) {
-                mobileProfileButton.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    mobileProfileDropdown.classList.toggle('hidden');
-
-                    // Close friends dropdown if open
-                    if (mobileFriendsDropdown) {
-                        mobileFriendsDropdown.classList.add('hidden');
-                    }
-                });
-            }
-
-            // Mobile Friends dropdown
-            if (mobileFriendsButton && mobileFriendsDropdown) {
-                mobileFriendsButton.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    mobileFriendsDropdown.classList.toggle('hidden');
-
-                    // Close profile dropdown if open
-                    if (mobileProfileDropdown) {
-                        mobileProfileDropdown.classList.add('hidden');
-                    }
-                });
-            }
-
-            // Notifications dropdown functionality
+            // Notifications dropdown
             if (notificationsButton && notificationsDropdown) {
                 notificationsButton.addEventListener('click', function(e) {
                     e.stopPropagation();
                     notificationsDropdown.classList.toggle('hidden');
+                    userDropdown.classList.add('hidden');
+                    friendsDropdown.classList.add('hidden');
 
-                    // Load notifications when dropdown opens
                     if (!notificationsDropdown.classList.contains('hidden')) {
                         loadNotifications();
-                    }
-
-                    // Close user dropdown if open
-                    if (userDropdown) {
-                        userDropdown.classList.add('hidden');
-                    }
-
-                    // Close friends dropdown if open
-                    if (friendsDropdown) {
-                        friendsDropdown.classList.add('hidden');
-                    }
-
-                    // Close mobile profile dropdown if open
-                    if (mobileProfileDropdown) {
-                        mobileProfileDropdown.classList.add('hidden');
-                    }
-
-                    // Close mobile friends dropdown if open
-                    if (mobileFriendsDropdown) {
-                        mobileFriendsDropdown.classList.add('hidden');
                     }
                 });
             }
 
             // Close dropdowns when clicking outside
-            document.addEventListener('click', function(event) {
-                // Close user dropdown
-                if (userMenuButton && userDropdown && !userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
-                    userDropdown.classList.add('hidden');
-                }
-
-                // Close friends dropdown
-                if (friendsMenuButton && friendsDropdown && !friendsMenuButton.contains(event.target) && !friendsDropdown.contains(event.target)) {
-                    friendsDropdown.classList.add('hidden');
-                }
-
-                // Close notifications dropdown
-                if (notificationsButton && notificationsDropdown && !notificationsButton.contains(event.target) && !notificationsDropdown.contains(event.target)) {
-                    notificationsDropdown.classList.add('hidden');
-                }
-
-                // Close mobile profile dropdown
-                if (mobileProfileButton && mobileProfileDropdown && !mobileProfileButton.contains(event.target) && !mobileProfileDropdown.contains(event.target)) {
-                    mobileProfileDropdown.classList.add('hidden');
-                }
-
-                // Close mobile friends dropdown
-                if (mobileFriendsButton && mobileFriendsDropdown && !mobileFriendsButton.contains(event.target) && !mobileFriendsDropdown.contains(event.target)) {
-                    mobileFriendsDropdown.classList.add('hidden');
-                }
+            document.addEventListener('click', function() {
+                if (userDropdown) userDropdown.classList.add('hidden');
+                if (friendsDropdown) friendsDropdown.classList.add('hidden');
+                if (notificationsDropdown) notificationsDropdown.classList.add('hidden');
             });
 
-            // Add active state to current page in navigation
-            const currentUrl = window.location.pathname;
-            const navLinks = document.querySelectorAll('nav a');
-            navLinks.forEach(link => {
-                if (link.getAttribute('href') && currentUrl.includes(link.getAttribute('href'))) {
-                    link.classList.add('text-blue-600', 'bg-blue-50');
-                    link.classList.remove('text-gray-600');
-                }
-            });
+            // Mobile notifications
+            const mobileNotificationsBtn = document.getElementById('mobile-notifications-btn');
+            if (mobileNotificationsBtn) {
+                mobileNotificationsBtn.addEventListener('click', function() {
+                    loadNotifications();
+                    // Show notifications in a mobile-friendly way
+                    alert('Notifications would open here on mobile');
+                });
+            }
 
-            // Mobile menu active state
-            const mobileLinks = document.querySelectorAll('.md\\:hidden a');
-            mobileLinks.forEach(link => {
-                if (link.getAttribute('href') && currentUrl.includes(link.getAttribute('href'))) {
-                    link.classList.add('text-blue-600');
-                    link.classList.remove('text-gray-600');
-                }
-            });
-
-            // Auto-update notification count on page load
+            // Auto-update notification count
             updateNotificationCount();
-            // Update count every 30 seconds
             setInterval(updateNotificationCount, 30000);
         });
 
@@ -428,6 +530,7 @@
 
         function updateNotificationsList(notifications) {
             const notificationsList = document.getElementById('notifications-list');
+            if (!notificationsList) return;
 
             if (notifications.length === 0) {
                 notificationsList.innerHTML = `
@@ -485,12 +588,23 @@
 
         function updateNotificationBadge(count) {
             const badge = document.querySelector('.notification-badge');
+            const mobileBadge = document.getElementById('mobile-notification-badge');
+
             if (badge) {
                 if (count > 0) {
                     badge.textContent = count > 99 ? '99+' : count;
                     badge.classList.remove('hidden');
                 } else {
                     badge.classList.add('hidden');
+                }
+            }
+
+            if (mobileBadge) {
+                if (count > 0) {
+                    mobileBadge.textContent = count > 99 ? '99+' : count;
+                    mobileBadge.classList.remove('hidden');
+                } else {
+                    mobileBadge.classList.add('hidden');
                 }
             }
         }
@@ -507,8 +621,8 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    loadNotifications(); // Reload notifications
-                    updateNotificationCount(); // Update badge count
+                    loadNotifications();
+                    updateNotificationCount();
                 }
             })
             .catch(error => console.error('Error marking notification as read:', error));
@@ -526,8 +640,8 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    loadNotifications(); // Reload notifications
-                    updateNotificationCount(); // Update badge count
+                    loadNotifications();
+                    updateNotificationCount();
                     showToast('All notifications marked as read', 'success');
                 }
             })
@@ -586,7 +700,18 @@
                 }, 300);
             }, 3000);
         }
+
+        // Mobile viewport height fix
+        function setViewportHeight() {
+            const vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        }
+
+        window.addEventListener('resize', setViewportHeight);
+        window.addEventListener('orientationchange', setViewportHeight);
+        setViewportHeight();
     </script>
-    {% endblock %}
+
+    {% block extra_js %}{% endblock %}
 </body>
 </html>
