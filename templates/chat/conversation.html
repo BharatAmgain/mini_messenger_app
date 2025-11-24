@@ -1,8 +1,9 @@
 <!-- templates/chat/conversation.html -->
 {% extends 'base.html' %}
 {% load static %}
+{% load chat_filters %}
 
-{% block title %}{% if is_group %}{{ conversation.group_name }} - Group Chat{% else %}Chat with {{ other_user.username }}{% endif %} - Connect.io{% endblock %}
+{% block title %}{% if is_group %}{{ conversation.group_name }} - Group Chat{% else %}Chat with {{ other_user.username }}{% endif %} - Messenger{% endblock %}
 
 {% block mobile_title %}
 {% if is_group %}{{ conversation.group_name }}{% else %}{{ other_user.username }}{% endif %}

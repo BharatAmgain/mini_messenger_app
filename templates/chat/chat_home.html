@@ -2,195 +2,72 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Chat - Connect.io{% endblock %}
-
-{% block mobile_title %}Chats{% endblock %}
+{% block title %}Chat - Messenger{% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-gray-50">
-    <!-- Desktop Layout -->
-    <div class="hidden md:flex h-screen">
-        <!-- Sidebar -->
-        <div class="w-80 bg-white border-r border-gray-200">
-            <!-- Header -->
-            <div class="p-4 border-b border-gray-200">
-                <div class="flex items-center justify-between">
-                    <h1 class="text-xl font-bold text-gray-900">Messages</h1>
-                    <div class="flex space-x-2">
-                        <a href="{% url 'start_chat' %}" class="p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-full transition duration-200" title="New Chat">
-                            <i class="fas fa-edit"></i>
-                        </a>
-                        <a href="{% url 'create_group' %}" class="p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-full transition duration-200" title="Create Group">
-                            <i class="fas fa-users"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Search -->
-            <div class="p-4 border-b border-gray-200">
-                <form method="GET" action="{% url 'search_users' %}">
-                    <div class="relative">
-                        <input
-                            type="text"
-                            name="q"
-                            placeholder="Search users..."
-                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="fas fa-search text-gray-400"></i>
-                        </div>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Conversations List -->
-            <div class="overflow-y-auto h-full custom-scrollbar">
-                {% if conversation_data %}
-                    {% for conv_data in conversation_data %}
-                    <a href="{% url 'conversation' conv_data.conversation.id %}"
-                       class="flex items-center p-4 border-b border-gray-100 hover:bg-gray-50 transition duration-200">
-                        <div class="relative flex-shrink-0">
-                            {% if conv_data.display_photo %}
-                            <img src="{{ conv_data.display_photo }}"
-                                 alt="{{ conv_data.display_name }}"
-                                 class="w-12 h-12 rounded-full border-2 border-gray-300 object-cover">
-                            {% else %}
-                            <div class="w-12 h-12 rounded-full bg-gray-300 border-2 border-gray-300 flex items-center justify-center">
-                                {% if conv_data.is_group %}
-                                <i class="fas fa-users text-gray-500"></i>
+    <div class="max-w-7xl mx-auto">
+        <div class="flex h-screen">
+            <!-- Sidebar -->
+            <div class="w-80 bg-white border-r border-gray-200">
+                <!-- Header -->
+                <div class="p-4 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h1 class="text-xl font-bold text-gray-900">Messages</h1>
+                        <div class="flex space-x-2">
+                            <a href="{% url 'start_chat' %}" class="p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-full transition duration-200" title="New Chat">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{% url 'create_group' %}" class="p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-full transition duration-200" title="Create Group">
+                                <i class="fas fa-users"></i>
+                            </a>
+                            <button id="notifications-btn" class="p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-full transition duration-200 relative">
+                                <i class="fas fa-bell"></i>
+                                {% if unread_notifications_count > 0 %}
+                                <span id="notification-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                                    {{ unread_notifications_count }}
+                                </span>
                                 {% else %}
-                                <i class="fas fa-user text-gray-500"></i>
+                                <span id="notification-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center hidden">0</span>
                                 {% endif %}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search -->
+                <div class="p-4 border-b border-gray-200">
+                    <form method="GET" action="{% url 'search_users' %}">
+                        <div class="relative">
+                            <input
+                                type="text"
+                                name="q"
+                                placeholder="Search users..."
+                                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-search text-gray-400"></i>
                             </div>
-                            {% endif %}
-                            {% if not conv_data.is_group and conv_data.is_online %}
-                            <div class="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-                            {% endif %}
-                            {% if conv_data.is_group %}
-                            <div class="absolute -bottom-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white"></div>
-                            {% endif %}
                         </div>
+                    </form>
+                </div>
 
-                        <div class="ml-3 flex-1 min-w-0">
-                            <div class="flex items-center justify-between">
-                                <h3 class="font-semibold text-gray-900 truncate">
-                                    {{ conv_data.display_name }}
-                                    {% if conv_data.is_group %}
-                                    <i class="fas fa-users text-blue-500 text-xs ml-1"></i>
-                                    {% endif %}
-                                </h3>
-                                {% with last_message=conv_data.last_message %}
-                                    {% if last_message %}
-                                    <span class="text-xs text-gray-500">{{ last_message.timestamp|time }}</span>
-                                    {% endif %}
-                                {% endwith %}
-                            </div>
-                            <p class="text-sm text-gray-600 truncate">
-                                {% with last_message=conv_data.last_message %}
-                                    {% if last_message %}
-                                        {% if last_message.sender == request.user %}
-                                            You: {{ last_message.content|truncatewords:8 }}
-                                        {% else %}
-                                            {% if conv_data.is_group %}
-                                                {{ last_message.sender.username }}: {{ last_message.content|truncatewords:8 }}
-                                            {% else %}
-                                                {{ last_message.content|truncatewords:8 }}
-                                            {% endif %}
-                                        {% endif %}
-                                    {% else %}
-                                        Start a conversation...
-                                    {% endif %}
-                                {% endwith %}
-                            </p>
-                        </div>
-
-                        {% if conv_data.unread_count > 0 %}
-                        <span class="bg-blue-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center ml-2">
-                            {{ conv_data.unread_count }}
-                        </span>
-                        {% endif %}
-                    </a>
-                    {% endfor %}
-                {% else %}
-                <div class="text-center py-8">
-                    <div class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        <i class="fas fa-comments text-gray-400 text-xl"></i>
+                <!-- Notifications Dropdown -->
+                <div id="notifications-dropdown" class="hidden absolute z-50 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg max-h-96 overflow-y-auto">
+                    <div class="p-4 border-b border-gray-200">
+                        <h3 class="font-semibold text-gray-900">Notifications</h3>
                     </div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">No conversations yet</h3>
-                    <p class="text-gray-600 mb-4">Start a new chat or create a group to begin messaging</p>
-                    <div class="space-x-2">
-                        <a href="{% url 'start_chat' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200">
-                            <i class="fas fa-edit mr-2"></i>New Chat
-                        </a>
-                        <a href="{% url 'create_group' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition duration-200">
-                            <i class="fas fa-users mr-2"></i>Create Group
-                        </a>
+                    <div id="notifications-list" class="p-2">
+                        <!-- Notifications will be loaded here via AJAX -->
                     </div>
                 </div>
-                {% endif %}
-            </div>
-        </div>
 
-        <!-- Welcome/Empty State -->
-        <div class="flex-1 flex items-center justify-center bg-gray-50">
-            <div class="text-center">
-                <div class="mx-auto w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 shadow-sm">
-                    <i class="fas fa-comments text-blue-500 text-3xl"></i>
-                </div>
-                <h2 class="text-2xl font-bold text-gray-900 mb-2">Welcome to Connect.io</h2>
-                <p class="text-gray-600 mb-6 max-w-md">
-                    Start a conversation with friends or create a group chat to stay connected with multiple people at once.
-                </p>
-                <div class="space-x-3">
-                    <a href="{% url 'start_chat' %}" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 font-medium">
-                        <i class="fas fa-edit mr-2"></i>Start New Chat
-                    </a>
-                    <a href="{% url 'create_group' %}" class="inline-flex items-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition duration-200 font-medium">
-                        <i class="fas fa-users mr-2"></i>Create Group
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Mobile Layout -->
-    <div class="md:hidden min-h-screen bg-gray-50 pt-4 pb-20">
-        <div class="container mx-auto px-4">
-            <!-- Quick Actions -->
-            <div class="flex space-x-4 mb-6">
-                <a href="{% url 'start_chat' %}" class="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg text-center hover:bg-blue-700 transition duration-200">
-                    <i class="fas fa-edit mr-2"></i>New Chat
-                </a>
-                <a href="{% url 'create_group' %}" class="flex-1 bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-lg text-center hover:bg-gray-50 transition duration-200">
-                    <i class="fas fa-users mr-2"></i>Create Group
-                </a>
-            </div>
-
-            <!-- Search -->
-            <div class="mb-6">
-                <form method="GET" action="{% url 'search_users' %}">
-                    <div class="relative">
-                        <input
-                            type="text"
-                            name="q"
-                            placeholder="Search users..."
-                            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="fas fa-search text-gray-400"></i>
-                        </div>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Conversations List -->
-            <div class="space-y-3">
-                {% if conversation_data %}
-                    {% for conv_data in conversation_data %}
-                    <a href="{% url 'conversation' conv_data.conversation.id %}"
-                       class="block bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition duration-200">
-                        <div class="flex items-center">
+                <!-- Conversations List -->
+                <div class="overflow-y-auto h-full">
+                    {% if conversation_data %}
+                        {% for conv_data in conversation_data %}
+                        <a href="{% url 'conversation' conv_data.conversation.id %}"
+                           class="flex items-center p-4 border-b border-gray-100 hover:bg-gray-50 transition duration-200">
                             <div class="relative flex-shrink-0">
                                 {% if conv_data.display_photo %}
                                 <img src="{{ conv_data.display_photo }}"
@@ -214,9 +91,12 @@
                             </div>
 
                             <div class="ml-3 flex-1 min-w-0">
-                                <div class="flex items-center justify-between mb-1">
+                                <div class="flex items-center justify-between">
                                     <h3 class="font-semibold text-gray-900 truncate">
                                         {{ conv_data.display_name }}
+                                        {% if conv_data.is_group %}
+                                        <i class="fas fa-users text-blue-500 text-xs ml-1"></i>
+                                        {% endif %}
                                     </h3>
                                     {% with last_message=conv_data.last_message %}
                                         {% if last_message %}
@@ -248,20 +128,167 @@
                                 {{ conv_data.unread_count }}
                             </span>
                             {% endif %}
+                        </a>
+                        {% endfor %}
+                    {% else %}
+                    <div class="text-center py-8">
+                        <div class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            <i class="fas fa-comments text-gray-400 text-xl"></i>
                         </div>
-                    </a>
-                    {% endfor %}
-                {% else %}
-                <div class="text-center py-12">
-                    <div class="mx-auto w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        <i class="fas fa-comments text-gray-400 text-2xl"></i>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">No conversations yet</h3>
+                        <p class="text-gray-600 mb-4">Start a new chat or create a group to begin messaging</p>
+                        <div class="space-x-2">
+                            <a href="{% url 'start_chat' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200">
+                                <i class="fas fa-edit mr-2"></i>New Chat
+                            </a>
+                            <a href="{% url 'create_group' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition duration-200">
+                                <i class="fas fa-users mr-2"></i>Create Group
+                            </a>
+                        </div>
                     </div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">No conversations yet</h3>
-                    <p class="text-gray-600">Start a conversation to begin messaging</p>
+                    {% endif %}
                 </div>
-                {% endif %}
+            </div>
+
+            <!-- Welcome/Empty State -->
+            <div class="flex-1 flex items-center justify-center bg-gray-50">
+                <div class="text-center">
+                    <div class="mx-auto w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 shadow-sm">
+                        <i class="fas fa-comments text-blue-500 text-3xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Welcome to connect.io</h2>
+                    <p class="text-gray-600 mb-6 max-w-md">
+                        Start a conversation with friends or create a group chat to stay connected with multiple people at once.
+                    </p>
+                    <div class="space-x-3">
+                        <a href="{% url 'start_chat' %}" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 font-medium">
+                            <i class="fas fa-edit mr-2"></i>Start New Chat
+                        </a>
+                        <a href="{% url 'create_group' %}" class="inline-flex items-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition duration-200 font-medium">
+                            <i class="fas fa-users mr-2"></i>Create Group
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+// Notifications functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const notificationsBtn = document.getElementById('notifications-btn');
+    const notificationsDropdown = document.getElementById('notifications-dropdown');
+    const notificationsList = document.getElementById('notifications-list');
+    const notificationBadge = document.getElementById('notification-badge');
+
+    // Toggle notifications dropdown
+    notificationsBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        notificationsDropdown.classList.toggle('hidden');
+        loadNotifications();
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function() {
+        notificationsDropdown.classList.add('hidden');
+    });
+
+    // Load notifications via AJAX
+    function loadNotifications() {
+        fetch('{% url "get_notifications" %}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateNotificationsList(data.notifications);
+                    updateNotificationBadge(data.unread_count);
+                }
+            })
+            .catch(error => console.error('Error loading notifications:', error));
+    }
+
+    function updateNotificationsList(notifications) {
+        if (notifications.length === 0) {
+            notificationsList.innerHTML = `
+                <div class="p-4 text-center text-gray-500">
+                    <i class="fas fa-bell-slash text-2xl mb-2"></i>
+                    <p>No notifications</p>
+                </div>
+            `;
+            return;
+        }
+
+        notificationsList.innerHTML = notifications.map(notification => `
+            <div class="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                 onclick="markNotificationRead(${notification.id})">
+                <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                        <i class="fas fa-${getNotificationIcon(notification.type)} text-blue-600 text-sm"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm text-gray-900">${notification.content}</p>
+                        <p class="text-xs text-gray-500 mt-1">${notification.created_at}</p>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function getNotificationIcon(type) {
+        const icons = {
+            'message': 'comment',
+            'typing': 'keyboard',
+            'online': 'circle',
+            'group_invite': 'users'
+        };
+        return icons[type] || 'bell';
+    }
+
+    function updateNotificationBadge(count) {
+        if (count > 0) {
+            notificationBadge.textContent = count;
+            notificationBadge.classList.remove('hidden');
+        } else {
+            notificationBadge.classList.add('hidden');
+        }
+    }
+
+    // Auto-refresh notifications every 30 seconds
+    setInterval(loadNotifications, 30000);
+});
+
+// Global function to mark notification as read
+function markNotificationRead(notificationId) {
+    fetch(`/chat/notifications/${notificationId}/read/`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reload notifications
+            document.getElementById('notifications-btn').click();
+        }
+    });
+}
+
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
 {% endblock %}
