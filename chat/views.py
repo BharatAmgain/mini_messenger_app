@@ -17,7 +17,7 @@ import emoji
 
 
 class EmojiManager:
-    """Enhanced emoji manager with all emojis and mobile support"""
+    """Enhanced emoji manager with all emojis and responsive support"""
 
     @staticmethod
     def get_all_emojis():
@@ -213,7 +213,7 @@ class EmojiManager:
 
 @login_required
 def chat_home(request):
-    """Chat home page with conversations and search"""
+    """Enhanced chat home page with responsive design"""
     conversations = Conversation.objects.filter(participants=request.user).order_by('-updated_at')
 
     # Prepare conversation data with other user info
@@ -264,6 +264,7 @@ def chat_home(request):
         'pending_invitations_count': pending_invitations,
     }
     return render(request, 'chat/chat_home.html', context)
+
 
 
 @login_required
@@ -401,7 +402,7 @@ def search_users(request):
 
 @login_required
 def conversation(request, conversation_id):
-    """View conversation and messages - Updated with friendship check"""
+    """Enhanced conversation view with responsive design"""
     conversation = get_object_or_404(
         Conversation,
         id=conversation_id,
@@ -465,6 +466,7 @@ def conversation(request, conversation_id):
         }
 
     return render(request, 'chat/conversation.html', context)
+
 
 
 @login_required
@@ -807,7 +809,7 @@ def get_notifications(request):
 
 @login_required
 def send_message_ajax(request, conversation_id):
-    """Send message via AJAX - Enhanced with all emoji support and mobile optimization"""
+    """Enhanced message sending with responsive support"""
     if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
         conversation = get_object_or_404(Conversation, id=conversation_id, participants=request.user)
 
@@ -1118,7 +1120,7 @@ def react_to_message(request, message_id):
 
 @login_required
 def discover_users(request):
-    """Merged page for discovering all users and searching users"""
+    """Enhanced user discovery with responsive design"""
     query = request.GET.get('q', '').strip()
 
     # Get users blocked by current user
@@ -1183,9 +1185,10 @@ def discover_users(request):
         }
         users_with_status.append(user_info)
 
-    # Pagination
+    # Responsive pagination
     page = request.GET.get('page', 1)
-    paginator = Paginator(users_with_status, 20)  # 20 users per page
+    items_per_page = 12 if request.headers.get('User-Agent', '').lower().find('mobile') != -1 else 20
+    paginator = Paginator(users_with_status, items_per_page)
 
     try:
         users_page = paginator.page(page)
@@ -1202,6 +1205,7 @@ def discover_users(request):
         'is_search': is_search,
     }
     return render(request, 'chat/discover_users.html', context)
+
 
 
 @login_required
