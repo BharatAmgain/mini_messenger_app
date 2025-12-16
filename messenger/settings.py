@@ -7,7 +7,10 @@ from decouple import config
 # -----------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here')
-DEBUG = config('DEBUG', default=False, cast=bool)
+
+# DEBUG can be True (development) or False (production)
+DEBUG = config('DEBUG', default=True, cast=bool)
+
 ALLOWED_HOSTS = ['mini-messenger-app.onrender.com']
 
 # -----------------------------
