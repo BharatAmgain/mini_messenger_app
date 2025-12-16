@@ -9,7 +9,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here')
 
 # DEBUG can be True (development) or False (production)
-DEBUG = config('DEBUG', default=False, cast=bool)
+DEBUG = True
+
 
 ALLOWED_HOSTS = ['mini-messenger-app.onrender.com']
 
