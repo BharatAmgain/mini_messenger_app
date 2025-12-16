@@ -3,11 +3,13 @@
 
 {% block title %}Edit Profile - Messenger{% endblock %}
 
+{% block mobile_title %}Edit Profile{% endblock %}
+
 {% block content %}
-<div class="min-h-screen bg-gray-50 py-4 md:py-8">
+<div class="min-h-screen bg-gray-50 pb-20 md:pb-0">
     <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Mobile Back Button -->
-        <div class="desktop-hidden mb-4">
+        <div class="desktop-hidden mb-4 pt-2">
             <button onclick="window.history.back()" class="flex items-center text-blue-600 hover:text-blue-700">
                 <i class="fas fa-arrow-left mr-2"></i>
                 Back
@@ -19,10 +21,10 @@
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0">
                     <div>
                         <h1 class="text-xl md:text-2xl font-bold text-gray-900">Edit Your Profile</h1>
-                        <p class="text-gray-600 text-sm md:text-base">You can change your profile anytime</p>
+                        <p class="text-gray-600 text-sm md:text-base">Update your profile anytime</p>
                     </div>
-                    <a href="{% url 'profile' %}" class="text-blue-600 hover:text-blue-700 text-sm md:text-base">
-                        ← Back to Profile
+                    <a href="{% url 'profile' %}" class="text-blue-600 hover:text-blue-700 text-sm md:text-base flex items-center">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to Profile
                     </a>
                 </div>
             </div>
@@ -37,100 +39,135 @@
                 </div>
                 {% endif %}
 
-                <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                <form method="POST" enctype="multipart/form-data" class="space-y-6" id="profile-edit-form">
                     {% csrf_token %}
 
                     <!-- Profile Picture Section -->
                     <div class="border-b border-gray-200 pb-6">
-                        <h3 class="text-lg font-medium text-gray-900 mb-4">Profile Picture</h3>
+                        <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-camera mr-2 text-blue-600"></i>Profile Picture
+                        </h3>
                         <div class="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-6">
                             <div class="flex-shrink-0">
-                                {% if user.profile_picture %}
-                                <img id="current-photo" src="{{ user.profile_picture.url }}" alt="{{ user.username }}"
-                                     class="w-20 h-20 rounded-full border-2 border-gray-300 object-cover">
-                                {% else %}
-                                <div id="current-photo" class="w-20 h-20 rounded-full bg-gray-300 border-2 border-gray-300 flex items-center justify-center">
-                                    <i class="fas fa-user text-gray-500 text-2xl"></i>
+                                <div class="relative">
+                                    {% if user.profile_picture %}
+                                    <img id="current-photo" src="{{ user.profile_picture.url }}" alt="{{ user.username }}"
+                                         class="w-24 h-24 md:w-32 md:h-32 rounded-full border-2 border-gray-300 object-cover">
+                                    {% else %}
+                                    <div id="current-photo" class="w-24 h-24 md:w-32 md:h-32 rounded-full bg-gray-300 border-2 border-gray-300 flex items-center justify-center">
+                                        <i class="fas fa-user text-gray-500 text-3xl"></i>
+                                    </div>
+                                    {% endif %}
+                                    <div id="photo-preview" class="hidden absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                                        <span class="text-white text-sm">Preview</span>
+                                    </div>
                                 </div>
-                                {% endif %}
                             </div>
                             <div class="flex-1">
-                                <label for="profile_picture" class="block text-sm font-medium text-gray-700 mb-2">
-                                    Change Photo (Optional)
-                                </label>
-                                <input type="file" id="profile_picture" name="profile_picture"
-                                       accept="image/*"
-                                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                                <p class="text-xs text-gray-500 mt-1">JPG, PNG, GIF • Max 5MB</p>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label for="profile_picture" class="block text-sm font-medium text-gray-700 mb-2">
+                                            Upload New Photo
+                                        </label>
+                                        <div class="flex items-center space-x-2">
+                                            <input type="file" id="profile_picture" name="profile_picture"
+                                                   accept="image/*"
+                                                   class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                        </div>
+                                        <p class="text-xs text-gray-500 mt-1">JPG, PNG, GIF • Max 5MB</p>
+                                    </div>
+
+                                    {% if user.profile_picture %}
+                                    <div class="pt-2 border-t border-gray-100">
+                                        <button type="button" onclick="removeProfilePicture()"
+                                                class="text-sm text-red-600 hover:text-red-700 flex items-center">
+                                            <i class="fas fa-trash-alt mr-2"></i>
+                                            Remove Current Picture
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Personal Information -->
                     <div class="border-b border-gray-200 pb-6">
-                        <h3 class="text-lg font-medium text-gray-900 mb-4">Personal Information</h3>
+                        <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-id-card mr-2 text-green-600"></i>Personal Information
+                        </h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label for="first_name" class="block text-sm font-medium text-gray-700">First Name</label>
+                                <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
                                 <input type="text" id="first_name" name="first_name" value="{{ user.first_name }}"
-                                    class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
                             </div>
 
                             <div>
-                                <label for="last_name" class="block text-sm font-medium text-gray-700">Last Name</label>
+                                <label for="last_name" class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
                                 <input type="text" id="last_name" name="last_name" value="{{ user.last_name }}"
-                                    class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
                             </div>
                         </div>
 
                         <div class="mt-4">
-                            <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-                            <input type="email" id="email" name="email" value="{{ user.email }}" required
-                                class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
+                            <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                            <input type="text" id="username" name="username" value="{{ user.username }}" required
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
                         </div>
 
                         <div class="mt-4">
-                            <label for="phone_number" class="block text-sm font-medium text-gray-700">Phone Number</label>
-                            <input type="text" id="phone_number" name="phone_number" value="{{ user.phone_number|default:'' }}"
-                                class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input type="email" id="email" name="email" value="{{ user.email }}" required
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
+                        </div>
+
+                        <div class="mt-4">
+                            <label for="phone_number" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                            <input type="tel" id="phone_number" name="phone_number" value="{{ user.phone_number|default:'' }}"
+                                placeholder="+1 (555) 123-4567"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
                         </div>
                     </div>
 
                     <!-- Additional Information -->
                     <div class="border-b border-gray-200 pb-6">
-                        <h3 class="text-lg font-medium text-gray-900 mb-4">Additional Information</h3>
+                        <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-info-circle mr-2 text-purple-600"></i>Additional Information
+                        </h3>
 
                         <div class="mb-4">
-                            <label for="bio" class="block text-sm font-medium text-gray-700">Bio</label>
+                            <label for="bio" class="block text-sm font-medium text-gray-700 mb-1">Bio</label>
                             <textarea id="bio" name="bio" rows="3" placeholder="Tell us about yourself..."
-                                class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">{{ user.bio|default:'' }}</textarea>
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base resize-none">{{ user.bio|default:'' }}</textarea>
+                            <div class="text-xs text-gray-500 mt-1">Max 500 characters</div>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label for="location" class="block text-sm font-medium text-gray-700">Location</label>
+                                <label for="location" class="block text-sm font-medium text-gray-700 mb-1">Location</label>
                                 <input type="text" id="location" name="location" value="{{ user.location|default:'' }}" placeholder="Your city"
-                                    class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
                             </div>
 
                             <div>
-                                <label for="website" class="block text-sm font-medium text-gray-700">Website</label>
+                                <label for="website" class="block text-sm font-medium text-gray-700 mb-1">Website</label>
                                 <input type="url" id="website" name="website" value="{{ user.website|default:'' }}" placeholder="https://example.com"
-                                    class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                             <div>
-                                <label for="date_of_birth" class="block text-sm font-medium text-gray-700">Date of Birth</label>
+                                <label for="date_of_birth" class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
                                 <input type="date" id="date_of_birth" name="date_of_birth"
                                        value="{% if user.date_of_birth %}{{ user.date_of_birth|date:'Y-m-d' }}{% endif %}"
-                                    class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
                             </div>
 
                             <div>
-                                <label for="gender" class="block text-sm font-medium text-gray-700">Gender</label>
-                                <select id="gender" name="gender" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
+                                <label for="gender" class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                                <select id="gender" name="gender" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
                                     <option value="">Select Gender</option>
                                     <option value="male" {% if user.gender == 'male' %}selected{% endif %}>Male</option>
                                     <option value="female" {% if user.gender == 'female' %}selected{% endif %}>Female</option>
@@ -141,18 +178,33 @@
                         </div>
                     </div>
 
+                    <!-- Privacy Settings Preview -->
+                    <div class="pb-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-shield-alt mr-2 text-red-600"></i>Privacy Settings
+                        </h3>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600 mb-2">Manage your privacy settings to control who can see your information.</p>
+                            <a href="{% url 'privacy_settings' %}" class="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center">
+                                <i class="fas fa-external-link-alt mr-2"></i>Go to Privacy Settings
+                            </a>
+                        </div>
+                    </div>
+
                     <!-- Action Buttons -->
-                    <div class="flex flex-col md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0">
-                        <p class="text-sm text-gray-600">
-                            You can come back and edit anytime
-                        </p>
-                        <div class="flex space-x-3">
+                    <div class="flex flex-col md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0 pt-4 border-t border-gray-200">
+                        <div class="flex items-center space-x-2 text-sm text-gray-600">
+                            <i class="fas fa-info-circle"></i>
+                            <span>You can update your profile anytime</span>
+                        </div>
+                        <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
                             <a href="{% url 'profile' %}"
-                                class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-200 text-center text-sm md:text-base">
+                                class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition duration-200 text-center font-medium">
                                 Cancel
                             </a>
                             <button type="submit"
-                                class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200 font-medium text-sm md:text-base">
+                                    class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 font-medium flex items-center justify-center">
+                                <i class="fas fa-save mr-2"></i>
                                 Save Changes
                             </button>
                         </div>
@@ -163,30 +215,196 @@
     </div>
 </div>
 
-<!-- Simple Photo Preview -->
 <script>
-document.getElementById('profile_picture').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const currentPhoto = document.getElementById('current-photo');
-            if (currentPhoto.tagName === 'IMG') {
-                currentPhoto.src = e.target.result;
-            } else {
-                // Replace div with image
-                const container = currentPhoto.parentElement;
-                const newImg = document.createElement('img');
-                newImg.src = e.target.result;
-                newImg.alt = 'Preview';
-                newImg.className = 'w-20 h-20 rounded-full border-2 border-gray-300 object-cover';
-                newImg.id = 'current-photo';
-                container.innerHTML = '';
-                container.appendChild(newImg);
+document.addEventListener('DOMContentLoaded', function() {
+    const profilePictureInput = document.getElementById('profile_picture');
+    const currentPhoto = document.getElementById('current-photo');
+    const photoPreview = document.getElementById('photo-preview');
+    const form = document.getElementById('profile-edit-form');
+
+    // Profile picture preview
+    if (profilePictureInput) {
+        profilePictureInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Validate file size (5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File size must be less than 5MB');
+                    this.value = '';
+                    return;
+                }
+
+                // Validate file type
+                if (!file.type.startsWith('image/')) {
+                    alert('Please select an image file (JPG, PNG, GIF)');
+                    this.value = '';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (currentPhoto.tagName === 'IMG') {
+                        currentPhoto.src = e.target.result;
+                    } else {
+                        // Replace div with image
+                        const container = currentPhoto.parentElement;
+                        const newImg = document.createElement('img');
+                        newImg.src = e.target.result;
+                        newImg.alt = 'Preview';
+                        newImg.className = 'w-24 h-24 md:w-32 md:h-32 rounded-full border-2 border-gray-300 object-cover';
+                        newImg.id = 'current-photo';
+                        container.innerHTML = '';
+                        container.appendChild(newImg);
+
+                        // Re-add the preview overlay
+                        const previewDiv = document.createElement('div');
+                        previewDiv.id = 'photo-preview';
+                        previewDiv.className = 'absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center hidden';
+                        previewDiv.innerHTML = '<span class="text-white text-sm">Preview</span>';
+                        container.appendChild(previewDiv);
+                    }
+
+                    // Show preview overlay on hover
+                    const newCurrentPhoto = document.getElementById('current-photo');
+                    const newPhotoPreview = document.getElementById('photo-preview');
+
+                    newCurrentPhoto.addEventListener('mouseenter', () => newPhotoPreview.classList.remove('hidden'));
+                    newCurrentPhoto.addEventListener('mouseleave', () => newPhotoPreview.classList.add('hidden'));
+                };
+                reader.readAsDataURL(file);
             }
-        };
-        reader.readAsDataURL(file);
+        });
+    }
+
+    // Remove profile picture
+    window.removeProfilePicture = function() {
+        if (confirm('Are you sure you want to remove your profile picture?')) {
+            // In a real application, this would send an AJAX request to remove the picture
+            // For now, we'll just clear the input and show default avatar
+            if (profilePictureInput) {
+                profilePictureInput.value = '';
+            }
+
+            const container = currentPhoto.parentElement;
+            container.innerHTML = `
+                <div id="current-photo" class="w-24 h-24 md:w-32 md:h-32 rounded-full bg-gray-300 border-2 border-gray-300 flex items-center justify-center">
+                    <i class="fas fa-user text-gray-500 text-3xl"></i>
+                </div>
+                <div id="photo-preview" class="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center hidden">
+                    <span class="text-white text-sm">Preview</span>
+                </div>
+            `;
+
+            alert('Profile picture will be removed when you save changes.');
+        }
+    };
+
+    // Character counter for bio
+    const bioTextarea = document.getElementById('bio');
+    if (bioTextarea) {
+        const charCount = document.createElement('div');
+        charCount.className = 'text-xs text-gray-500 text-right mt-1';
+        charCount.id = 'char-count';
+        bioTextarea.parentElement.appendChild(charCount);
+
+        function updateCharCount() {
+            const remaining = 500 - bioTextarea.value.length;
+            charCount.textContent = `${remaining} characters remaining`;
+            charCount.className = `text-xs ${remaining < 50 ? 'text-red-500' : 'text-gray-500'} text-right mt-1`;
+        }
+
+        bioTextarea.addEventListener('input', updateCharCount);
+        updateCharCount();
+    }
+
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        const email = document.getElementById('email').value;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (!emailRegex.test(email)) {
+            e.preventDefault();
+            alert('Please enter a valid email address.');
+            return;
+        }
+
+        const bio = document.getElementById('bio').value;
+        if (bio.length > 500) {
+            e.preventDefault();
+            alert('Bio must be 500 characters or less.');
+            return;
+        }
+
+        // Show loading state
+        const submitBtn = this.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
+            submitBtn.disabled = true;
+        }
+    });
+
+    // Show preview overlay on hover
+    if (currentPhoto && photoPreview) {
+        currentPhoto.addEventListener('mouseenter', () => photoPreview.classList.remove('hidden'));
+        currentPhoto.addEventListener('mouseleave', () => photoPreview.classList.add('hidden'));
+    }
+
+    // Mobile-specific optimizations
+    if (window.innerWidth <= 768) {
+        // Make form inputs more mobile-friendly
+        const inputs = form.querySelectorAll('input, textarea, select');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                // Scroll to input on mobile
+                setTimeout(() => {
+                    this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            });
+        });
     }
 });
+
+// Helper function for mobile detection
+function isMobile() {
+    return window.innerWidth <= 768;
+}
 </script>
+
+<style>
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+    .mobile-input {
+        font-size: 16px; /* Prevents iOS zoom on focus */
+    }
+
+    input, textarea, select {
+        font-size: 16px !important; /* Prevents iOS zoom on focus */
+    }
+
+    #profile-edit-form {
+        padding-bottom: 80px; /* Account for bottom nav */
+    }
+}
+
+/* Focus styles */
+input:focus, textarea:focus, select:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Transition effects */
+.smooth-transition {
+    transition: all 0.3s ease;
+}
+
+/* Loading animation */
+.fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
 {% endblock %}
