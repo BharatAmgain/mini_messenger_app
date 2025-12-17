@@ -157,12 +157,13 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_uid',
     'social_core.pipeline.social_auth.auth_allowed',
     'social_core.pipeline.social_auth.social_user',
+    'accounts.pipeline.handle_duplicate_email',  # ADD THIS LINE - Handles duplicate emails
     'social_core.pipeline.user.get_username',
     'social_core.pipeline.user.create_user',
     'social_core.pipeline.social_auth.associate_user',
     'social_core.pipeline.social_auth.load_extra_data',
     'social_core.pipeline.user.user_details',
-    'accounts.pipeline.save_profile_picture',
+    'accounts.pipeline.save_profile_picture',  # Your existing function
 )
 
 SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/chat/'
