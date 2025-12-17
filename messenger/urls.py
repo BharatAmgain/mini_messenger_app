@@ -9,6 +9,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
     path('chat/', include('chat.urls')),
+path('oauth/', include('social_django.urls', namespace='social')),
 
     # Redirect root to chat home
     path('', RedirectView.as_view(pattern_name='chat_home', permanent=False)),
