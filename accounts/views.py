@@ -369,15 +369,13 @@ def update_notification_preferences(request):
 
     return redirect('notification_settings')
 
-
 @login_required
 def get_unread_count(request):
-    """Get unread notification count for badge - FIXED: Add is_archived filter"""
+    """Get unread notification count for badge"""
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        unread_count = request.user.account_notifications.filter(is_read=False, is_archived=False).count()
+        unread_count = request.user.account_notifications.filter(is_read=False).count()
         return JsonResponse({'unread_count': unread_count})
     return JsonResponse({'error': 'Invalid request'})
-
 
 def login_view(request):
     if request.user.is_authenticated:

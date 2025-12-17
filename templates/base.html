@@ -278,13 +278,9 @@
                 <!-- Notifications -->
                 <a href="{% url 'notifications' %}" class="relative p-2 text-gray-600">
                     <i class="fas fa-bell text-lg"></i>
-                    {% with unread_notifications=user.account_notifications.filter.is_read=False %}
-                    {% if unread_notifications.count > 0 %}
-                    <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                        {{ unread_notifications.count }}
+                    <span class="notification-badge absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">
+                        0
                     </span>
-                    {% endif %}
-                    {% endwith %}
                 </a>
 
                 <!-- Profile -->
@@ -363,13 +359,9 @@
                 <i class="fas fa-bell w-6 text-red-600"></i>
                 <span class="ml-3">Notifications</span>
                 {% if user.is_authenticated %}
-                {% with unread_notifications=user.account_notifications.filter.is_read=False %}
-                {% if unread_notifications.count > 0 %}
-                <span class="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {{ unread_notifications.count }}
+                <span class="notification-badge ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">
+                    0
                 </span>
-                {% endif %}
-                {% endwith %}
                 {% endif %}
             </a>
 
@@ -470,13 +462,9 @@
                     <i class="fas fa-bell w-6"></i>
                     <span class="ml-3">Notifications</span>
                     {% if user.is_authenticated %}
-                    {% with unread_notifications=user.account_notifications.filter.is_read=False %}
-                    {% if unread_notifications.count > 0 %}
-                    <span class="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                        {{ unread_notifications.count }}
+                    <span class="notification-badge ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">
+                        0
                     </span>
-                    {% endif %}
-                    {% endwith %}
                     {% endif %}
                 </a>
 
@@ -567,6 +555,46 @@
         window.addEventListener('resize', setVH);
         window.addEventListener('orientationchange', setVH);
 
+        // Function to fetch notification count
+        function fetchNotificationCount() {
+            // Only fetch if user is authenticated
+            if (!document.body.classList.contains('user-authenticated')) {
+                return;
+            }
+
+            fetch('/accounts/get-unread-count/')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.unread_count > 0) {
+                        // Update all notification badges
+                        const badges = document.querySelectorAll('.notification-badge');
+                        badges.forEach(badge => {
+                            badge.textContent = data.unread_count;
+                            badge.classList.remove('hidden');
+                        });
+                    } else {
+                        // Hide all notification badges
+                        const badges = document.querySelectorAll('.notification-badge');
+                        badges.forEach(badge => {
+                            badge.classList.add('hidden');
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching notification count:', error);
+                    // Hide all notification badges on error
+                    const badges = document.querySelectorAll('.notification-badge');
+                    badges.forEach(badge => {
+                        badge.classList.add('hidden');
+                    });
+                });
+        }
+
         // Mobile menu functionality
         document.addEventListener('DOMContentLoaded', function() {
             const mobileMenuButton = document.getElementById('mobileMenuButton');
@@ -623,6 +651,16 @@
                     document.body.classList.remove('keyboard-open');
                 });
             });
+
+            // Check if user is authenticated
+            const userAuthenticated = document.querySelector('body').classList.contains('user-authenticated');
+            if (userAuthenticated) {
+                // Fetch notification count on page load
+                fetchNotificationCount();
+
+                // Update notification count every 30 seconds
+                setInterval(fetchNotificationCount, 30000);
+            }
         });
 
         // Online status update
