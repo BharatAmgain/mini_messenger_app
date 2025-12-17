@@ -746,6 +746,40 @@
                 }
             });
         }
+
+        // CSRF Token Helper Function
+function getCSRFToken() {
+    const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+    return cookieValue;
+}
+
+// Update online status with CSRF protection
+function updateOnlineStatus(isOnline) {
+    fetch('/chat/update-online-status/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify({ online: isOnline })
+    }).catch(error => {
+        console.log('Online status update failed:', error);
+    });
+}
+
+// Update status when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    updateOnlineStatus(true);
+
+    // Update status when user leaves
+    window.addEventListener('beforeunload', function() {
+        navigator.sendBeacon('/chat/update-online-status/',
+            JSON.stringify({ online: false }));
+    });
+});
     </script>
 
     {% block extra_js %}{% endblock %}

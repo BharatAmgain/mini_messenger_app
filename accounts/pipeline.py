@@ -4,8 +4,10 @@ from django.core.files import File
 from django.core.files.temp import NamedTemporaryFile
 from django.contrib.auth import get_user_model
 from .models import SocialAccount, CustomUser
+import logging
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 def handle_duplicate_email(backend, uid, user=None, *args, **kwargs):
@@ -56,43 +58,30 @@ def handle_duplicate_email(backend, uid, user=None, *args, **kwargs):
 
 
 def save_profile_picture(backend, user, response, *args, **kwargs):
-    """
-    Download and save profile picture from social providers.
-    Also creates SocialAccount record.
-    """
-    if backend.name == 'facebook':
-        img_url = f"https://graph.facebook.com/{response['id']}/picture?type=large&width=400&height=400"
-    elif backend.name == 'google-oauth2':
+    """Download and save profile picture from social providers."""
+    img_url = None
+
+    if backend.name == 'google-oauth2':
+        # Google provides picture URL directly
         img_url = response.get('picture')
-    else:
-        return
+    elif backend.name == 'facebook':
+        # Facebook needs the ID to construct URL
+        facebook_id = response.get('id')
+        if facebook_id:
+            img_url = f"https://graph.facebook.com/{facebook_id}/picture?type=large&width=400&height=400"
 
-    if img_url:
+    if img_url and not user.profile_picture:
         try:
-            # Only download if user doesn't have a profile picture or we want to update it
-            if not user.profile_picture:
-                # Download the image
-                img_temp = NamedTemporaryFile(delete=True)
-                img_temp.write(urlopen(img_url).read())
-                img_temp.flush()
+            # Download the image
+            img_temp = NamedTemporaryFile(delete=True)
+            img_temp.write(urlopen(img_url).read())
+            img_temp.flush()
 
-                # Save to user profile
-                user.profile_picture.save(f"{user.username}_social.jpg", File(img_temp))
-
-            # Save social provider info
+            # Save to user profile
+            user.profile_picture.save(f"{user.username}_social.jpg", File(img_temp))
             user.social_provider = backend.name
-            user.social_avatar = img_url
             user.save()
 
-            # Create or update SocialAccount record
-            SocialAccount.objects.update_or_create(
-                user=user,
-                provider=backend.name,
-                defaults={
-                    'provider_id': response['id'],
-                    'email': response.get('email', '')
-                }
-            )
-
         except Exception as e:
-            print(f"Error downloading profile picture: {e}")
+            # Just log the error, don't break the login
+            logger.warning(f"Could not download profile picture: {e}")
