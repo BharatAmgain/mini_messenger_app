@@ -11,12 +11,18 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here'
 # Debug
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-# Allowed Hosts
 ALLOWED_HOSTS = [
-    'connect-io-dbwj.onrender.com',  # Render domain
-    'localhost',
-    '127.0.0.1',
+    "connect-io-dbwj.onrender.com",
+    "mini-messenger-app.onrender.com",
+    "localhost",
+    "127.0.0.1",
 ]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://connect-io-dbwj.onrender.com",
+    "https://mini-messenger-app.onrender.com",
+]
+
 
 # Installed Apps
 INSTALLED_APPS = [
