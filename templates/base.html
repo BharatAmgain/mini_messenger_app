@@ -112,27 +112,6 @@
             .mobile-back-button {
                 display: none;
             }
-
-            /* Desktop top navigation */
-            .desktop-top-nav {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                height: 64px;
-                background: white;
-                border-bottom: 1px solid #e5e7eb;
-                z-index: 100;
-                display: flex;
-                align-items: center;
-                padding: 0 24px;
-            }
-
-            /* Adjust main content for desktop top nav */
-            .desktop-main-content {
-                padding-top: 64px;
-                height: 100vh;
-            }
         }
 
         /* Custom scrollbar */
@@ -217,20 +196,6 @@
             transform: translateX(0);
         }
 
-        /* Desktop dropdown menu animation */
-        .dropdown-menu {
-            opacity: 0;
-            transform: translateY(-10px);
-            transition: opacity 0.2s ease, transform 0.2s ease;
-            pointer-events: none;
-        }
-
-        .dropdown-menu.open {
-            opacity: 1;
-            transform: translateY(0);
-            pointer-events: auto;
-        }
-
         /* Message animations */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -286,105 +251,6 @@
     </style>
 </head>
 <body class="h-full bg-gray-50">
-    <!-- Desktop Top Navigation -->
-    <div class="desktop-hidden desktop-top-nav">
-        <div class="flex items-center justify-between w-full">
-            <!-- Logo -->
-            <div class="flex items-center">
-                <h1 class="text-xl font-bold text-blue-600">
-                    <i class="fas fa-comments mr-2"></i>
-                    Messenger
-                </h1>
-            </div>
-
-            <!-- Center: Navigation Links -->
-            <div class="flex items-center space-x-6">
-                <a href="{% url 'chat_home' %}"
-                   class="flex items-center p-2 rounded-lg hover:bg-blue-50 transition duration-200 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}text-blue-600 border-b-2 border-blue-500{% endif %}">
-                    <i class="fas fa-comments w-5 mr-2"></i>
-                    <span>Chats</span>
-                </a>
-
-                <a href="{% url 'discover_users' %}"
-                   class="flex items-center p-2 rounded-lg hover:bg-green-50 transition duration-200 {% if request.resolver_match.url_name == 'discover_users' %}text-green-600 border-b-2 border-green-500{% endif %}">
-                    <i class="fas fa-search w-5 mr-2"></i>
-                    <span>Discover</span>
-                </a>
-
-                <a href="{% url 'friend_requests' %}"
-                   class="flex items-center p-2 rounded-lg hover:bg-purple-50 transition duration-200 {% if request.resolver_match.url_name == 'friend_requests' %}text-purple-600 border-b-2 border-purple-500{% endif %}">
-                    <i class="fas fa-user-friends w-5 mr-2"></i>
-                    <span>Friends</span>
-                </a>
-
-                <a href="{% url 'profile' %}"
-                   class="flex items-center p-2 rounded-lg hover:bg-yellow-50 transition duration-200 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}text-yellow-600 border-b-2 border-yellow-500{% endif %}">
-                    <i class="fas fa-user w-5 mr-2"></i>
-                    <span>Profile</span>
-                </a>
-
-                <a href="{% url 'notifications' %}"
-                   class="flex items-center p-2 rounded-lg hover:bg-red-50 transition duration-200 {% if request.resolver_match.url_name == 'notifications' %}text-red-600 border-b-2 border-red-500{% endif %}">
-                    <i class="fas fa-bell w-5 mr-2"></i>
-                    <span>Notifications</span>
-                    {% if user.is_authenticated %}
-                    <span class="notification-badge ml-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">
-                        0
-                    </span>
-                    {% endif %}
-                </a>
-            </div>
-
-            <!-- Right: User Info & Settings -->
-            <div class="flex items-center space-x-4">
-                <!-- Settings -->
-                <a href="{% url 'settings_main' %}"
-                   class="flex items-center p-2 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'settings_main' %}text-gray-900 border-b-2 border-gray-500{% endif %}">
-                    <i class="fas fa-cog w-5"></i>
-                </a>
-
-                <!-- User Dropdown -->
-                <div class="relative">
-                    <button id="userDropdownButton" class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition duration-200">
-                        {% if user.profile_picture and user.profile_picture.url %}
-                        <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}"
-                             class="profile-picture">
-                        {% else %}
-                        <div class="profile-picture bg-gray-300 flex items-center justify-center">
-                            <i class="fas fa-user text-gray-500"></i>
-                        </div>
-                        {% endif %}
-                        <div class="text-left">
-                            <p class="text-sm font-medium text-gray-900 truncate max-w-[120px]">{{ user.username }}</p>
-                            <p class="text-xs text-gray-500 truncate max-w-[120px]">{{ user.email|truncatechars:20 }}</p>
-                        </div>
-                        <i class="fas fa-chevron-down text-gray-400 text-sm"></i>
-                    </button>
-
-                    <!-- Dropdown Menu -->
-                    <div id="userDropdownMenu" class="dropdown-menu absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                        <a href="{% url 'profile' %}" class="flex items-center px-4 py-3 hover:bg-gray-50 transition duration-200">
-                            <i class="fas fa-user w-5 text-gray-500 mr-3"></i>
-                            <span>My Profile</span>
-                        </a>
-                        <a href="{% url 'settings_main' %}" class="flex items-center px-4 py-3 hover:bg-gray-50 transition duration-200">
-                            <i class="fas fa-cog w-5 text-gray-500 mr-3"></i>
-                            <span>Settings</span>
-                        </a>
-                        <hr class="my-2 border-gray-200">
-                        <form method="POST" action="{% url 'logout' %}">
-                            {% csrf_token %}
-                            <button type="submit" class="flex items-center w-full px-4 py-3 hover:bg-red-50 transition duration-200 text-red-600">
-                                <i class="fas fa-sign-out-alt w-5 mr-3"></i>
-                                <span>Logout</span>
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Mobile Top Navigation -->
     <div class="desktop-hidden top-nav">
         <div class="flex items-center justify-between w-full">
@@ -555,8 +421,88 @@
 
     <!-- Main Content -->
     <div class="flex h-full">
+        <!-- Desktop Sidebar -->
+        <div class="mobile-hidden w-64 bg-white shadow-lg flex flex-col">
+            <!-- Logo -->
+            <div class="p-4 border-b border-gray-200">
+                <h1 class="text-xl font-bold text-blue-600">
+                    <i class="fas fa-comments mr-2"></i>
+                    Messenger
+                </h1>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 p-4 space-y-1">
+                <a href="{% url 'chat_home' %}"
+                   class="flex items-center p-3 rounded-lg hover:bg-blue-50 transition duration-200 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}bg-blue-50 text-blue-600 border-l-4 border-blue-500{% endif %}">
+                    <i class="fas fa-comments w-6"></i>
+                    <span class="ml-3">Chats</span>
+                </a>
+
+                <a href="{% url 'discover_users' %}"
+                   class="flex items-center p-3 rounded-lg hover:bg-green-50 transition duration-200 {% if request.resolver_match.url_name == 'discover_users' %}bg-green-50 text-green-600 border-l-4 border-green-500{% endif %}">
+                    <i class="fas fa-search w-6"></i>
+                    <span class="ml-3">Discover</span>
+                </a>
+
+                <a href="{% url 'friend_requests' %}"
+                   class="flex items-center p-3 rounded-lg hover:bg-purple-50 transition duration-200 {% if request.resolver_match.url_name == 'friend_requests' %}bg-purple-50 text-purple-600 border-l-4 border-purple-500{% endif %}">
+                    <i class="fas fa-user-friends w-6"></i>
+                    <span class="ml-3">Friends</span>
+                </a>
+
+                <a href="{% url 'profile' %}"
+                   class="flex items-center p-3 rounded-lg hover:bg-yellow-50 transition duration-200 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}bg-yellow-50 text-yellow-600 border-l-4 border-yellow-500{% endif %}">
+                    <i class="fas fa-user w-6"></i>
+                    <span class="ml-3">Profile</span>
+                </a>
+
+                <a href="{% url 'notifications' %}"
+                   class="flex items-center p-3 rounded-lg hover:bg-red-50 transition duration-200 {% if request.resolver_match.url_name == 'notifications' %}bg-red-50 text-red-600 border-l-4 border-red-500{% endif %}">
+                    <i class="fas fa-bell w-6"></i>
+                    <span class="ml-3">Notifications</span>
+                    {% if user.is_authenticated %}
+                    <span class="notification-badge ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">
+                        0
+                    </span>
+                    {% endif %}
+                </a>
+
+                <a href="{% url 'settings_main' %}"
+                   class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'settings_main' %}bg-gray-100 text-gray-900 border-l-4 border-gray-500{% endif %}">
+                    <i class="fas fa-cog w-6"></i>
+                    <span class="ml-3">Settings</span>
+                </a>
+            </nav>
+
+            <!-- User Info -->
+            <div class="p-4 border-t border-gray-200">
+                <div class="flex items-center space-x-3">
+                    {% if user.profile_picture and user.profile_picture.url %}
+                    <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}"
+                         class="profile-picture">
+                    {% else %}
+                    <div class="profile-picture bg-gray-300 flex items-center justify-center">
+                        <i class="fas fa-user text-gray-500"></i>
+                    </div>
+                    {% endif %}
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900 truncate">{{ user.username }}</p>
+                        <p class="text-xs text-gray-500 truncate">{{ user.email|truncatechars:20 }}</p>
+                    </div>
+                    <form method="POST" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="p-2 text-gray-400 hover:text-red-600 transition duration-200"
+                                title="Logout">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col desktop-main-content main-content">
+        <div class="flex-1 flex flex-col main-content">
             <!-- Messages Display -->
             {% if messages %}
             <div class="bg-white border-b border-gray-200 p-4">
@@ -655,8 +601,6 @@
             const closeMobileMenu = document.getElementById('closeMobileMenu');
             const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
             const mobileMenu = document.getElementById('mobileMenu');
-            const userDropdownButton = document.getElementById('userDropdownButton');
-            const userDropdownMenu = document.getElementById('userDropdownMenu');
 
             function openMobileMenu() {
                 mobileMenu.classList.add('open');
@@ -670,19 +614,6 @@
                 document.body.style.overflow = 'auto';
             }
 
-            // Desktop user dropdown functionality
-            function toggleUserDropdown() {
-                if (userDropdownMenu) {
-                    userDropdownMenu.classList.toggle('open');
-                }
-            }
-
-            function closeUserDropdown() {
-                if (userDropdownMenu) {
-                    userDropdownMenu.classList.remove('open');
-                }
-            }
-
             if (mobileMenuButton) {
                 mobileMenuButton.addEventListener('click', openMobileMenu);
             }
@@ -693,17 +624,6 @@
 
             if (mobileMenuOverlay) {
                 mobileMenuOverlay.addEventListener('click', closeMobileMenuFunc);
-            }
-
-            if (userDropdownButton) {
-                userDropdownButton.addEventListener('click', toggleUserDropdown);
-
-                // Close dropdown when clicking outside
-                document.addEventListener('click', function(event) {
-                    if (!userDropdownButton.contains(event.target) && !userDropdownMenu.contains(event.target)) {
-                        closeUserDropdown();
-                    }
-                });
             }
 
             // Auto-hide messages after 5 seconds
