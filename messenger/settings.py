@@ -135,7 +135,7 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
 )
 
-# Google OAuth2 - NOW USING ENVIRONMENT VARIABLES
+# Google OAuth2 - USING ENVIRONMENT VARIABLES
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config('GOOGLE_OAUTH2_KEY', default='')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config('GOOGLE_OAUTH2_SECRET', default='')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
@@ -144,26 +144,32 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'openid'
 ]
 
-# Facebook OAuth2
+# Facebook OAuth2 - FIXED SCOPES
 SOCIAL_AUTH_FACEBOOK_KEY = config('FACEBOOK_APP_ID', default='')
 SOCIAL_AUTH_FACEBOOK_SECRET = config('FACEBOOK_APP_SECRET', default='')
-SOCIAL_AUTH_FACEBOOK_SCOPE = ['email', 'public_profile']
+SOCIAL_AUTH_FACEBOOK_SCOPE = ['public_profile']  # REMOVED 'email' from scope
 SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {
-    'fields': 'id, name, email, picture.type(large)'
+    'fields': 'id,name,email,picture.type(large)',  # Request email via fields parameter instead
+    'locale': 'en_US'
 }
+SOCIAL_AUTH_FACEBOOK_EXTRA_DATA = [  # ADDED THIS SECTION
+    ('name', 'name'),
+    ('email', 'email'),
+    ('picture', 'picture')
+]
 
 SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_details',
     'social_core.pipeline.social_auth.social_uid',
     'social_core.pipeline.social_auth.auth_allowed',
     'social_core.pipeline.social_auth.social_user',
-    'accounts.pipeline.handle_duplicate_email',  # ADD THIS LINE - Handles duplicate emails
+    'accounts.pipeline.handle_duplicate_email',
     'social_core.pipeline.user.get_username',
     'social_core.pipeline.user.create_user',
     'social_core.pipeline.social_auth.associate_user',
     'social_core.pipeline.social_auth.load_extra_data',
     'social_core.pipeline.user.user_details',
-    'accounts.pipeline.save_profile_picture',  # Your existing function
+    'accounts.pipeline.save_profile_picture',
 )
 
 SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/chat/'
