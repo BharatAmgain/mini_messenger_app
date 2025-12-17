@@ -11,34 +11,34 @@ from .models import FriendRequest, Friendship
 
 
 def register(request):
+    if request.user.is_authenticated:
+        return redirect('chat_home')
+
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            user = form.save()
+            try:
+                user = form.save()
 
-            # FIX: Specify the authentication backend
-            from django.contrib.auth import authenticate, login
+                # Import ModelBackend correctly
+                from django.contrib.auth.backends import ModelBackend
 
-            # Authenticate with the ModelBackend
-            user = authenticate(
-                request,
-                username=form.cleaned_data['username'],
-                password=form.cleaned_data['password1'],
-                backend='django.contrib.auth.backends.ModelBackend'
-            )
+                # Use ModelBackend class, not string
+                user.backend = f'{ModelBackend.__module__}.{ModelBackend.__name__}'
 
-            if user is not None:
+                # Log the user in
+                from django.contrib.auth import login
                 login(request, user)
-                messages.success(request, 'Registration successful!')
+
+                messages.success(request, 'Registration successful! Welcome to Messenger!')
                 return redirect('chat_home')
-            else:
-                # If authentication fails, still log in using the user object
-                # This is a fallback
-                login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-                messages.success(request, 'Registration successful!')
-                return redirect('chat_home')
+
+            except Exception as e:
+                messages.error(request, f'Registration error: {str(e)}')
+                return render(request, 'accounts/register.html', {'form': form})
     else:
         form = CustomUserCreationForm()
+
     return render(request, 'accounts/register.html', {'form': form})
 
 @login_required
