@@ -5,8 +5,8 @@ from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Secret Key
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here')
+# Secret Key - ALWAYS USE ENVIRONMENT VARIABLES FOR SECRETS
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-production')
 
 DEBUG = True
 
@@ -135,9 +135,9 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
 )
 
-# Google OAuth2
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '489001278248-9hovcmgd3jbeo73675banaa1d2af3s7m.apps.googleusercontent.com'
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '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'
+# Google OAuth2 - NOW USING ENVIRONMENT VARIABLES
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config('GOOGLE_OAUTH2_KEY', default='')
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config('GOOGLE_OAUTH2_SECRET', default='')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'https://www.googleapis.com/auth/userinfo.email',
     'https://www.googleapis.com/auth/userinfo.profile',
