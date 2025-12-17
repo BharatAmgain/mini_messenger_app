@@ -14,14 +14,8 @@ ALLOWED_HOSTS = ["*"]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://connect-io-dbwj.onrender.com",
-]
-
-
-CSRF_TRUSTED_ORIGINS = [
-    "https://connect-io-dbwj.onrender.com",
     "https://mini-messenger-app.onrender.com",
 ]
-
 
 # Installed Apps
 INSTALLED_APPS = [
@@ -41,7 +35,7 @@ INSTALLED_APPS = [
 # Middleware
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # Whitenoise for static files
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -141,9 +135,16 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
 )
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config('GOOGLE_OAUTH2_KEY', default='')
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config('GOOGLE_OAUTH2_SECRET', default='')
+# Google OAuth2
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '489001278248-9hovcmgd3jbeo73675banaa1d2af3s7m.apps.googleusercontent.com'
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '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'
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'openid'
+]
 
+# Facebook OAuth2
 SOCIAL_AUTH_FACEBOOK_KEY = config('FACEBOOK_APP_ID', default='')
 SOCIAL_AUTH_FACEBOOK_SECRET = config('FACEBOOK_APP_SECRET', default='')
 SOCIAL_AUTH_FACEBOOK_SCOPE = ['email', 'public_profile']
@@ -167,6 +168,18 @@ SOCIAL_AUTH_PIPELINE = (
 SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/chat/'
 SOCIAL_AUTH_LOGIN_ERROR_URL = '/accounts/login/'
 SOCIAL_AUTH_NEW_USER_REDIRECT_URL = '/chat/'
+
+# Social Auth Additional Settings
+SOCIAL_AUTH_URL_NAMESPACE = 'social'
+SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
+    'access_type': 'online',
+}
+SOCIAL_AUTH_FACEBOOK_API_VERSION = '12.0'
+
+# Social Auth User Creation Settings
+SOCIAL_AUTH_USERNAME_IS_FULL_EMAIL = False
+SOCIAL_AUTH_USER_MODEL = 'accounts.CustomUser'
+SOCIAL_AUTH_ADMIN_USER_SEARCH_FIELDS = ['username', 'email']
 
 # Security settings for production
 if not DEBUG:
