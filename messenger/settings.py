@@ -8,15 +8,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Secret Key
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here')
 
-# Debug
-DEBUG = config('DEBUG', default=False, cast=bool)
+DEBUG = True
 
-ALLOWED_HOSTS = [
-    "connect-io-dbwj.onrender.com",
-    "mini-messenger-app.onrender.com",
-    "localhost",
-    "127.0.0.1",
+ALLOWED_HOSTS = ["*"]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://connect-io-dbwj.onrender.com",
 ]
+
 
 CSRF_TRUSTED_ORIGINS = [
     "https://connect-io-dbwj.onrender.com",
