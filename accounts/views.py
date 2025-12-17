@@ -15,13 +15,31 @@ def register(request):
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)
-            messages.success(request, 'Registration successful!')
-            return redirect('chat_home')
+
+            # FIX: Specify the authentication backend
+            from django.contrib.auth import authenticate, login
+
+            # Authenticate with the ModelBackend
+            user = authenticate(
+                request,
+                username=form.cleaned_data['username'],
+                password=form.cleaned_data['password1'],
+                backend='django.contrib.auth.backends.ModelBackend'
+            )
+
+            if user is not None:
+                login(request, user)
+                messages.success(request, 'Registration successful!')
+                return redirect('chat_home')
+            else:
+                # If authentication fails, still log in using the user object
+                # This is a fallback
+                login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                messages.success(request, 'Registration successful!')
+                return redirect('chat_home')
     else:
         form = CustomUserCreationForm()
     return render(request, 'accounts/register.html', {'form': form})
-
 
 @login_required
 def profile(request):
@@ -377,6 +395,7 @@ def get_unread_count(request):
         return JsonResponse({'unread_count': unread_count})
     return JsonResponse({'error': 'Invalid request'})
 
+
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('chat_home')
@@ -384,8 +403,12 @@ def login_view(request):
     if request.method == 'POST':
         username = request.POST['username']
         password = request.POST['password']
+
+        # Authenticate with all available backends
         user = authenticate(request, username=username, password=password)
+
         if user is not None:
+            # User authenticated successfully
             login(request, user)
             next_url = request.GET.get('next', 'chat_home')
             return redirect(next_url)
@@ -400,7 +423,6 @@ def login_view(request):
     return render(request, 'accounts/login.html', {
         'social_errors': social_errors
     })
-
 
 def logout_view(request):
     logout(request)
