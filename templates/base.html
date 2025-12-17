@@ -278,11 +278,13 @@
                 <!-- Notifications -->
                 <a href="{% url 'notifications' %}" class="relative p-2 text-gray-600">
                     <i class="fas fa-bell text-lg"></i>
-                    {% if request.user.account_notifications.filter.is_read=False %}
+                    {% with unread_notifications=user.account_notifications.filter.is_read=False %}
+                    {% if unread_notifications.count > 0 %}
                     <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                        {{ request.user.account_notifications.filter(is_read=False).count }}
+                        {{ unread_notifications.count }}
                     </span>
                     {% endif %}
+                    {% endwith %}
                 </a>
 
                 <!-- Profile -->
@@ -360,10 +362,14 @@
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'notifications' %}bg-red-50 text-red-700 border-l-4 border-red-500{% endif %}">
                 <i class="fas fa-bell w-6 text-red-600"></i>
                 <span class="ml-3">Notifications</span>
-                {% if request.user.account_notifications.filter.is_read=False %}
+                {% if user.is_authenticated %}
+                {% with unread_notifications=user.account_notifications.filter.is_read=False %}
+                {% if unread_notifications.count > 0 %}
                 <span class="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {{ request.user.account_notifications.filter(is_read=False).count }}
+                    {{ unread_notifications.count }}
                 </span>
+                {% endif %}
+                {% endwith %}
                 {% endif %}
             </a>
 
@@ -463,10 +469,14 @@
                    class="flex items-center p-3 rounded-lg hover:bg-red-50 transition duration-200 {% if request.resolver_match.url_name == 'notifications' %}bg-red-50 text-red-600 border-l-4 border-red-500{% endif %}">
                     <i class="fas fa-bell w-6"></i>
                     <span class="ml-3">Notifications</span>
-                    {% if request.user.account_notifications.filter.is_read=False %}
+                    {% if user.is_authenticated %}
+                    {% with unread_notifications=user.account_notifications.filter.is_read=False %}
+                    {% if unread_notifications.count > 0 %}
                     <span class="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                        {{ request.user.account_notifications.filter(is_read=False).count }}
+                        {{ unread_notifications.count }}
                     </span>
+                    {% endif %}
+                    {% endwith %}
                     {% endif %}
                 </a>
 
