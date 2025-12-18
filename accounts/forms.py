@@ -82,14 +82,15 @@ class OTPVerificationForm(forms.Form):
         return otp_code
 
 
-class PasswordResetRequestForm(AuthPasswordResetForm):
+class PasswordResetRequestForm(forms.Form):
     email_or_phone = forms.CharField(
         label="Email or Phone Number",
+        max_length=255,
         widget=forms.TextInput(attrs={
             'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500',
             'placeholder': 'Enter your email or phone number'
         }),
-        help_text="Example: user@example.com or +9779800000000"
+        help_text="Example: user@example.com or 9800000000"
     )
 
     def clean_email_or_phone(self):
@@ -103,7 +104,7 @@ class PasswordResetRequestForm(AuthPasswordResetForm):
             # Validate email format
             try:
                 validate_email(email_or_phone)
-                return {'type': 'email', 'value': email_or_phone}
+                return {'type': 'email', 'value': email_or_phone.lower()}
             except ValidationError:
                 raise forms.ValidationError('Please enter a valid email address (e.g., user@example.com)')
         else:
@@ -124,7 +125,7 @@ class PasswordResetRequestForm(AuthPasswordResetForm):
                     formatted = phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
                     return {'type': 'phone', 'value': formatted}
                 else:
-                    raise forms.ValidationError('Please enter a valid phone number (e.g., +9779800000000)')
+                    raise forms.ValidationError('Please enter a valid phone number (e.g., 9800000000)')
             except NumberParseException:
                 # Try one more time with just the number
                 try:
@@ -134,25 +135,9 @@ class PasswordResetRequestForm(AuthPasswordResetForm):
                         formatted = phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
                         return {'type': 'phone', 'value': formatted}
                     else:
-                        raise forms.ValidationError('Please enter a valid phone number')
+                        raise forms.ValidationError('Please enter a valid phone number (e.g., 9800000000)')
                 except:
                     raise forms.ValidationError('Please enter a valid email or phone number')
-
-    def get_users(self, email_or_phone):
-        """Get users by email or phone number"""
-        if not hasattr(self, 'cleaned_data'):
-            return []
-
-        data = self.cleaned_data.get('email_or_phone')
-        if not data:
-            return []
-
-        if data['type'] == 'email':
-            email = data['value']
-            return CustomUser.objects.filter(email__iexact=email, is_active=True)
-        else:  # phone
-            phone = data['value']
-            return CustomUser.objects.filter(phone_number=phone, is_active=True)
 
 
 class OTPPasswordResetForm(SetPasswordForm):
@@ -230,7 +215,7 @@ class SendOTPForm(forms.Form):
         max_length=20,
         widget=forms.TextInput(attrs={
             'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500',
-            'placeholder': 'Enter your phone number (e.g., +9779800000000)'
+            'placeholder': 'Enter your phone number (e.g., 9800000000)'
         })
     )
 
@@ -255,8 +240,8 @@ class SendOTPForm(forms.Form):
 
                 parsed = phonenumbers.parse(phone_number, None)
                 if not phonenumbers.is_valid_number(parsed):
-                    raise forms.ValidationError('Please enter a valid phone number (e.g., +9779800000000)')
+                    raise forms.ValidationError('Please enter a valid phone number (e.g., 9800000000)')
             except NumberParseException:
-                raise forms.ValidationError('Please enter a valid phone number (e.g., +9779800000000)')
+                raise forms.ValidationError('Please enter a valid phone number (e.g., 9800000000)')
 
         return cleaned_data
