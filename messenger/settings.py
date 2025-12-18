@@ -108,12 +108,14 @@ if DATABASE_URL and DATABASE_URL.startswith('postgres'):
             conn_max_age=600,
             conn_health_checks=True,
             ssl_require=True,
+
         )
     }
 else:
     # SQLite configuration (default for development)
     DATABASES = {
         'default': {
+            'ENGINE': 'django.db.backends.postgresql',
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
         }
