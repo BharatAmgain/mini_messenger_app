@@ -1,0 +1,106 @@
+<!-- templates/accounts/verify_account_otp.html -->
+{% extends 'base.html' %}
+
+{% block title %}Verify Account - Messenger{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-md mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h1 class="text-2xl font-bold text-gray-900">Verify Account</h1>
+                <p class="text-sm text-gray-600 mt-1">
+                    Enter the verification code sent to your {% if verification_method == 'email' %}email{% else %}phone{% endif %}
+                </p>
+                {% if contact_info %}
+                <p class="text-sm font-medium text-gray-700 mt-2">
+                    Code sent to: {{ contact_info }}
+                </p>
+                {% endif %}
+            </div>
+
+            <div class="p-6">
+                {% if messages %}
+                <div class="mb-4">
+                    {% for message in messages %}
+                    <div class="p-3 rounded {% if message.tags == 'success' %}bg-green-50 text-green-700{% else %}bg-red-50 text-red-700{% endif %}">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <form method="POST" class="space-y-4">
+                    {% csrf_token %}
+
+                    {% if form.errors %}
+                    <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+                        Please correct the errors below.
+                    </div>
+                    {% endif %}
+
+                    <div>
+                        <label for="otp_code" class="block text-sm font-medium text-gray-700">
+                            6-Digit Verification Code
+                        </label>
+                        <input type="text" name="otp_code" id="otp_code" required maxlength="6" minlength="6"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-center text-2xl tracking-widest"
+                            placeholder="000000"
+                            inputmode="numeric"
+                            pattern="[0-9]*">
+                        {% if form.otp_code.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.otp_code.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                        <div class="text-sm">
+                            <a href="{% url 'send_verification_otp' %}"
+                               class="text-blue-600 hover:text-blue-500">
+                                Didn't receive code? Resend
+                            </a>
+                        </div>
+                        <div class="flex space-x-3">
+                            <a href="{% url 'send_verification_otp' %}"
+                                class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-200">
+                                Back
+                            </a>
+                            <button type="submit"
+                                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200">
+                                Verify Account
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <p class="text-sm text-gray-600">
+                        <i class="fas fa-clock text-gray-400 mr-1"></i>
+                        Code expires in 5 minutes
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const otpInput = document.getElementById('otp_code');
+
+    // Auto-tab between digits
+    otpInput.addEventListener('input', function(e) {
+        if (this.value.length === 6) {
+            this.blur();
+        }
+    });
+
+    // Only allow numbers
+    otpInput.addEventListener('keypress', function(e) {
+        if (!/^\d$/.test(e.key)) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,17 @@
+# requirements-dev.txt (Development only) - UPDATED
+Django==4.2.26
+asgiref==3.7.2
+channels==4.0.0
+daphne==4.2.1
+channels-redis==4.1.0
+redis==5.0.1
+social-auth-core==4.8.1
+social-auth-app-django==5.4.3
+django-otp==1.6.3  # CHANGED
+django-otp-twilio==1.0.5
+twilio==8.10.0
+phonenumbers==8.13.19
+python-decouple==3.8
+Pillow==12.0.0
+emoji==2.15.0
+django-extensions==3.2.3

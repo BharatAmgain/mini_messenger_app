@@ -1,0 +1,126 @@
+<!-- templates/accounts/send_verification_otp.html -->
+{% extends 'base.html' %}
+
+{% block title %}Verify Account - Messenger{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-md mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h1 class="text-2xl font-bold text-gray-900">Verify Account</h1>
+                <p class="text-sm text-gray-600 mt-1">
+                    Choose how you want to receive your verification code
+                </p>
+            </div>
+
+            <div class="p-6">
+                {% if messages %}
+                <div class="mb-4">
+                    {% for message in messages %}
+                    <div class="p-3 rounded {% if message.tags == 'success' %}bg-green-50 text-green-700{% else %}bg-red-50 text-red-700{% endif %}">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <form method="POST" class="space-y-4">
+                    {% csrf_token %}
+
+                    {% if form.errors %}
+                    <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+                        Please correct the errors below.
+                    </div>
+                    {% endif %}
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Verification Method
+                        </label>
+                        <div class="space-y-2">
+                            {% for choice in form.verification_method %}
+                            <div class="flex items-center">
+                                {{ choice.tag }}
+                                <label for="{{ choice.id_for_label }}" class="ml-2 text-sm text-gray-700">
+                                    {{ choice.choice_label }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div id="email-field" class="hidden">
+                        <label for="email" class="block text-sm font-medium text-gray-700">
+                            Email Address
+                        </label>
+                        <input type="email" name="email" id="email"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Enter your email"
+                            value="{{ form.email.value|default:'' }}">
+                        {% if form.email.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.email.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div id="phone-field" class="hidden">
+                        <label for="phone_number" class="block text-sm font-medium text-gray-700">
+                            Phone Number
+                        </label>
+                        <input type="tel" name="phone_number" id="phone_number"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Enter your phone number"
+                            value="{{ form.phone_number.value|default:'' }}">
+                        {% if form.phone_number.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.phone_number.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex justify-end space-x-3">
+                        <a href="{% url 'profile' %}"
+                            class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-200">
+                            Cancel
+                        </a>
+                        <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200">
+                            Send Verification Code
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const emailField = document.getElementById('email-field');
+    const phoneField = document.getElementById('phone-field');
+    const verificationMethod = document.querySelectorAll('input[name="verification_method"]');
+
+    function toggleFields() {
+        const method = document.querySelector('input[name="verification_method"]:checked').value;
+
+        if (method === 'email') {
+            emailField.classList.remove('hidden');
+            phoneField.classList.add('hidden');
+            document.getElementById('email').required = true;
+            document.getElementById('phone_number').required = false;
+        } else {
+            emailField.classList.add('hidden');
+            phoneField.classList.remove('hidden');
+            document.getElementById('email').required = false;
+            document.getElementById('phone_number').required = true;
+        }
+    }
+
+    // Initial toggle
+    toggleFields();
+
+    // Add event listeners
+    verificationMethod.forEach(input => {
+        input.addEventListener('change', toggleFields);
+    });
+});
+</script>
+{% endblock %}

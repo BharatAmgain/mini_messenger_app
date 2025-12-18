@@ -58,41 +58,59 @@ urlpatterns = [
     path('reject-friend-request/<int:request_id>/', views.reject_friend_request, name='reject_friend_request'),
     path('remove-friend/<int:user_id>/', views.remove_friend, name='remove_friend'),
 
-    # Password Change URLs
-    path('password-change/',
-         auth_views.PasswordChangeView.as_view(
-             template_name='accounts/password_change.html',
-             success_url='/accounts/password-change/done/'
-         ),
-         name='password_change'),
-    path('password-change/done/',
-         auth_views.PasswordChangeDoneView.as_view(
-             template_name='accounts/password_change_done.html'
-         ),
-         name='password_change_done'),
+    # Password Change URLs (Django built-in - kept for backup)
+    path('password-change-old/', auth_views.PasswordChangeView.as_view(
+        template_name='accounts/password_change.html',
+        success_url='/accounts/password-change/done/'
+    ), name='password_change_old'),
 
-    # Password Reset URLs
-    path('password-reset/',
+    path('password-change/done/', auth_views.PasswordChangeDoneView.as_view(
+        template_name='accounts/password_change_done.html'
+    ), name='password_change_done'),
+
+    # Password Reset URLs (Django built-in - kept for backup)
+    path('password-reset-old/',
          auth_views.PasswordResetView.as_view(
              template_name='accounts/password_reset.html',
              email_template_name='accounts/password_reset_email.html',
              subject_template_name='accounts/password_reset_subject.txt',
              success_url='/accounts/password-reset/done/'
          ),
-         name='password_reset'),
+         name='password_reset_old'),
+
     path('password-reset/done/',
          auth_views.PasswordResetDoneView.as_view(
              template_name='accounts/password_reset_done.html'
          ),
          name='password_reset_done'),
+
     path('password-reset-confirm/<uidb64>/<token>/',
          auth_views.PasswordResetConfirmView.as_view(
              template_name='accounts/password_reset_confirm.html'
          ),
          name='password_reset_confirm'),
+
     path('password-reset-complete/',
          auth_views.PasswordResetCompleteView.as_view(
              template_name='accounts/password_reset_complete.html'
          ),
          name='password_reset_complete'),
+
+    # ========== OTP-BASED AUTHENTICATION URLS ==========
+
+    # OTP-based password reset
+    path('password-reset/', views.password_reset_request, name='password_reset_request'),
+    path('password-reset/verify-otp/', views.password_reset_verify_otp, name='password_reset_verify_otp'),
+    path('password-reset/confirm/', views.password_reset_confirm, name='password_reset_confirm'),
+
+    # OTP-based password change
+    path('password-change/', views.password_change_with_otp, name='password_change_with_otp'),
+    path('password-change/verify-otp/', views.verify_password_change_otp, name='verify_password_change_otp'),
+
+    # Account verification with OTP
+    path('send-verification-otp/', views.send_verification_otp, name='send_verification_otp'),
+    path('verify-account-otp/', views.verify_account_otp, name='verify_account_otp'),
+
+    # Resend OTP
+    path('resend-otp/<str:otp_type>/', views.resend_otp, name='resend_otp'),
 ]

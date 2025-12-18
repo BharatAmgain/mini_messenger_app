@@ -6,6 +6,14 @@ from django.utils import timezone
 from django.db.models import Q
 from django.core.exceptions import ValidationError
 import os
+import random
+import string
+from django.core.cache import cache
+from twilio.rest import Client
+from django.core.mail import send_mail
+from django.conf import settings
+import phonenumbers
+from phonenumbers import NumberParseException
 
 
 def user_profile_picture_path(instance, filename):
@@ -347,3 +355,237 @@ class Notification(models.Model):
     def unarchive(self):
         self.is_archived = False
         self.save()
+
+
+class OTPVerification(models.Model):
+    VERIFICATION_TYPES = [
+        ('email', 'Email'),
+        ('phone', 'Phone'),
+        ('password_reset', 'Password Reset'),
+        ('account_verification', 'Account Verification'),
+    ]
+
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='otp_verifications')
+    verification_type = models.CharField(max_length=50, choices=VERIFICATION_TYPES)
+    otp_code = models.CharField(max_length=6)
+    email = models.EmailField(blank=True, null=True)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    is_verified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    verified_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.verification_type} - {self.otp_code}"
+
+    def is_expired(self):
+        from django.utils import timezone
+        return timezone.now() > self.expires_at
+
+    @classmethod
+    def generate_otp(cls, length=6):
+        """Generate random OTP code"""
+        return ''.join(random.choices(string.digits, k=length))
+
+    @classmethod
+    def send_otp_email(cls, email, otp_code, verification_type='account_verification'):
+        """Send OTP via email"""
+        subject = f"Your Verification Code - {verification_type.replace('_', ' ').title()}"
+        message = f"""
+        Hello,
+
+        Your verification code is: {otp_code}
+
+        This code will expire in 5 minutes.
+
+        If you didn't request this, please ignore this email.
+
+        Best regards,
+        Connect.io Team
+        """
+
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            fail_silently=False,
+        )
+        return True
+
+    @classmethod
+    def send_otp_sms(cls, phone_number, otp_code, verification_type='account_verification'):
+        """Send OTP via SMS using Twilio"""
+        try:
+            client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+            message = client.messages.create(
+                body=f"Your Connect.io verification code is: {otp_code}. Valid for 5 minutes.",
+                from_=settings.TWILIO_PHONE_NUMBER,
+                to=phone_number
+            )
+            return True
+        except Exception as e:
+            print(f"Error sending SMS: {e}")
+            return False
+
+    @classmethod
+    def create_otp(cls, user, verification_type='account_verification', email=None, phone_number=None):
+        """Create and send OTP"""
+        from django.utils import timezone
+        from datetime import timedelta
+
+        # Generate OTP code
+        otp_code = cls.generate_otp()
+
+        # Set expiration (5 minutes from now)
+        expires_at = timezone.now() + timedelta(minutes=5)
+
+        # Create OTP record
+        otp = cls.objects.create(
+            user=user,
+            verification_type=verification_type,
+            otp_code=otp_code,
+            email=email,
+            phone_number=phone_number,
+            expires_at=expires_at
+        )
+
+        # Send OTP based on method
+        if email:
+            cls.send_otp_email(email, otp_code, verification_type)
+        elif phone_number:
+            cls.send_otp_sms(phone_number, otp_code, verification_type)
+
+        return otp
+
+    def verify_otp(self, otp_code):
+        """Verify OTP code"""
+        from django.utils import timezone
+
+        if self.is_expired():
+            return False, "OTP has expired"
+
+        if self.is_verified:
+            return False, "OTP already used"
+
+        if self.otp_code == otp_code:
+            self.is_verified = True
+            self.verified_at = timezone.now()
+            self.save()
+            return True, "OTP verified successfully"
+
+        return False, "Invalid OTP code"
+
+
+class PasswordResetOTP(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='password_reset_otps')
+    otp_code = models.CharField(max_length=6)
+    email = models.EmailField()
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    is_used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} - Password Reset OTP"
+
+    def is_expired(self):
+        from django.utils import timezone
+        return timezone.now() > self.expires_at
+
+    @classmethod
+    def create_password_reset_otp(cls, user, email=None, phone_number=None):
+        """Create password reset OTP"""
+        from django.utils import timezone
+        from datetime import timedelta
+
+        # Generate OTP code
+        otp_code = cls.generate_otp()
+
+        # Set expiration (10 minutes for password reset)
+        expires_at = timezone.now() + timedelta(minutes=10)
+
+        # Create OTP record
+        otp = cls.objects.create(
+            user=user,
+            otp_code=otp_code,
+            email=email,
+            phone_number=phone_number,
+            expires_at=expires_at
+        )
+
+        # Send OTP
+        if email:
+            cls.send_password_reset_email(email, otp_code)
+        elif phone_number:
+            cls.send_password_reset_sms(phone_number, otp_code)
+
+        return otp
+
+    @classmethod
+    def generate_otp(cls, length=6):
+        """Generate random OTP code"""
+        return ''.join(random.choices(string.digits, k=length))
+
+    @classmethod
+    def send_password_reset_email(cls, email, otp_code):
+        """Send password reset OTP via email"""
+        subject = "Password Reset Verification Code"
+        message = f"""
+        Hello,
+
+        You requested to reset your password. Your verification code is:
+
+        {otp_code}
+
+        This code will expire in 10 minutes.
+
+        If you didn't request a password reset, please ignore this email.
+
+        Best regards,
+        Connect.io Team
+        """
+
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            fail_silently=False,
+        )
+
+    @classmethod
+    def send_password_reset_sms(cls, phone_number, otp_code):
+        """Send password reset OTP via SMS"""
+        try:
+            client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+            message = client.messages.create(
+                body=f"Your Connect.io password reset code is: {otp_code}. Valid for 10 minutes.",
+                from_=settings.TWILIO_PHONE_NUMBER,
+                to=phone_number
+            )
+            return True
+        except Exception as e:
+            print(f"Error sending SMS: {e}")
+            return False
+
+    def verify_and_use(self, otp_code):
+        """Verify and mark OTP as used"""
+        if self.is_expired():
+            return False, "OTP has expired"
+
+        if self.is_used:
+            return False, "OTP already used"
+
+        if self.otp_code == otp_code:
+            self.is_used = True
+            self.save()
+            return True, "OTP verified successfully"
+
+        return False, "Invalid OTP code"

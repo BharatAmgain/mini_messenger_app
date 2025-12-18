@@ -1,8 +1,17 @@
 # messenger_app/accounts/forms.py
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import (
+    UserCreationForm,
+    PasswordChangeForm,
+    SetPasswordForm,
+    PasswordResetForm as AuthPasswordResetForm
+)
 from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from .models import CustomUser
+import phonenumbers
+from phonenumbers import NumberParseException
+
 
 class CustomUserCreationForm(UserCreationForm):
     email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={
@@ -45,3 +54,177 @@ class CustomUserCreationForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
+
+class OTPVerificationForm(forms.Form):
+    otp_code = forms.CharField(
+        max_length=6,
+        min_length=6,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500',
+            'placeholder': 'Enter 6-digit OTP',
+            'autocomplete': 'off',
+            'inputmode': 'numeric',
+            'pattern': '[0-9]*'
+        }),
+        error_messages={
+            'required': 'Please enter the OTP code',
+            'min_length': 'OTP must be 6 digits',
+            'max_length': 'OTP must be 6 digits'
+        }
+    )
+
+    def clean_otp_code(self):
+        otp_code = self.cleaned_data.get('otp_code')
+        if not otp_code.isdigit():
+            raise forms.ValidationError('OTP must contain only numbers')
+        return otp_code
+
+
+class PasswordResetRequestForm(AuthPasswordResetForm):
+    email_or_phone = forms.CharField(
+        label="Email or Phone Number",
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500',
+            'placeholder': 'Enter your email or phone number'
+        })
+    )
+
+    def clean_email_or_phone(self):
+        email_or_phone = self.cleaned_data.get('email_or_phone')
+
+        # Check if it's an email
+        if '@' in email_or_phone:
+            # Validate email format
+            try:
+                validate_email(email_or_phone)
+                return {'type': 'email', 'value': email_or_phone}
+            except ValidationError:
+                raise forms.ValidationError('Please enter a valid email address')
+        else:
+            # Try to parse as phone number
+            try:
+                parsed = phonenumbers.parse(email_or_phone, "NP")  # Default to Nepal
+                if phonenumbers.is_valid_number(parsed):
+                    return {'type': 'phone',
+                            'value': phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)}
+                else:
+                    raise forms.ValidationError('Please enter a valid phone number')
+            except NumberParseException:
+                raise forms.ValidationError('Please enter a valid email or phone number')
+
+    def get_users(self, email_or_phone):
+        """Get users by email or phone number"""
+        data = self.cleaned_data.get('email_or_phone')
+        if not data:
+            return []
+
+        if data['type'] == 'email':
+            email = data['value']
+            return CustomUser.objects.filter(email__iexact=email, is_active=True)
+        else:  # phone
+            phone = data['value']
+            return CustomUser.objects.filter(phone_number=phone, is_active=True)
+
+
+class OTPPasswordResetForm(SetPasswordForm):
+    otp_code = forms.CharField(
+        max_length=6,
+        min_length=6,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500',
+            'placeholder': 'Enter OTP',
+            'autocomplete': 'off'
+        })
+    )
+
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(user, *args, **kwargs)
+        # Remove the new_password2 help text
+        self.fields['new_password2'].help_text = None
+
+
+class OTPPasswordChangeForm(PasswordChangeForm):
+    otp_code = forms.CharField(
+        max_length=6,
+        min_length=6,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500',
+            'placeholder': 'Enter OTP sent to your email/phone',
+            'autocomplete': 'off'
+        }),
+        required=True
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Remove the new_password2 help text
+        self.fields['new_password2'].help_text = None
+
+
+class VerifyOTPForm(forms.Form):
+    otp_code = forms.CharField(
+        max_length=6,
+        min_length=6,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500',
+            'placeholder': 'Enter 6-digit OTP',
+            'autocomplete': 'off'
+        })
+    )
+
+    def clean_otp_code(self):
+        otp_code = self.cleaned_data.get('otp_code')
+        if not otp_code.isdigit():
+            raise forms.ValidationError('OTP must contain only numbers')
+        return otp_code
+
+
+class SendOTPForm(forms.Form):
+    verification_method = forms.ChoiceField(
+        choices=[
+            ('email', 'Email'),
+            ('phone', 'Phone')
+        ],
+        widget=forms.RadioSelect(attrs={'class': 'mr-2'})
+    )
+
+    email = forms.EmailField(
+        required=False,
+        widget=forms.EmailInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500',
+            'placeholder': 'Enter your email'
+        })
+    )
+
+    phone_number = forms.CharField(
+        required=False,
+        max_length=20,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500',
+            'placeholder': 'Enter your phone number'
+        })
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        verification_method = cleaned_data.get('verification_method')
+        email = cleaned_data.get('email')
+        phone_number = cleaned_data.get('phone_number')
+
+        if verification_method == 'email' and not email:
+            raise forms.ValidationError('Email is required for email verification')
+
+        if verification_method == 'phone' and not phone_number:
+            raise forms.ValidationError('Phone number is required for phone verification')
+
+        # Validate phone number if provided
+        if phone_number:
+            try:
+                parsed = phonenumbers.parse(phone_number, "NP")
+                if not phonenumbers.is_valid_number(parsed):
+                    raise forms.ValidationError('Please enter a valid phone number')
+            except NumberParseException:
+                raise forms.ValidationError('Please enter a valid phone number')
+
+        return cleaned_data

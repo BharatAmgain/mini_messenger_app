@@ -1,13 +1,30 @@
 # messenger_app/accounts/views.py
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
-from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Q
-from .forms import CustomUserCreationForm
-from .models import CustomUser, Notification
-from .models import FriendRequest, Friendship
+from django.utils import timezone
+from datetime import timedelta
+import random
+import string
+
+from .forms import (
+    CustomUserCreationForm,
+    OTPVerificationForm,
+    PasswordResetRequestForm,
+    OTPPasswordResetForm,
+    OTPPasswordChangeForm,
+    VerifyOTPForm,
+    SendOTPForm
+)
+from .models import CustomUser, Notification, FriendRequest, Friendship, OTPVerification, PasswordResetOTP
+from django.core.cache import cache
+from twilio.rest import Client
+from django.conf import settings
+import phonenumbers
+from phonenumbers import NumberParseException
 
 
 def register(request):
@@ -40,6 +57,7 @@ def register(request):
         form = CustomUserCreationForm()
 
     return render(request, 'accounts/register.html', {'form': form})
+
 
 @login_required
 def profile(request):
@@ -387,6 +405,7 @@ def update_notification_preferences(request):
 
     return redirect('notification_settings')
 
+
 @login_required
 def get_unread_count(request):
     """Get unread notification count for badge"""
@@ -423,6 +442,7 @@ def login_view(request):
     return render(request, 'accounts/login.html', {
         'social_errors': social_errors
     })
+
 
 def logout_view(request):
     logout(request)
@@ -789,3 +809,621 @@ def remove_friend(request, user_id):
             messages.error(request, 'User not found.')
 
     return redirect('friend_requests')
+
+
+def password_reset_request(request):
+    """Request password reset with OTP"""
+    if request.user.is_authenticated:
+        return redirect('chat_home')
+
+    if request.method == 'POST':
+        form = PasswordResetRequestForm(request.POST)
+        if form.is_valid():
+            email_or_phone = form.cleaned_data['email_or_phone']
+
+            # Get user based on email or phone
+            if email_or_phone['type'] == 'email':
+                email = email_or_phone['value']
+                try:
+                    user = CustomUser.objects.get(email__iexact=email, is_active=True)
+                    # Create OTP for password reset
+                    otp = PasswordResetOTP.create_password_reset_otp(
+                        user=user,
+                        email=email
+                    )
+
+                    # Store user_id and OTP ID in session
+                    request.session['password_reset_user_id'] = str(user.id)
+                    request.session['password_reset_otp_id'] = str(otp.id)
+                    request.session['password_reset_method'] = 'email'
+
+                    messages.success(request, f'OTP has been sent to {email}. Please check your email.')
+                    return redirect('password_reset_verify_otp')
+
+                except CustomUser.DoesNotExist:
+                    # Still show success message for security (don't reveal if user exists)
+                    messages.success(request, 'If an account exists with this email, OTP has been sent.')
+                    return redirect('password_reset_verify_otp')
+
+            else:  # phone
+                phone = email_or_phone['value']
+                try:
+                    user = CustomUser.objects.get(phone_number=phone, is_active=True)
+                    # Create OTP for password reset
+                    otp = PasswordResetOTP.create_password_reset_otp(
+                        user=user,
+                        phone_number=phone
+                    )
+
+                    # Store user_id and OTP ID in session
+                    request.session['password_reset_user_id'] = str(user.id)
+                    request.session['password_reset_otp_id'] = str(otp.id)
+                    request.session['password_reset_method'] = 'phone'
+
+                    messages.success(request, f'OTP has been sent to {phone}. Please check your messages.')
+                    return redirect('password_reset_verify_otp')
+
+                except CustomUser.DoesNotExist:
+                    # Still show success message for security
+                    messages.success(request, 'If an account exists with this phone, OTP has been sent.')
+                    return redirect('password_reset_verify_otp')
+        else:
+            messages.error(request, 'Please correct the error below.')
+    else:
+        form = PasswordResetRequestForm()
+
+    return render(request, 'accounts/password_reset_request.html', {'form': form})
+
+
+def password_reset_verify_otp(request):
+    """Verify OTP for password reset"""
+    if request.user.is_authenticated:
+        return redirect('chat_home')
+
+    # Check if user_id exists in session
+    user_id = request.session.get('password_reset_user_id')
+    otp_id = request.session.get('password_reset_otp_id')
+    reset_method = request.session.get('password_reset_method')
+
+    if not user_id or not otp_id:
+        messages.error(request, 'Invalid password reset request. Please start over.')
+        return redirect('password_reset_request')
+
+    try:
+        user = CustomUser.objects.get(id=user_id, is_active=True)
+        otp = PasswordResetOTP.objects.get(id=otp_id, user=user, is_used=False)
+    except (CustomUser.DoesNotExist, PasswordResetOTP.DoesNotExist):
+        messages.error(request, 'Invalid password reset request. Please start over.')
+        # Clear session
+        if 'password_reset_user_id' in request.session:
+            del request.session['password_reset_user_id']
+        if 'password_reset_otp_id' in request.session:
+            del request.session['password_reset_otp_id']
+        if 'password_reset_method' in request.session:
+            del request.session['password_reset_method']
+        return redirect('password_reset_request')
+
+    if request.method == 'POST':
+        form = OTPVerificationForm(request.POST)
+        if form.is_valid():
+            otp_code = form.cleaned_data['otp_code']
+
+            # Verify OTP
+            success, message = otp.verify_and_use(otp_code)
+
+            if success:
+                # Store verification in session
+                request.session['password_reset_verified'] = True
+                request.session['verified_user_id'] = str(user.id)
+                messages.success(request, 'OTP verified successfully. You can now set your new password.')
+                return redirect('password_reset_confirm')
+            else:
+                messages.error(request, message)
+        else:
+            messages.error(request, 'Please enter a valid 6-digit OTP.')
+
+    else:
+        form = OTPVerificationForm()
+
+    # Get contact info for display
+    contact_info = None
+    if reset_method == 'email' and otp.email:
+        # Mask email for display
+        email = otp.email
+        if '@' in email:
+            username, domain = email.split('@')
+            if len(username) > 2:
+                masked_email = username[0] + '*' * (len(username) - 2) + username[-1] + '@' + domain
+            else:
+                masked_email = '*' * len(username) + '@' + domain
+            contact_info = masked_email
+    elif reset_method == 'phone' and otp.phone_number:
+        # Mask phone number for display
+        phone = otp.phone_number
+        if len(phone) > 4:
+            masked_phone = '*' * (len(phone) - 4) + phone[-4:]
+        else:
+            masked_phone = '*' * len(phone)
+        contact_info = masked_phone
+
+    context = {
+        'form': form,
+        'contact_info': contact_info,
+        'reset_method': reset_method,
+        'can_resend': True,
+    }
+    return render(request, 'accounts/password_reset_verify_otp.html', context)
+
+
+def password_reset_confirm(request):
+    """Set new password after OTP verification"""
+    if request.user.is_authenticated:
+        return redirect('chat_home')
+
+    # Check if verification is complete
+    if not request.session.get('password_reset_verified'):
+        messages.error(request, 'Please verify OTP first.')
+        return redirect('password_reset_request')
+
+    user_id = request.session.get('verified_user_id')
+    if not user_id:
+        messages.error(request, 'Invalid session. Please start over.')
+        return redirect('password_reset_request')
+
+    try:
+        user = CustomUser.objects.get(id=user_id, is_active=True)
+    except CustomUser.DoesNotExist:
+        messages.error(request, 'User not found.')
+        # Clear session
+        if 'password_reset_verified' in request.session:
+            del request.session['password_reset_verified']
+        if 'verified_user_id' in request.session:
+            del request.session['verified_user_id']
+        return redirect('password_reset_request')
+
+    if request.method == 'POST':
+        form = OTPPasswordResetForm(user, request.POST)
+        if form.is_valid():
+            # Clear all session data
+            session_keys = [
+                'password_reset_user_id',
+                'password_reset_otp_id',
+                'password_reset_method',
+                'password_reset_verified',
+                'verified_user_id'
+            ]
+            for key in session_keys:
+                if key in request.session:
+                    del request.session[key]
+
+            # Save new password
+            form.save()
+
+            # Create notification
+            Notification.objects.create(
+                user=user,
+                notification_type='system',
+                title="Password Reset",
+                message="Your password has been reset successfully.",
+                related_url="/accounts/settings/"
+            )
+
+            messages.success(request, 'Your password has been reset successfully. You can now log in.')
+            return redirect('login')
+    else:
+        form = OTPPasswordResetForm(user)
+
+    context = {
+        'form': form,
+        'user': user
+    }
+    return render(request, 'accounts/password_reset_confirm.html', context)
+
+
+@login_required
+def password_change_with_otp(request):
+    """Change password with OTP verification"""
+    if request.method == 'POST':
+        form = OTPPasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            # Send OTP before changing password
+            user = request.user
+
+            # Determine contact method based on user's preference
+            contact_method = 'email'  # Default to email
+            contact_value = user.email
+
+            # If user has phone and prefers SMS, use phone
+            if user.phone_number:
+                # In a real app, you might have a user preference field
+                # For now, we'll check both
+                contact_method = 'phone'
+                contact_value = user.phone_number
+
+            # Create OTP for password change
+            if contact_method == 'email':
+                otp = PasswordResetOTP.create_password_reset_otp(
+                    user=user,
+                    email=contact_value
+                )
+            else:
+                otp = PasswordResetOTP.create_password_reset_otp(
+                    user=user,
+                    phone_number=contact_value
+                )
+
+            # Store OTP ID and form data in session
+            request.session['password_change_otp_id'] = str(otp.id)
+            request.session['password_change_form_data'] = {
+                'old_password': form.cleaned_data['old_password'],
+                'new_password1': form.cleaned_data['new_password1'],
+                'new_password2': form.cleaned_data['new_password2'],
+            }
+            request.session['password_change_method'] = contact_method
+
+            messages.success(request, f'OTP has been sent to your {contact_method}. Please verify to continue.')
+            return redirect('verify_password_change_otp')
+    else:
+        form = OTPPasswordChangeForm(request.user)
+
+    context = {
+        'form': form,
+    }
+    return render(request, 'accounts/password_change_with_otp.html', context)
+
+
+@login_required
+def verify_password_change_otp(request):
+    """Verify OTP for password change"""
+    otp_id = request.session.get('password_change_otp_id')
+    form_data = request.session.get('password_change_form_data')
+    contact_method = request.session.get('password_change_method')
+
+    if not otp_id or not form_data:
+        messages.error(request, 'Invalid request. Please start over.')
+        return redirect('password_change_with_otp')
+
+    try:
+        otp = PasswordResetOTP.objects.get(
+            id=otp_id,
+            user=request.user,
+            is_used=False
+        )
+    except PasswordResetOTP.DoesNotExist:
+        messages.error(request, 'Invalid OTP request. Please start over.')
+        # Clear session
+        if 'password_change_otp_id' in request.session:
+            del request.session['password_change_otp_id']
+        if 'password_change_form_data' in request.session:
+            del request.session['password_change_form_data']
+        if 'password_change_method' in request.session:
+            del request.session['password_change_method']
+        return redirect('password_change_with_otp')
+
+    if request.method == 'POST':
+        form = VerifyOTPForm(request.POST)
+        if form.is_valid():
+            otp_code = form.cleaned_data['otp_code']
+
+            # Verify OTP
+            success, message = otp.verify_and_use(otp_code)
+
+            if success:
+                # Verify old password first
+                user = request.user
+                old_password = form_data['old_password']
+
+                if not user.check_password(old_password):
+                    messages.error(request, 'Your old password was entered incorrectly.')
+                    # Clear session
+                    if 'password_change_otp_id' in request.session:
+                        del request.session['password_change_otp_id']
+                    if 'password_change_form_data' in request.session:
+                        del request.session['password_change_form_data']
+                    if 'password_change_method' in request.session:
+                        del request.session['password_change_method']
+                    return redirect('password_change_with_otp')
+
+                # Set new password
+                user.set_password(form_data['new_password1'])
+                user.save()
+
+                # Update session
+                from django.contrib.auth import update_session_auth_hash
+                update_session_auth_hash(request, user)
+
+                # Create notification
+                Notification.objects.create(
+                    user=user,
+                    notification_type='system',
+                    title="Password Changed",
+                    message="Your password has been changed successfully.",
+                    related_url="/accounts/settings/"
+                )
+
+                # Clear session
+                if 'password_change_otp_id' in request.session:
+                    del request.session['password_change_otp_id']
+                if 'password_change_form_data' in request.session:
+                    del request.session['password_change_form_data']
+                if 'password_change_method' in request.session:
+                    del request.session['password_change_method']
+
+                messages.success(request, 'Your password has been changed successfully!')
+                return redirect('settings_main')
+            else:
+                messages.error(request, message)
+        else:
+            messages.error(request, 'Please enter a valid 6-digit OTP.')
+    else:
+        form = VerifyOTPForm()
+
+    # Get contact info for display
+    contact_info = None
+    if contact_method == 'email' and otp.email:
+        # Mask email for display
+        email = otp.email
+        if '@' in email:
+            username, domain = email.split('@')
+            if len(username) > 2:
+                masked_email = username[0] + '*' * (len(username) - 2) + username[-1] + '@' + domain
+            else:
+                masked_email = '*' * len(username) + '@' + domain
+            contact_info = masked_email
+    elif contact_method == 'phone' and otp.phone_number:
+        # Mask phone number for display
+        phone = otp.phone_number
+        if len(phone) > 4:
+            masked_phone = '*' * (len(phone) - 4) + phone[-4:]
+        else:
+            masked_phone = '*' * len(phone)
+        contact_info = masked_phone
+
+    context = {
+        'form': form,
+        'contact_info': contact_info,
+        'contact_method': contact_method,
+        'can_resend': True,
+    }
+    return render(request, 'accounts/verify_password_change_otp.html', context)
+
+
+@login_required
+def resend_otp(request, otp_type):
+    """Resend OTP"""
+    if otp_type == 'password_change':
+        otp_id = request.session.get('password_change_otp_id')
+        if otp_id:
+            try:
+                otp = PasswordResetOTP.objects.get(id=otp_id, user=request.user)
+                # Delete old OTP
+                otp.delete()
+
+                # Get contact method from session
+                contact_method = request.session.get('password_change_method', 'email')
+
+                # Create new OTP
+                if contact_method == 'email':
+                    new_otp = PasswordResetOTP.create_password_reset_otp(
+                        user=request.user,
+                        email=request.user.email
+                    )
+                else:
+                    new_otp = PasswordResetOTP.create_password_reset_otp(
+                        user=request.user,
+                        phone_number=request.user.phone_number
+                    )
+
+                # Update session with new OTP ID
+                request.session['password_change_otp_id'] = str(new_otp.id)
+
+                messages.success(request, f'New OTP has been sent to your {contact_method}.')
+                return redirect('verify_password_change_otp')
+
+            except PasswordResetOTP.DoesNotExist:
+                messages.error(request, 'Unable to resend OTP. Please start over.')
+                return redirect('password_change_with_otp')
+
+    elif otp_type == 'password_reset':
+        user_id = request.session.get('password_reset_user_id')
+        reset_method = request.session.get('password_reset_method')
+
+        if user_id and reset_method:
+            try:
+                user = CustomUser.objects.get(id=user_id)
+
+                # Get old OTP ID from session
+                old_otp_id = request.session.get('password_reset_otp_id')
+                if old_otp_id:
+                    try:
+                        old_otp = PasswordResetOTP.objects.get(id=old_otp_id, user=user)
+                        old_otp.delete()
+                    except PasswordResetOTP.DoesNotExist:
+                        pass
+
+                # Create new OTP
+                if reset_method == 'email':
+                    new_otp = PasswordResetOTP.create_password_reset_otp(
+                        user=user,
+                        email=user.email
+                    )
+                else:
+                    new_otp = PasswordResetOTP.create_password_reset_otp(
+                        user=user,
+                        phone_number=user.phone_number
+                    )
+
+                # Update session with new OTP ID
+                request.session['password_reset_otp_id'] = str(new_otp.id)
+
+                messages.success(request, f'New OTP has been sent.')
+                return redirect('password_reset_verify_otp')
+
+            except CustomUser.DoesNotExist:
+                messages.error(request, 'Unable to resend OTP. Please start over.')
+
+    messages.error(request, 'Invalid request.')
+    return redirect('settings_main' if request.user.is_authenticated else 'password_reset_request')
+
+
+@login_required
+def send_verification_otp(request):
+    """Send verification OTP for account verification"""
+    if request.method == 'POST':
+        form = SendOTPForm(request.POST)
+        if form.is_valid():
+            verification_method = form.cleaned_data['verification_method']
+            email = form.cleaned_data.get('email')
+            phone_number = form.cleaned_data.get('phone_number')
+
+            user = request.user
+
+            if verification_method == 'email':
+                # Update email if different
+                if email and email != user.email:
+                    # Check if email is already taken
+                    if CustomUser.objects.filter(email=email).exclude(id=user.id).exists():
+                        messages.error(request, 'This email is already registered.')
+                        return redirect('send_verification_otp')
+                    user.email = email
+                    user.save()
+
+                # Create OTP
+                otp = OTPVerification.create_otp(
+                    user=user,
+                    verification_type='account_verification',
+                    email=user.email
+                )
+
+                # Store OTP ID in session
+                request.session['verification_otp_id'] = str(otp.id)
+                request.session['verification_method'] = 'email'
+
+                messages.success(request, f'Verification OTP has been sent to {user.email}')
+                return redirect('verify_account_otp')
+
+            else:  # phone
+                # Update phone if different
+                if phone_number and phone_number != user.phone_number:
+                    # Check if phone is already taken
+                    if CustomUser.objects.filter(phone_number=phone_number).exclude(id=user.id).exists():
+                        messages.error(request, 'This phone number is already registered.')
+                        return redirect('send_verification_otp')
+                    user.phone_number = phone_number
+                    user.save()
+
+                # Create OTP
+                otp = OTPVerification.create_otp(
+                    user=user,
+                    verification_type='account_verification',
+                    phone_number=user.phone_number
+                )
+
+                # Store OTP ID in session
+                request.session['verification_otp_id'] = str(otp.id)
+                request.session['verification_method'] = 'phone'
+
+                messages.success(request, f'Verification OTP has been sent to {user.phone_number}')
+                return redirect('verify_account_otp')
+    else:
+        form = SendOTPForm(initial={
+            'email': request.user.email,
+            'phone_number': request.user.phone_number
+        })
+
+    context = {
+        'form': form,
+    }
+    return render(request, 'accounts/send_verification_otp.html', context)
+
+
+@login_required
+def verify_account_otp(request):
+    """Verify account with OTP"""
+    otp_id = request.session.get('verification_otp_id')
+    verification_method = request.session.get('verification_method')
+
+    if not otp_id:
+        messages.error(request, 'Please request OTP first.')
+        return redirect('send_verification_otp')
+
+    try:
+        otp = OTPVerification.objects.get(
+            id=otp_id,
+            user=request.user,
+            is_verified=False
+        )
+    except OTPVerification.DoesNotExist:
+        messages.error(request, 'Invalid OTP request. Please start over.')
+        if 'verification_otp_id' in request.session:
+            del request.session['verification_otp_id']
+        if 'verification_method' in request.session:
+            del request.session['verification_method']
+        return redirect('send_verification_otp')
+
+    if request.method == 'POST':
+        form = VerifyOTPForm(request.POST)
+        if form.is_valid():
+            otp_code = form.cleaned_data['otp_code']
+
+            # Verify OTP
+            success, message = otp.verify_otp(otp_code)
+
+            if success:
+                # Mark user as verified
+                user = request.user
+                user.is_verified = True
+                user.save()
+
+                # Create notification
+                Notification.objects.create(
+                    user=user,
+                    notification_type='system',
+                    title="Account Verified",
+                    message="Your account has been verified successfully.",
+                    related_url="/accounts/profile/"
+                )
+
+                # Clear session
+                if 'verification_otp_id' in request.session:
+                    del request.session['verification_otp_id']
+                if 'verification_method' in request.session:
+                    del request.session['verification_method']
+
+                messages.success(request, 'Your account has been verified successfully!')
+                return redirect('profile')
+            else:
+                messages.error(request, message)
+        else:
+            messages.error(request, 'Please enter a valid 6-digit OTP.')
+    else:
+        form = VerifyOTPForm()
+
+    # Get contact info for display
+    contact_info = None
+    if verification_method == 'email' and otp.email:
+        # Mask email for display
+        email = otp.email
+        if '@' in email:
+            username, domain = email.split('@')
+            if len(username) > 2:
+                masked_email = username[0] + '*' * (len(username) - 2) + username[-1] + '@' + domain
+            else:
+                masked_email = '*' * len(username) + '@' + domain
+            contact_info = masked_email
+    elif verification_method == 'phone' and otp.phone_number:
+        # Mask phone number for display
+        phone = otp.phone_number
+        if len(phone) > 4:
+            masked_phone = '*' * (len(phone) - 4) + phone[-4:]
+        else:
+            masked_phone = '*' * len(phone)
+        contact_info = masked_phone
+
+    context = {
+        'form': form,
+        'contact_info': contact_info,
+        'verification_method': verification_method,
+        'can_resend': True,
+    }
+    return render(request, 'accounts/verify_account_otp.html', context)
