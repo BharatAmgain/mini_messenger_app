@@ -1,6 +1,6 @@
-# .gitignore
+# .gitignore - UPDATED WITH SECURITY FIXES
 
-# Python
+# ========== Python ==========
 __pycache__/
 *.py[cod]
 *$py.class
@@ -22,33 +22,68 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+.python-version
 
-# Django
+# ========== Django ==========
 *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+*.sqlite3
+*.sqlite3-*
 
-# Environments
+# ========== ENVIRONMENT VARIABLES (CRITICAL - NEVER COMMIT!) ==========
 .env
-.venv
-env/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*
+!.env.example  # Keep the example file
+.env.backup
+.env.save
+
+# ========== Virtual Environments ==========
+.venv/
 venv/
 ENV/
+env/
 env.bak/
 venv.bak/
+venv*/
+.venv*/
+env*/
+.python-venv/
 
-# Media and Static
+# ========== Media and Static ==========
 media/
 staticfiles/
+uploads/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.pdf
+*.mp3
+*.mp4
+*.mov
+*.avi
 
-# IDE
+# ========== IDE ==========
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+*.bak
+*.tmp
+*.temp
+.code/
+.history/
+*.sublime-*
+.DS_Store
 
-# OS
+# ========== OS ==========
 .DS_Store
 .DS_Store?
 ._*
@@ -56,13 +91,99 @@ staticfiles/
 .Trashes
 ehthumbs.db
 Thumbs.db
+desktop.ini
 
-# Testing
+# ========== Testing ==========
 .coverage
+.coverage.*
 htmlcov/
 .pytest_cache/
+.tox/
+nosetests.xml
+junit.xml
 
-# Deployment
+# ========== Deployment ==========
 .dockerignore
 Dockerfile
 docker-compose.yml
+docker-compose.*.yml
+.docker/
+.cache
+.cache/
+.circleci/
+.travis.yml
+.gitlab-ci.yml
+.azure-pipelines.yml
+
+# ========== SECRETS & KEYS (ADDED FOR SECURITY) ==========
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+*.jks
+secret_key.txt
+credentials.json
+service-account.json
+firebase-key.json
+secrets/
+keys/
+certificates/
+
+# ========== TWILIO & API KEYS PROTECTION ==========
+twilio_credentials.json
+firebase_config.json
+google-credentials.json
+aws-credentials.ini
+azure-credentials.ini
+
+# ========== RENDER & DEPLOYMENT ==========
+.render.yaml
+render.yaml
+Procfile.local
+requirements-dev.txt
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ========== LOGS ==========
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# ========== NODE/NPM ==========
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ========== MISC ==========
+*.pot
+*.mo
+*.csv
+*.xlsx
+*.xls
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.odt
+instance/
+.webassets-cache
+.scrapy
+
+# ========== COMPILED FILES ==========
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+*.pyc
+*.pyo
+*.pyd
+*.coverage
+*.profraw
