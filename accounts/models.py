@@ -14,7 +14,9 @@ from django.core.mail import send_mail
 from django.conf import settings
 import phonenumbers
 from phonenumbers import NumberParseException
-
+import requests
+import base64
+from django.conf import settings
 
 def user_profile_picture_path(instance, filename):
     """Generate file path for user profile picture"""
@@ -488,6 +490,8 @@ class PasswordResetOTP(models.Model):
     is_used = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
+    verification_sid = models.CharField(max_length=100, blank=True, null=True)  # ADD THIS
+
 
     class Meta:
         ordering = ['-created_at']
@@ -589,3 +593,50 @@ class PasswordResetOTP(models.Model):
             return True, "OTP verified successfully"
 
         return False, "Invalid OTP code"
+
+    def verify_with_twilio(self, code):
+        """Verify OTP using Twilio Verify API"""
+        if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN:
+            return False, "Twilio not configured"
+
+        if not self.phone_number:
+            return False, "No phone number associated"
+
+        # Twilio Verify API endpoint
+        service_sid = settings.TWILIO_VERIFY_SERVICE_SID
+        url = f"https://verify.twilio.com/v2/Services/{service_sid}/VerificationCheck"
+
+        # Basic auth encoding
+        auth_string = f"{settings.TWILIO_ACCOUNT_SID}:{settings.TWILIO_AUTH_TOKEN}"
+        auth_bytes = auth_string.encode('ascii')
+        base64_auth = base64.b64encode(auth_bytes).decode('ascii')
+
+        # Headers
+        headers = {
+            'Authorization': f'Basic {base64_auth}',
+            'Content-Type': 'application/x-www-form-urlencoded',
+        }
+
+        # Data
+        data = {
+            'To': self.phone_number,
+            'Code': code,
+        }
+
+        try:
+            response = requests.post(url, headers=headers, data=data)
+
+            if response.status_code == 201:
+                result = response.json()
+                if result.get('status') == 'approved' and result.get('valid') == True:
+                    # Mark OTP as used
+                    self.is_used = True
+                    self.save()
+                    return True, "Verification successful"
+                else:
+                    return False, "Invalid verification code"
+            else:
+                return False, f"Twilio API error: {response.status_code}"
+
+        except Exception as e:
+            return False, f"Verification error: {str(e)}"

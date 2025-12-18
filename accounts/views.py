@@ -9,6 +9,8 @@ from django.utils import timezone
 from datetime import timedelta
 import random
 import string
+import requests
+import base64
 
 from .forms import (
     CustomUserCreationForm,
@@ -811,6 +813,85 @@ def remove_friend(request, user_id):
     return redirect('friend_requests')
 
 
+def send_twilio_verification(phone_number):
+    """Send verification code via Twilio Verify API"""
+    if not all([settings.TWILIO_ACCOUNT_SID,
+                settings.TWILIO_AUTH_TOKEN,
+                settings.TWILIO_VERIFY_SERVICE_SID]):
+        return None, "Twilio not configured"
+
+    service_sid = settings.TWILIO_VERIFY_SERVICE_SID
+    url = f"https://verify.twilio.com/v2/Services/{service_sid}/Verifications"
+
+    # Basic auth
+    auth_string = f"{settings.TWILIO_ACCOUNT_SID}:{settings.TWILIO_AUTH_TOKEN}"
+    auth_bytes = auth_string.encode('ascii')
+    base64_auth = base64.b64encode(auth_bytes).decode('ascii')
+
+    headers = {
+        'Authorization': f'Basic {base64_auth}',
+        'Content-Type': 'application/x-www-form-urlencoded',
+    }
+
+    data = {
+        'To': phone_number,
+        'Channel': 'sms',  # or 'call', 'whatsapp', 'email'
+    }
+
+    try:
+        response = requests.post(url, headers=headers, data=data)
+
+        if response.status_code == 201:
+            result = response.json()
+            return result.get('sid'), "Verification sent"
+        else:
+            return None, f"Failed to send: {response.status_code}"
+
+    except Exception as e:
+        return None, f"Error: {str(e)}"
+
+
+def verify_twilio_code(phone_number, code):
+    """Verify code with Twilio Verify API"""
+    if not all([settings.TWILIO_ACCOUNT_SID,
+                settings.TWILIO_AUTH_TOKEN,
+                settings.TWILIO_VERIFY_SERVICE_SID]):
+        return False, "Twilio not configured"
+
+    service_sid = settings.TWILIO_VERIFY_SERVICE_SID
+    url = f"https://verify.twilio.com/v2/Services/{service_sid}/VerificationCheck"
+
+    # Basic auth
+    auth_string = f"{settings.TWILIO_ACCOUNT_SID}:{settings.TWILIO_AUTH_TOKEN}"
+    auth_bytes = auth_string.encode('ascii')
+    base64_auth = base64.b64encode(auth_bytes).decode('ascii')
+
+    headers = {
+        'Authorization': f'Basic {base64_auth}',
+        'Content-Type': 'application/x-www-form-urlencoded',
+    }
+
+    data = {
+        'To': phone_number,
+        'Code': code,
+    }
+
+    try:
+        response = requests.post(url, headers=headers, data=data)
+
+        if response.status_code == 201:
+            result = response.json()
+            if result.get('status') == 'approved' and result.get('valid') == True:
+                return True, "Verification successful"
+            else:
+                return False, "Invalid verification code"
+        else:
+            return False, f"Verification failed: {response.status_code}"
+
+    except Exception as e:
+        return False, f"Error: {str(e)}"
+
+
 def password_reset_request(request):
     """Request password reset with OTP"""
     if request.user.is_authenticated:
@@ -821,18 +902,18 @@ def password_reset_request(request):
         if form.is_valid():
             email_or_phone = form.cleaned_data['email_or_phone']
 
-            # Get user based on email or phone
             if email_or_phone['type'] == 'email':
                 email = email_or_phone['value']
                 try:
                     user = CustomUser.objects.get(email__iexact=email, is_active=True)
-                    # Create OTP for password reset
+
+                    # CREATE OTP RECORD
                     otp = PasswordResetOTP.create_password_reset_otp(
                         user=user,
                         email=email
                     )
 
-                    # Store user_id and OTP ID in session
+                    # Store in session
                     request.session['password_reset_user_id'] = str(user.id)
                     request.session['password_reset_otp_id'] = str(otp.id)
                     request.session['password_reset_method'] = 'email'
@@ -845,23 +926,34 @@ def password_reset_request(request):
                     messages.success(request, 'If an account exists with this email, OTP has been sent.')
                     return redirect('password_reset_verify_otp')
 
-            else:  # phone
+            else:  # phone - USE TWILIO
                 phone = email_or_phone['value']
                 try:
                     user = CustomUser.objects.get(phone_number=phone, is_active=True)
-                    # Create OTP for password reset
-                    otp = PasswordResetOTP.create_password_reset_otp(
-                        user=user,
-                        phone_number=phone
-                    )
 
-                    # Store user_id and OTP ID in session
-                    request.session['password_reset_user_id'] = str(user.id)
-                    request.session['password_reset_otp_id'] = str(otp.id)
-                    request.session['password_reset_method'] = 'phone'
+                    # ✅ SEND VIA TWILIO VERIFY API
+                    verification_sid, message = send_twilio_verification(phone)
 
-                    messages.success(request, f'OTP has been sent to {phone}. Please check your messages.')
-                    return redirect('password_reset_verify_otp')
+                    if verification_sid:
+                        # Create OTP record with Twilio SID
+                        otp = PasswordResetOTP.objects.create(
+                            user=user,
+                            otp_code='000000',  # Placeholder - Twilio handles the code
+                            phone_number=phone,
+                            expires_at=timezone.now() + timedelta(minutes=10),
+                            verification_sid=verification_sid  # Store Twilio verification SID
+                        )
+
+                        # Store in session
+                        request.session['password_reset_user_id'] = str(user.id)
+                        request.session['password_reset_otp_id'] = str(otp.id)
+                        request.session['password_reset_method'] = 'phone'
+                        request.session['twilio_verification_sid'] = verification_sid
+
+                        messages.success(request, f'OTP has been sent to {phone}. Please check your messages.')
+                        return redirect('password_reset_verify_otp')
+                    else:
+                        messages.error(request, f'Failed to send OTP: {message}')
 
                 except CustomUser.DoesNotExist:
                     # Still show success message for security
@@ -884,6 +976,7 @@ def password_reset_verify_otp(request):
     user_id = request.session.get('password_reset_user_id')
     otp_id = request.session.get('password_reset_otp_id')
     reset_method = request.session.get('password_reset_method')
+    twilio_sid = request.session.get('twilio_verification_sid')
 
     if not user_id or not otp_id:
         messages.error(request, 'Invalid password reset request. Please start over.')
@@ -895,12 +988,11 @@ def password_reset_verify_otp(request):
     except (CustomUser.DoesNotExist, PasswordResetOTP.DoesNotExist):
         messages.error(request, 'Invalid password reset request. Please start over.')
         # Clear session
-        if 'password_reset_user_id' in request.session:
-            del request.session['password_reset_user_id']
-        if 'password_reset_otp_id' in request.session:
-            del request.session['password_reset_otp_id']
-        if 'password_reset_method' in request.session:
-            del request.session['password_reset_method']
+        session_keys = ['password_reset_user_id', 'password_reset_otp_id',
+                        'password_reset_method', 'twilio_verification_sid']
+        for key in session_keys:
+            if key in request.session:
+                del request.session[key]
         return redirect('password_reset_request')
 
     if request.method == 'POST':
@@ -908,17 +1000,34 @@ def password_reset_verify_otp(request):
         if form.is_valid():
             otp_code = form.cleaned_data['otp_code']
 
-            # Verify OTP
-            success, message = otp.verify_and_use(otp_code)
+            # ✅ VERIFY VIA TWILIO FOR PHONE
+            if reset_method == 'phone' and twilio_sid:
+                success, message = verify_twilio_code(otp.phone_number, otp_code)
 
-            if success:
-                # Store verification in session
-                request.session['password_reset_verified'] = True
-                request.session['verified_user_id'] = str(user.id)
-                messages.success(request, 'OTP verified successfully. You can now set your new password.')
-                return redirect('password_reset_confirm')
+                if success:
+                    # Mark OTP as used
+                    otp.is_used = True
+                    otp.save()
+
+                    # Store verification in session
+                    request.session['password_reset_verified'] = True
+                    request.session['verified_user_id'] = str(user.id)
+
+                    messages.success(request, 'OTP verified successfully. You can now set your new password.')
+                    return redirect('password_reset_confirm')
+                else:
+                    messages.error(request, message)
             else:
-                messages.error(request, message)
+                # Email verification (existing logic)
+                success, message = otp.verify_and_use(otp_code)
+
+                if success:
+                    request.session['password_reset_verified'] = True
+                    request.session['verified_user_id'] = str(user.id)
+                    messages.success(request, 'OTP verified successfully. You can now set your new password.')
+                    return redirect('password_reset_confirm')
+                else:
+                    messages.error(request, message)
         else:
             messages.error(request, 'Please enter a valid 6-digit OTP.')
 
@@ -990,7 +1099,8 @@ def password_reset_confirm(request):
                 'password_reset_otp_id',
                 'password_reset_method',
                 'password_reset_verified',
-                'verified_user_id'
+                'verified_user_id',
+                'twilio_verification_sid'
             ]
             for key in session_keys:
                 if key in request.session:
@@ -1047,10 +1157,19 @@ def password_change_with_otp(request):
                     email=contact_value
                 )
             else:
-                otp = PasswordResetOTP.create_password_reset_otp(
-                    user=user,
-                    phone_number=contact_value
-                )
+                # For phone, use Twilio
+                verification_sid, message = send_twilio_verification(contact_value)
+                if verification_sid:
+                    otp = PasswordResetOTP.objects.create(
+                        user=user,
+                        otp_code='000000',  # Placeholder
+                        phone_number=contact_value,
+                        expires_at=timezone.now() + timedelta(minutes=10),
+                        verification_sid=verification_sid
+                    )
+                else:
+                    messages.error(request, f'Failed to send OTP: {message}')
+                    return render(request, 'accounts/password_change_with_otp.html', {'form': form})
 
             # Store OTP ID and form data in session
             request.session['password_change_otp_id'] = str(otp.id)
@@ -1060,6 +1179,8 @@ def password_change_with_otp(request):
                 'new_password2': form.cleaned_data['new_password2'],
             }
             request.session['password_change_method'] = contact_method
+            if contact_method == 'phone':
+                request.session['password_change_twilio_sid'] = verification_sid
 
             messages.success(request, f'OTP has been sent to your {contact_method}. Please verify to continue.')
             return redirect('verify_password_change_otp')
@@ -1078,6 +1199,7 @@ def verify_password_change_otp(request):
     otp_id = request.session.get('password_change_otp_id')
     form_data = request.session.get('password_change_form_data')
     contact_method = request.session.get('password_change_method')
+    twilio_sid = request.session.get('password_change_twilio_sid')
 
     if not otp_id or not form_data:
         messages.error(request, 'Invalid request. Please start over.')
@@ -1092,12 +1214,11 @@ def verify_password_change_otp(request):
     except PasswordResetOTP.DoesNotExist:
         messages.error(request, 'Invalid OTP request. Please start over.')
         # Clear session
-        if 'password_change_otp_id' in request.session:
-            del request.session['password_change_otp_id']
-        if 'password_change_form_data' in request.session:
-            del request.session['password_change_form_data']
-        if 'password_change_method' in request.session:
-            del request.session['password_change_method']
+        session_keys = ['password_change_otp_id', 'password_change_form_data',
+                        'password_change_method', 'password_change_twilio_sid']
+        for key in session_keys:
+            if key in request.session:
+                del request.session[key]
         return redirect('password_change_with_otp')
 
     if request.method == 'POST':
@@ -1105,8 +1226,12 @@ def verify_password_change_otp(request):
         if form.is_valid():
             otp_code = form.cleaned_data['otp_code']
 
-            # Verify OTP
-            success, message = otp.verify_and_use(otp_code)
+            # ✅ VERIFY VIA TWILIO FOR PHONE
+            if contact_method == 'phone' and twilio_sid:
+                success, message = verify_twilio_code(otp.phone_number, otp_code)
+            else:
+                # Email verification
+                success, message = otp.verify_and_use(otp_code)
 
             if success:
                 # Verify old password first
@@ -1116,12 +1241,11 @@ def verify_password_change_otp(request):
                 if not user.check_password(old_password):
                     messages.error(request, 'Your old password was entered incorrectly.')
                     # Clear session
-                    if 'password_change_otp_id' in request.session:
-                        del request.session['password_change_otp_id']
-                    if 'password_change_form_data' in request.session:
-                        del request.session['password_change_form_data']
-                    if 'password_change_method' in request.session:
-                        del request.session['password_change_method']
+                    session_keys = ['password_change_otp_id', 'password_change_form_data',
+                                    'password_change_method', 'password_change_twilio_sid']
+                    for key in session_keys:
+                        if key in request.session:
+                            del request.session[key]
                     return redirect('password_change_with_otp')
 
                 # Set new password
@@ -1142,12 +1266,11 @@ def verify_password_change_otp(request):
                 )
 
                 # Clear session
-                if 'password_change_otp_id' in request.session:
-                    del request.session['password_change_otp_id']
-                if 'password_change_form_data' in request.session:
-                    del request.session['password_change_form_data']
-                if 'password_change_method' in request.session:
-                    del request.session['password_change_method']
+                session_keys = ['password_change_otp_id', 'password_change_form_data',
+                                'password_change_method', 'password_change_twilio_sid']
+                for key in session_keys:
+                    if key in request.session:
+                        del request.session[key]
 
                 messages.success(request, 'Your password has been changed successfully!')
                 return redirect('settings_main')
@@ -1193,14 +1316,13 @@ def resend_otp(request, otp_type):
     """Resend OTP"""
     if otp_type == 'password_change':
         otp_id = request.session.get('password_change_otp_id')
+        contact_method = request.session.get('password_change_method')
+
         if otp_id:
             try:
                 otp = PasswordResetOTP.objects.get(id=otp_id, user=request.user)
                 # Delete old OTP
                 otp.delete()
-
-                # Get contact method from session
-                contact_method = request.session.get('password_change_method', 'email')
 
                 # Create new OTP
                 if contact_method == 'email':
@@ -1209,10 +1331,20 @@ def resend_otp(request, otp_type):
                         email=request.user.email
                     )
                 else:
-                    new_otp = PasswordResetOTP.create_password_reset_otp(
-                        user=request.user,
-                        phone_number=request.user.phone_number
-                    )
+                    # For phone, use Twilio
+                    verification_sid, message = send_twilio_verification(request.user.phone_number)
+                    if verification_sid:
+                        new_otp = PasswordResetOTP.objects.create(
+                            user=request.user,
+                            otp_code='000000',
+                            phone_number=request.user.phone_number,
+                            expires_at=timezone.now() + timedelta(minutes=10),
+                            verification_sid=verification_sid
+                        )
+                        request.session['password_change_twilio_sid'] = verification_sid
+                    else:
+                        messages.error(request, f'Failed to resend OTP: {message}')
+                        return redirect('verify_password_change_otp')
 
                 # Update session with new OTP ID
                 request.session['password_change_otp_id'] = str(new_otp.id)
@@ -1248,10 +1380,20 @@ def resend_otp(request, otp_type):
                         email=user.email
                     )
                 else:
-                    new_otp = PasswordResetOTP.create_password_reset_otp(
-                        user=user,
-                        phone_number=user.phone_number
-                    )
+                    # For phone, use Twilio
+                    verification_sid, message = send_twilio_verification(user.phone_number)
+                    if verification_sid:
+                        new_otp = PasswordResetOTP.objects.create(
+                            user=user,
+                            otp_code='000000',
+                            phone_number=user.phone_number,
+                            expires_at=timezone.now() + timedelta(minutes=10),
+                            verification_sid=verification_sid
+                        )
+                        request.session['twilio_verification_sid'] = verification_sid
+                    else:
+                        messages.error(request, f'Failed to resend OTP: {message}')
+                        return redirect('password_reset_verify_otp')
 
                 # Update session with new OTP ID
                 request.session['password_reset_otp_id'] = str(new_otp.id)
@@ -1312,19 +1454,28 @@ def send_verification_otp(request):
                     user.phone_number = phone_number
                     user.save()
 
-                # Create OTP
-                otp = OTPVerification.create_otp(
-                    user=user,
-                    verification_type='account_verification',
-                    phone_number=user.phone_number
-                )
+                # Send OTP via Twilio
+                verification_sid, message = send_twilio_verification(user.phone_number)
+                if verification_sid:
+                    # Create OTP record
+                    otp = OTPVerification.objects.create(
+                        user=user,
+                        verification_type='account_verification',
+                        otp_code='000000',  # Placeholder
+                        phone_number=user.phone_number,
+                        expires_at=timezone.now() + timedelta(minutes=10),
+                        verification_sid=verification_sid
+                    )
 
-                # Store OTP ID in session
-                request.session['verification_otp_id'] = str(otp.id)
-                request.session['verification_method'] = 'phone'
+                    # Store OTP ID in session
+                    request.session['verification_otp_id'] = str(otp.id)
+                    request.session['verification_method'] = 'phone'
+                    request.session['verification_twilio_sid'] = verification_sid
 
-                messages.success(request, f'Verification OTP has been sent to {user.phone_number}')
-                return redirect('verify_account_otp')
+                    messages.success(request, f'Verification OTP has been sent to {user.phone_number}')
+                    return redirect('verify_account_otp')
+                else:
+                    messages.error(request, f'Failed to send OTP: {message}')
     else:
         form = SendOTPForm(initial={
             'email': request.user.email,
@@ -1342,6 +1493,7 @@ def verify_account_otp(request):
     """Verify account with OTP"""
     otp_id = request.session.get('verification_otp_id')
     verification_method = request.session.get('verification_method')
+    twilio_sid = request.session.get('verification_twilio_sid')
 
     if not otp_id:
         messages.error(request, 'Please request OTP first.')
@@ -1355,10 +1507,10 @@ def verify_account_otp(request):
         )
     except OTPVerification.DoesNotExist:
         messages.error(request, 'Invalid OTP request. Please start over.')
-        if 'verification_otp_id' in request.session:
-            del request.session['verification_otp_id']
-        if 'verification_method' in request.session:
-            del request.session['verification_method']
+        session_keys = ['verification_otp_id', 'verification_method', 'verification_twilio_sid']
+        for key in session_keys:
+            if key in request.session:
+                del request.session[key]
         return redirect('send_verification_otp')
 
     if request.method == 'POST':
@@ -1366,14 +1518,23 @@ def verify_account_otp(request):
         if form.is_valid():
             otp_code = form.cleaned_data['otp_code']
 
-            # Verify OTP
-            success, message = otp.verify_otp(otp_code)
+            # ✅ VERIFY VIA TWILIO FOR PHONE
+            if verification_method == 'phone' and twilio_sid:
+                success, message = verify_twilio_code(otp.phone_number, otp_code)
+            else:
+                # Email verification
+                success, message = otp.verify_otp(otp_code)
 
             if success:
                 # Mark user as verified
                 user = request.user
                 user.is_verified = True
                 user.save()
+
+                # Mark OTP as verified
+                otp.is_verified = True
+                otp.verified_at = timezone.now()
+                otp.save()
 
                 # Create notification
                 Notification.objects.create(
@@ -1385,10 +1546,10 @@ def verify_account_otp(request):
                 )
 
                 # Clear session
-                if 'verification_otp_id' in request.session:
-                    del request.session['verification_otp_id']
-                if 'verification_method' in request.session:
-                    del request.session['verification_method']
+                session_keys = ['verification_otp_id', 'verification_method', 'verification_twilio_sid']
+                for key in session_keys:
+                    if key in request.session:
+                        del request.session[key]
 
                 messages.success(request, 'Your account has been verified successfully!')
                 return redirect('profile')
