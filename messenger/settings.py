@@ -19,12 +19,12 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 
 # Allowed Hosts
 ALLOWED_HOSTS = config('ALLOWED_HOSTS',
-                       default='localhost,127.0.0.1,connect-io-dbwj.onrender.com,mini-messenger-app.onrender.com',
+                       default='localhost,127.0.0.1,connect-io-lg60.onrender.com,mini-messenger-app.onrender.com',
                        cast=Csv())
 
 # CSRF Trusted Origins
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS',
-                              default='https://connect-io-dbwj.onrender.com,https://mini-messenger-app.onrender.com',
+                              default='https://connect-io-lg60.onrender.com,https://mini-messenger-app.onrender.com',
                               cast=Csv())
 
 # Installed Apps
