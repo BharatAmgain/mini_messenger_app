@@ -299,7 +299,7 @@ OTP_TWILIO_AUTH = config('TWILIO_AUTH_TOKEN', default='')
 OTP_TWILIO_TOKEN_VALIDITY = config('OTP_TWILIO_TOKEN_VALIDITY', default=300, cast=int)
 OTP_TOTP_ISSUER = SITE_NAME
 
-# Twilio Configuration
+# Twilio Configuration (READ FROM .env - NO HARDCODED VALUES!)
 TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID', default='')
 TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN', default='')
 TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER', default='')
@@ -504,9 +504,3 @@ if DEBUG:
     # Email backend for development
     if config('DJANGO_DEV_SERVER', default=True, cast=bool):
         EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-        # settings.py
-        TWILIO_ACCOUNT_SID = 'ACb1f4d1fb64cf30a79a7ccfb504584f4b'  # Your Account SID
-        TWILIO_AUTH_TOKEN = 'your_auth_token_here'  # Your Auth Token
-        TWILIO_PHONE_NUMBER = '+15005550006'  # Your Twilio phone
-        TWILIO_VERIFY_SERVICE_SID = 'VA87fd0e149dd0297b83d48740df293f3e'  # Your Verify Service SID
