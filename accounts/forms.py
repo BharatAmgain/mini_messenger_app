@@ -11,6 +11,7 @@ from django.core.validators import validate_email
 from .models import CustomUser
 import phonenumbers
 from phonenumbers import NumberParseException
+import re
 
 
 class CustomUserCreationForm(UserCreationForm):
@@ -87,11 +88,15 @@ class PasswordResetRequestForm(AuthPasswordResetForm):
         widget=forms.TextInput(attrs={
             'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500',
             'placeholder': 'Enter your email or phone number'
-        })
+        }),
+        help_text="Example: user@example.com or +9779800000000"
     )
 
     def clean_email_or_phone(self):
-        email_or_phone = self.cleaned_data.get('email_or_phone')
+        email_or_phone = self.cleaned_data.get('email_or_phone', '').strip()
+
+        if not email_or_phone:
+            raise forms.ValidationError('Please enter an email or phone number')
 
         # Check if it's an email
         if '@' in email_or_phone:
@@ -100,21 +105,44 @@ class PasswordResetRequestForm(AuthPasswordResetForm):
                 validate_email(email_or_phone)
                 return {'type': 'email', 'value': email_or_phone}
             except ValidationError:
-                raise forms.ValidationError('Please enter a valid email address')
+                raise forms.ValidationError('Please enter a valid email address (e.g., user@example.com)')
         else:
             # Try to parse as phone number
-            try:
-                parsed = phonenumbers.parse(email_or_phone, "NP")  # Default to Nepal
-                if phonenumbers.is_valid_number(parsed):
-                    return {'type': 'phone',
-                            'value': phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)}
+            # Remove any spaces, dashes, parentheses
+            phone = email_or_phone.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
+
+            # Add country code if not present (assume Nepal +977)
+            if not phone.startswith('+'):
+                if phone.startswith('0'):
+                    phone = '+977' + phone[1:]  # Remove leading 0 and add +977
                 else:
-                    raise forms.ValidationError('Please enter a valid phone number')
+                    phone = '+977' + phone
+
+            try:
+                parsed = phonenumbers.parse(phone, None)  # Auto-detect country
+                if phonenumbers.is_valid_number(parsed):
+                    formatted = phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
+                    return {'type': 'phone', 'value': formatted}
+                else:
+                    raise forms.ValidationError('Please enter a valid phone number (e.g., +9779800000000)')
             except NumberParseException:
-                raise forms.ValidationError('Please enter a valid email or phone number')
+                # Try one more time with just the number
+                try:
+                    # Try with Nepal as default
+                    parsed = phonenumbers.parse(phone, "NP")
+                    if phonenumbers.is_valid_number(parsed):
+                        formatted = phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
+                        return {'type': 'phone', 'value': formatted}
+                    else:
+                        raise forms.ValidationError('Please enter a valid phone number')
+                except:
+                    raise forms.ValidationError('Please enter a valid email or phone number')
 
     def get_users(self, email_or_phone):
         """Get users by email or phone number"""
+        if not hasattr(self, 'cleaned_data'):
+            return []
+
         data = self.cleaned_data.get('email_or_phone')
         if not data:
             return []
@@ -202,7 +230,7 @@ class SendOTPForm(forms.Form):
         max_length=20,
         widget=forms.TextInput(attrs={
             'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500',
-            'placeholder': 'Enter your phone number'
+            'placeholder': 'Enter your phone number (e.g., +9779800000000)'
         })
     )
 
@@ -221,10 +249,14 @@ class SendOTPForm(forms.Form):
         # Validate phone number if provided
         if phone_number:
             try:
-                parsed = phonenumbers.parse(phone_number, "NP")
+                # Add + if not present
+                if not phone_number.startswith('+'):
+                    phone_number = '+977' + phone_number.lstrip('0')
+
+                parsed = phonenumbers.parse(phone_number, None)
                 if not phonenumbers.is_valid_number(parsed):
-                    raise forms.ValidationError('Please enter a valid phone number')
+                    raise forms.ValidationError('Please enter a valid phone number (e.g., +9779800000000)')
             except NumberParseException:
-                raise forms.ValidationError('Please enter a valid phone number')
+                raise forms.ValidationError('Please enter a valid phone number (e.g., +9779800000000)')
 
         return cleaned_data
