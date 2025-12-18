@@ -95,9 +95,13 @@ TEMPLATES = [
 WSGI_APPLICATION = 'messenger.wsgi.application'
 ASGI_APPLICATION = 'messenger.asgi.application'
 
-# Database
+# Database - FIXED SECTION
 DATABASE_URL = config('DATABASE_URL', default='')
-if DATABASE_URL:
+if DATABASE_URL and DATABASE_URL.startswith('postgres'):
+    # PostgreSQL configuration
+    if DATABASE_URL.startswith('postgres://'):
+        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
@@ -107,13 +111,11 @@ if DATABASE_URL:
         )
     }
 else:
+    # SQLite configuration (default for development)
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
-            'OPTIONS': {
-                'timeout': 20,
-            }
         }
     }
 
@@ -482,10 +484,6 @@ if not DEBUG:
 
     # Clickjacking protection
     SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
-
-    # Content Security Policy (CSP) - Basic
-    # Note: For full CSP, you might need django-csp
-    # SECURE_CSP = "default-src 'self'"
 
     # Force HTTPS
     os.environ['HTTPS'] = "on"
