@@ -292,6 +292,8 @@ SOCIAL_AUTH_FACEBOOK_EXTRA_DATA = [
     ('last_name', 'last_name'),
 ]
 SOCIAL_AUTH_FACEBOOK_API_VERSION = '12.0'
+# Use the shorter, more standard callback path for Facebook
+SOCIAL_AUTH_FACEBOOK_REDIRECT_URI = 'https://connect-io-0cql.onrender.com/complete/facebook/'
 
 # Social Auth Pipeline
 SOCIAL_AUTH_PIPELINE = (
