@@ -1,37 +1,225 @@
 <!-- templates/errors/csrf_failure.html -->
 {% extends 'base.html' %}
 
-{% block title %}CSRF Error - {{ SITE_NAME }}{% endblock %}
+{% block title %}Security Error - {{ SITE_NAME }}{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-    <div class="sm:mx-auto sm:w-full sm:max-w-md">
-        <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 text-center">
-            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
-                <i class="fas fa-shield-alt text-red-600"></i>
+<div class="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-lg w-full">
+        <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+            <!-- Error Header -->
+            <div class="px-8 py-6 bg-gradient-to-r from-red-600 to-orange-600">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-white p-3 rounded-full">
+                        <i class="fas fa-shield-alt text-red-600 text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <h1 class="text-2xl font-bold text-white">Security Verification Failed</h1>
+                        <p class="text-red-100 mt-1">Your request couldn't be processed due to a security issue</p>
+                    </div>
+                </div>
             </div>
-            <h2 class="mt-3 text-2xl font-bold text-gray-900">Security Error</h2>
-            <p class="mt-2 text-sm text-gray-600">
-                {{ message }}
-            </p>
-            {% if reason and DEBUG %}
-            <p class="mt-2 text-sm text-gray-500">
-                Reason: {{ reason }}
-            </p>
-            {% endif %}
-            <div class="mt-6">
-                <a href="javascript:history.back()"
-                   class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
-                    <i class="fas fa-arrow-left mr-2"></i>
-                    Go Back
-                </a>
-                <a href="{% url 'chat_home' %}"
-                   class="ml-3 inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                    <i class="fas fa-home mr-2"></i>
-                    Home
-                </a>
+
+            <!-- Error Content -->
+            <div class="p-8">
+                <div class="text-center mb-8">
+                    <div class="mx-auto h-20 w-20 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-exclamation-triangle text-red-600 text-3xl"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-900 mb-2">CSRF Verification Failed</h2>
+                    <p class="text-gray-600 mb-6">
+                        {{ message }}
+                    </p>
+                </div>
+
+                <!-- Common Causes -->
+                <div class="bg-gray-50 rounded-xl p-6 mb-8">
+                    <h3 class="font-semibold text-gray-900 mb-4 flex items-center">
+                        <i class="fas fa-info-circle text-blue-500 mr-2"></i>
+                        Common Causes:
+                    </h3>
+                    <ul class="space-y-2">
+                        <li class="flex items-start">
+                            <i class="fas fa-clock text-yellow-500 mt-1 mr-2"></i>
+                            <span>Your session expired (logged out automatically)</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-browser text-blue-500 mt-1 mr-2"></i>
+                            <span>Page was open in multiple tabs or browsers</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-hourglass-end text-orange-500 mt-1 mr-2"></i>
+                            <span>The page was idle for too long without activity</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-key text-purple-500 mt-1 mr-2"></i>
+                            <span>Security tokens expired or were missing</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Solutions -->
+                <div class="bg-blue-50 rounded-xl p-6 mb-8 border border-blue-200">
+                    <h3 class="font-semibold text-blue-900 mb-4 flex items-center">
+                        <i class="fas fa-wrench text-blue-600 mr-2"></i>
+                        How to fix this:
+                    </h3>
+                    <ol class="space-y-3">
+                        <li class="flex items-start">
+                            <span class="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mr-3 flex-shrink-0">1</span>
+                            <span>Refresh the page and try again</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mr-3 flex-shrink-0">2</span>
+                            <span>Log in again if you were logged out</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mr-3 flex-shrink-0">3</span>
+                            <span>Clear your browser cache and cookies if the problem persists</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mr-3 flex-shrink-0">4</span>
+                            <span>Use the "Back" button to return to the previous page</span>
+                        </li>
+                    </ol>
+                </div>
+
+                <!-- Technical Details (only in DEBUG mode) -->
+                {% if DEBUG %}
+                <div class="bg-gray-900 rounded-xl p-6 mb-8">
+                    <h3 class="font-semibold text-white mb-4 flex items-center">
+                        <i class="fas fa-code text-green-400 mr-2"></i>
+                        Technical Details (Debug Mode):
+                    </h3>
+                    <div class="text-gray-300 text-sm font-mono overflow-x-auto">
+                        <p>Reason: {{ reason|default:"CSRF token missing or incorrect" }}</p>
+                        <p>Path: {{ request.path }}</p>
+                        <p>Method: {{ request.method }}</p>
+                        <p>User: {{ user.username|default:"Anonymous" }}</p>
+                        <p>CSRF Token Present: {% if csrf_token %}Yes{% else %}No{% endif %}</p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Action Buttons -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button onclick="window.history.back()"
+                            class="w-full inline-flex justify-center items-center py-3 px-4 border border-gray-300 rounded-xl shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-200">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        Go Back
+                    </button>
+
+                    <a href="{% url 'login' %}"
+                       class="w-full inline-flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-200">
+                        <i class="fas fa-sign-in-alt mr-2"></i>
+                        Login Again
+                    </a>
+
+                    <a href="{% url 'chat_home' %}"
+                       class="w-full sm:col-span-2 inline-flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-200">
+                        <i class="fas fa-home mr-2"></i>
+                        Go to Homepage
+                    </a>
+                </div>
+
+                <!-- Contact Support -->
+                <div class="mt-8 pt-6 border-t border-gray-200 text-center">
+                    <p class="text-sm text-gray-600">
+                        If this error persists, please contact support:
+                        <a href="mailto:{{ SUPPORT_EMAIL }}" class="font-medium text-blue-600 hover:text-blue-500 ml-1">
+                            {{ SUPPORT_EMAIL }}
+                        </a>
+                    </p>
+                    <p class="text-xs text-gray-500 mt-2">
+                        <i class="fas fa-lock text-green-500 mr-1"></i>
+                        This security check helps protect your account from unauthorized access
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Security Info Footer -->
+        <div class="text-center mt-8">
+            <div class="inline-flex flex-wrap items-center justify-center gap-4 text-sm text-gray-500">
+                <div class="flex items-center space-x-1">
+                    <i class="fas fa-shield-alt text-green-500"></i>
+                    <span>End-to-end encryption</span>
+                </div>
+                <div class="w-1 h-1 bg-gray-300 rounded-full hidden sm:block"></div>
+                <div class="flex items-center space-x-1">
+                    <i class="fas fa-user-lock text-blue-500"></i>
+                    <span>Privacy protected</span>
+                </div>
+                <div class="w-1 h-1 bg-gray-300 rounded-full hidden sm:block"></div>
+                <div class="flex items-center space-x-1">
+                    <i class="fas fa-server text-purple-500"></i>
+                    <span>Secure servers</span>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    /* Animation for error icon */
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+
+    .error-icon {
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    /* Custom scrollbar for technical details */
+    .tech-details::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .tech-details::-webkit-scrollbar-track {
+        background: #1f2937;
+        border-radius: 4px;
+    }
+
+    .tech-details::-webkit-scrollbar-thumb {
+        background: #4b5563;
+        border-radius: 4px;
+    }
+
+    .tech-details::-webkit-scrollbar-thumb:hover {
+        background: #6b7280;
+    }
+</style>
+
+<script>
+    // Add interactive elements
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add copy email functionality
+        const supportEmail = "{{ SUPPORT_EMAIL }}";
+        const emailLinks = document.querySelectorAll('a[href^="mailto:"]');
+        emailLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                // Optional: Add animation or confirmation
+                this.classList.add('text-green-600');
+                setTimeout(() => {
+                    this.classList.remove('text-green-600');
+                }, 1000);
+            });
+        });
+
+        // Auto-refresh after 30 seconds if still on error page
+        setTimeout(() => {
+            if (window.location.pathname.includes('csrf-failure')) {
+                window.location.reload();
+            }
+        }, 30000);
+
+        // Log error for debugging
+        console.warn('CSRF Verification Failed:', {
+            reason: "{{ reason|default:'Unknown' }}",
+            path: window.location.pathname,
+            timestamp: new Date().toISOString()
+        });
+    });
+</script>
 {% endblock %}

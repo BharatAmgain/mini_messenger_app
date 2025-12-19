@@ -1,4 +1,4 @@
-# messenger_app/accounts/views.py
+# messenger_app/accounts/views.py - UPDATED PASSWORD RESET SECTION
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
@@ -27,6 +27,7 @@ from twilio.rest import Client
 from django.conf import settings
 import phonenumbers
 from phonenumbers import NumberParseException
+
 
 
 def register(request):
@@ -891,9 +892,8 @@ def verify_twilio_code(phone_number, code):
     except Exception as e:
         return False, f"Error: {str(e)}"
 
-
 def password_reset_request(request):
-    """Request password reset with OTP"""
+    """Request password reset with OTP - FIXED VERSION"""
     if request.user.is_authenticated:
         return redirect('chat_home')
 
@@ -960,7 +960,10 @@ def password_reset_request(request):
                     messages.success(request, 'If an account exists with this phone, OTP has been sent.')
                     return redirect('password_reset_verify_otp')
         else:
-            messages.error(request, 'Please correct the error below.')
+            # DEBUG: Show form errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
     else:
         form = PasswordResetRequestForm()
 
@@ -968,7 +971,7 @@ def password_reset_request(request):
 
 
 def password_reset_verify_otp(request):
-    """Verify OTP for password reset"""
+    """Verify OTP for password reset - FIXED VERSION"""
     if request.user.is_authenticated:
         return redirect('chat_home')
 
@@ -1030,7 +1033,6 @@ def password_reset_verify_otp(request):
                     messages.error(request, message)
         else:
             messages.error(request, 'Please enter a valid 6-digit OTP.')
-
     else:
         form = OTPVerificationForm()
 
@@ -1062,6 +1064,77 @@ def password_reset_verify_otp(request):
         'can_resend': True,
     }
     return render(request, 'accounts/password_reset_verify_otp.html', context)
+
+
+def password_reset_confirm(request):
+    """Set new password after OTP verification"""
+    if request.user.is_authenticated:
+        return redirect('chat_home')
+
+    # Check if verification is complete
+    if not request.session.get('password_reset_verified'):
+        messages.error(request, 'Please verify OTP first.')
+        return redirect('password_reset_request')
+
+    user_id = request.session.get('verified_user_id')
+    if not user_id:
+        messages.error(request, 'Invalid session. Please start over.')
+        return redirect('password_reset_request')
+
+    try:
+        user = CustomUser.objects.get(id=user_id, is_active=True)
+    except CustomUser.DoesNotExist:
+        messages.error(request, 'User not found.')
+        # Clear session
+        if 'password_reset_verified' in request.session:
+            del request.session['password_reset_verified']
+        if 'verified_user_id' in request.session:
+            del request.session['verified_user_id']
+        return redirect('password_reset_request')
+
+    if request.method == 'POST':
+        form = OTPPasswordResetForm(user, request.POST)
+        if form.is_valid():
+            # Clear all session data
+            session_keys = [
+                'password_reset_user_id',
+                'password_reset_otp_id',
+                'password_reset_method',
+                'password_reset_verified',
+                'verified_user_id',
+                'twilio_verification_sid'
+            ]
+            for key in session_keys:
+                if key in request.session:
+                    del request.session[key]
+
+            # Save new password
+            form.save()
+
+            # Create notification
+            Notification.objects.create(
+                user=user,
+                notification_type='system',
+                title="Password Reset",
+                message="Your password has been reset successfully.",
+                related_url="/accounts/settings/"
+            )
+
+            messages.success(request, 'Your password has been reset successfully. You can now log in.')
+            return redirect('login')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
+    else:
+        form = OTPPasswordResetForm(user)
+
+    context = {
+        'form': form,
+        'user': user
+    }
+    return render(request, 'accounts/password_reset_confirm.html', context)
+
 
 
 def password_reset_confirm(request):

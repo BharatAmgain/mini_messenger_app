@@ -14,6 +14,9 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <!-- CSRF Token for JavaScript -->
+    <meta name="csrf-token" content="{{ csrf_token }}">
+
     <!-- Custom CSS -->
     <style>
         :root {
@@ -206,13 +209,30 @@
             animation: fadeIn 0.3s ease-out;
         }
 
-        /* Profile picture styling */
+        /* Profile picture styling - SAFE VERSION */
         .profile-picture {
             width: 40px;
             height: 40px;
             border-radius: 50%;
             object-fit: cover;
             border: 2px solid #e5e7eb;
+            background-color: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .profile-picture img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .profile-picture .placeholder {
+            color: #6b7280;
+            font-size: 14px;
+            font-weight: 500;
         }
 
         .profile-picture-sm {
@@ -250,7 +270,7 @@
         }
     </style>
 </head>
-<body class="h-full bg-gray-50">
+<body class="h-full bg-gray-50 {% if user.is_authenticated %}user-authenticated{% endif %}">
     <!-- Mobile Top Navigation -->
     <div class="desktop-hidden top-nav">
         <div class="flex items-center justify-between w-full">
@@ -285,12 +305,15 @@
 
                 <!-- Profile -->
                 <a href="{% url 'profile' %}" class="flex items-center">
-                    {% if user.profile_picture and user.profile_picture.url %}
-                    <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}"
-                         class="profile-picture">
+                    {% if user.is_authenticated and user.profile_picture and user.profile_picture.url %}
+                    <div class="profile-picture">
+                        <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}">
+                    </div>
                     {% else %}
-                    <div class="profile-picture bg-gray-300 flex items-center justify-center">
-                        <i class="fas fa-user text-gray-500"></i>
+                    <div class="profile-picture bg-gray-300">
+                        <div class="placeholder">
+                            <i class="fas fa-user text-gray-500"></i>
+                        </div>
                     </div>
                     {% endif %}
                 </a>
@@ -312,14 +335,18 @@
         </div>
 
         <!-- User Profile in Mobile Menu -->
+        {% if user.is_authenticated %}
         <div class="mb-6 p-3 bg-gray-50 rounded-lg">
             <div class="flex items-center space-x-3">
                 {% if user.profile_picture and user.profile_picture.url %}
-                <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}"
-                     class="profile-picture-lg">
+                <div class="profile-picture-lg">
+                    <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}">
+                </div>
                 {% else %}
-                <div class="profile-picture-lg bg-gray-300 flex items-center justify-center">
-                    <i class="fas fa-user text-gray-500 text-2xl"></i>
+                <div class="profile-picture-lg bg-gray-300">
+                    <div class="placeholder">
+                        <i class="fas fa-user text-gray-500 text-2xl"></i>
+                    </div>
                 </div>
                 {% endif %}
                 <div>
@@ -328,6 +355,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <div class="space-y-1">
             <a href="{% url 'chat_home' %}"
@@ -373,6 +401,7 @@
 
             <hr class="my-4">
 
+            {% if user.is_authenticated %}
             <form method="POST" action="{% url 'logout' %}">
                 {% csrf_token %}
                 <button type="submit" class="flex items-center w-full p-3 rounded-lg hover:bg-red-50 transition duration-200 text-red-600">
@@ -380,6 +409,12 @@
                     <span class="ml-3">Logout</span>
                 </button>
             </form>
+            {% else %}
+            <a href="{% url 'login' %}" class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200">
+                <i class="fas fa-sign-in-alt w-6 text-blue-600"></i>
+                <span class="ml-3">Login</span>
+            </a>
+            {% endif %}
         </div>
     </div>
 
@@ -478,25 +513,44 @@
             <!-- User Info -->
             <div class="p-4 border-t border-gray-200">
                 <div class="flex items-center space-x-3">
-                    {% if user.profile_picture and user.profile_picture.url %}
-                    <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}"
-                         class="profile-picture">
+                    {% if user.is_authenticated %}
+                        {% if user.profile_picture and user.profile_picture.url %}
+                        <div class="profile-picture">
+                            <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}">
+                        </div>
+                        {% else %}
+                        <div class="profile-picture bg-gray-300">
+                            <div class="placeholder">
+                                <i class="fas fa-user text-gray-500"></i>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 truncate">{{ user.username }}</p>
+                            <p class="text-xs text-gray-500 truncate">{{ user.email|truncatechars:20 }}</p>
+                        </div>
+                        <form method="POST" action="{% url 'logout' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="p-2 text-gray-400 hover:text-red-600 transition duration-200"
+                                    title="Logout">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </button>
+                        </form>
                     {% else %}
-                    <div class="profile-picture bg-gray-300 flex items-center justify-center">
-                        <i class="fas fa-user text-gray-500"></i>
-                    </div>
+                        <div class="profile-picture bg-gray-300">
+                            <div class="placeholder">
+                                <i class="fas fa-user text-gray-500"></i>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 truncate">Guest</p>
+                            <p class="text-xs text-gray-500 truncate">Not logged in</p>
+                        </div>
+                        <a href="{% url 'login' %}" class="p-2 text-blue-400 hover:text-blue-600 transition duration-200"
+                           title="Login">
+                            <i class="fas fa-sign-in-alt"></i>
+                        </a>
                     {% endif %}
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-gray-900 truncate">{{ user.username }}</p>
-                        <p class="text-xs text-gray-500 truncate">{{ user.email|truncatechars:20 }}</p>
-                    </div>
-                    <form method="POST" action="{% url 'logout' %}">
-                        {% csrf_token %}
-                        <button type="submit" class="p-2 text-gray-400 hover:text-red-600 transition duration-200"
-                                title="Logout">
-                            <i class="fas fa-sign-out-alt"></i>
-                        </button>
-                    </form>
                 </div>
             </div>
         </div>
@@ -544,6 +598,22 @@
 
     <!-- JavaScript -->
     <script>
+        // Function to get CSRF token from cookies
+        function getCSRFToken() {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, 10) === 'csrftoken=') {
+                        cookieValue = decodeURIComponent(cookie.substring(10));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
         // Set CSS custom property for viewport height
         function setVH() {
             let vh = window.innerHeight * 0.01;
@@ -593,6 +663,27 @@
                         badge.classList.add('hidden');
                     });
                 });
+        }
+
+        // Update online status with CSRF protection
+        function updateOnlineStatus(isOnline) {
+            const csrfToken = getCSRFToken();
+
+            fetch('/chat/update-online-status/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ online: isOnline }),
+                credentials: 'same-origin'
+            }).then(response => {
+                if (!response.ok) {
+                    console.error('Failed to update online status:', response.status);
+                }
+            }).catch(error => {
+                console.error('Error updating online status:', error);
+            });
         }
 
         // Mobile menu functionality
@@ -653,21 +744,34 @@
             });
 
             // Check if user is authenticated
-            const userAuthenticated = document.querySelector('body').classList.contains('user-authenticated');
+            const userAuthenticated = document.body.classList.contains('user-authenticated');
             if (userAuthenticated) {
                 // Fetch notification count on page load
                 fetchNotificationCount();
 
                 // Update notification count every 30 seconds
                 setInterval(fetchNotificationCount, 30000);
-            }
-        });
 
-        // Online status update
-        window.addEventListener('beforeunload', function() {
-            if (navigator.sendBeacon) {
-                navigator.sendBeacon('/chat/update-online-status/', JSON.stringify({ online: false }));
+                // Update online status when page loads
+                updateOnlineStatus(true);
             }
+
+            // Update status when user leaves
+            window.addEventListener('beforeunload', function() {
+                if (userAuthenticated) {
+                    // Try to send via sendBeacon first
+                    if (navigator.sendBeacon) {
+                        const csrfToken = getCSRFToken();
+                        const blob = new Blob([JSON.stringify({ online: false })], {
+                            type: 'application/json'
+                        });
+                        navigator.sendBeacon('/chat/update-online-status/', blob);
+                    } else {
+                        // Fallback to sync request
+                        updateOnlineStatus(false);
+                    }
+                }
+            });
         });
 
         // Prevent zoom on double-tap for mobile
@@ -726,13 +830,6 @@
             }
         }
 
-        // Update online status when page loads
-        window.addEventListener('load', function() {
-            if (navigator.sendBeacon) {
-                navigator.sendBeacon('/chat/update-online-status/', JSON.stringify({ online: true }));
-            }
-        });
-
         // Handle mobile back button
         if (window.innerWidth <= 768) {
             window.addEventListener('popstate', function() {
@@ -746,40 +843,6 @@
                 }
             });
         }
-
-        // CSRF Token Helper Function
-function getCSRFToken() {
-    const cookieValue = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('csrftoken='))
-        ?.split('=')[1];
-    return cookieValue;
-}
-
-// Update online status with CSRF protection
-function updateOnlineStatus(isOnline) {
-    fetch('/chat/update-online-status/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
-        },
-        body: JSON.stringify({ online: isOnline })
-    }).catch(error => {
-        console.log('Online status update failed:', error);
-    });
-}
-
-// Update status when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    updateOnlineStatus(true);
-
-    // Update status when user leaves
-    window.addEventListener('beforeunload', function() {
-        navigator.sendBeacon('/chat/update-online-status/',
-            JSON.stringify({ online: false }));
-    });
-});
     </script>
 
     {% block extra_js %}{% endblock %}
