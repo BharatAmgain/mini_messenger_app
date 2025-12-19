@@ -19,6 +19,22 @@ import base64
 from django.conf import settings
 
 
+def user_profile_picture_path(instance, filename):
+    """File upload path for user profile pictures"""
+    # Upload to: profile_pictures/user_<id>/<filename>
+    ext = filename.split('.')[-1]
+    filename = f"profile_picture.{ext}"
+    return os.path.join('profile_pictures', f'user_{instance.id}', filename)
+
+class User(AbstractUser):
+    profile_picture = models.ImageField(
+        upload_to=user_profile_picture_path,
+        blank=True,
+        null=True,
+        default=None
+    )
+
+
 class CustomUser(AbstractUser):
     online_status = models.BooleanField(default=False)
     profile_picture = models.ImageField(
