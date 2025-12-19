@@ -19,13 +19,13 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 
 # Allowed Hosts - Load from environment
 ALLOWED_HOSTS = config('ALLOWED_HOSTS',
-                       default='localhost,127.0.0.1,connect-io-0cql.onrender.com,connect-io-lg60.onrender.com,connect-io-dbwj.onrender.com,mini-messenger-app.onrender.com',
+                       default='localhost,127.0.0.1,connect-io-0cql.onrender.com',
                        cast=Csv()
                        )
 
 # CSRF Trusted Origins - Load from environment
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS',
-                              default='https://connect-io-0cql.onrender.com,https://connect-io-lg60.onrender.com,https://connect-io-dbwj.onrender.com,https://mini-messenger-app.onrender.com,http://localhost:8000,http://127.0.0.1:8000',
+                              default='https://connect-io-0cql.onrender.com,http://localhost:8000,http://127.0.0.1:8000',
                               cast=Csv()
                               )
 
@@ -164,12 +164,12 @@ USE_TZ = True
 # Static files
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static'] if os.path.exists(BASE_DIR / 'static') else []
-STATIC_ROOT = BASE_DIR / config('STATIC_ROOT', default='staticfiles')
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / config('MEDIA_ROOT', default='media')
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -250,11 +250,17 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-# CSRF Configuration
+# CSRF Configuration - FIXED FOR AJAX
 CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read the CSRF token
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_USE_SESSIONS = False
 CSRF_FAILURE_VIEW = 'messenger.views.csrf_failure'
+CSRF_COOKIE_NAME = 'csrftoken'
+CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS',
+                              default='https://connect-io-0cql.onrender.com,http://localhost:8000,http://127.0.0.1:8000',
+                              cast=Csv()
+                              )
 
 # Social Auth Configuration
 AUTHENTICATION_BACKENDS = (
@@ -276,11 +282,11 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
     'prompt': 'select_account',
 }
 
-# Facebook OAuth2
+# Facebook OAuth2 - FIXED FOR LIVE APP
 SOCIAL_AUTH_FACEBOOK_KEY = config('FACEBOOK_APP_ID', default='')
 SOCIAL_AUTH_FACEBOOK_SECRET = config('FACEBOOK_APP_SECRET', default='')
-# 👉 CHANGE HERE: Removed 'email' to fix "Invalid Scopes" error during App Review
-SOCIAL_AUTH_FACEBOOK_SCOPE = ['public_profile']  # Temporary fix until 'email' permission is approved
+# For Live App with email permission approved
+SOCIAL_AUTH_FACEBOOK_SCOPE = ['email', 'public_profile']
 SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {
     'fields': 'id,name,email,picture.type(large),first_name,last_name',
     'locale': 'en_US',
@@ -292,9 +298,10 @@ SOCIAL_AUTH_FACEBOOK_EXTRA_DATA = [
     ('first_name', 'first_name'),
     ('last_name', 'last_name'),
 ]
-SOCIAL_AUTH_FACEBOOK_API_VERSION = '12.0'
-# Use the shorter, more standard callback path for Facebook
-SOCIAL_AUTH_FACEBOOK_REDIRECT_URI = 'https://connect-io-0cql.onrender.com/complete/facebook/'
+SOCIAL_AUTH_FACEBOOK_API_VERSION = 'v19.0'  # Latest API version
+
+# IMPORTANT: Remove custom redirect URI - let social-auth handle it
+# SOCIAL_AUTH_FACEBOOK_REDIRECT_URI = 'https://connect-io-0cql.onrender.com/complete/facebook/'
 
 # Social Auth Pipeline
 SOCIAL_AUTH_PIPELINE = (
@@ -351,10 +358,10 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_SAVE_EVERY_REQUEST = True
 
-# CSRF Configuration
+# CSRF Configuration - Additional settings
 CSRF_COOKIE_AGE = 31449600  # 1 year
 CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
-CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False  # Must be False for JavaScript access
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_FAILURE_VIEW = 'messenger.views.csrf_failure'
 
@@ -425,6 +432,11 @@ LOGGING = {
             'propagate': False,
         },
         'chat': {
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
+        'social': {
             'handlers': ['console'],
             'level': LOG_LEVEL,
             'propagate': False,
@@ -538,10 +550,9 @@ if 'RENDER' in os.environ:
         DATABASE_URL = os.environ['DATABASE_URL']
         print("✅ Using Render PostgreSQL database from environment")
 
-    # 👉 CHANGE HERE: Force HTTPS for OAuth redirects on Render
-    # 🔧 CRITICAL: This fixes 'redirect_uri_mismatch' errors
+    # 👉 CRITICAL: Force HTTPS for OAuth redirects on Render
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    SOCIAL_AUTH_REDIRECT_IS_HTTPS = True  # This tells social-auth to use HTTPS
+    SOCIAL_AUTH_REDIRECT_IS_HTTPS = True
 
     # Run migrations
     ensure_migrations_and_user()

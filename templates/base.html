@@ -599,9 +599,9 @@
         </div>
     </div>
 
-       <!-- JavaScript -->
+    <!-- JavaScript -->
     <script>
-        // Function to get CSRF token from cookies - FIXED VERSION
+        // Function to get CSRF token from cookies
         function getCSRFToken() {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -627,7 +627,63 @@
                 }
             }
 
+            // Final fallback: use window.csrftoken from csrf_fix.js
+            if (!cookieValue && window.csrftoken) {
+                cookieValue = window.csrftoken;
+            }
+
             return cookieValue;
+        }
+
+        // Function to handle online status updates with CSRF protection
+        function updateOnlineStatus(isOnline) {
+            const csrfToken = getCSRFToken();
+
+            if (!csrfToken) {
+                console.warn('CSRF token not found, skipping online status update');
+                return;
+            }
+
+            fetch('/chat/update-online-status/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    'online': isOnline.toString(),
+                    'csrfmiddlewaretoken': csrfToken
+                }),
+                credentials: 'same-origin'
+            }).then(response => {
+                if (!response.ok) {
+                    console.log('Online status update failed:', response.status);
+                }
+            }).catch(error => {
+                console.log('Error updating online status:', error);
+            });
+        }
+
+        // Function to send beacons when page is closing
+        function sendBeforeUnloadBeacon() {
+            const csrfToken = getCSRFToken();
+            if (csrfToken && navigator.sendBeacon) {
+                const formData = new FormData();
+                formData.append('online', 'false');
+                formData.append('csrfmiddlewaretoken', csrfToken);
+
+                const blob = new Blob([JSON.stringify({
+                    online: false,
+                    csrfmiddlewaretoken: csrfToken
+                })], {
+                    type: 'application/json'
+                });
+                navigator.sendBeacon('/chat/update-online-status/', blob);
+            } else {
+                // Fallback sync request
+                updateOnlineStatus(false);
+            }
         }
 
         // Set CSS custom property for viewport height
@@ -679,37 +735,6 @@
                         badge.classList.add('hidden');
                     });
                 });
-        }
-
-        // Update online status with CSRF protection - FIXED VERSION
-        function updateOnlineStatus(isOnline) {
-            const csrfToken = getCSRFToken();
-
-            if (!csrfToken) {
-                console.warn('CSRF token not found, skipping online status update');
-                return;
-            }
-
-            // Create form data for proper CSRF handling
-            const formData = new FormData();
-            formData.append('csrfmiddlewaretoken', csrfToken);
-            formData.append('online', isOnline);
-
-            fetch('/chat/update-online-status/', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: formData,
-                credentials: 'same-origin'
-            }).then(response => {
-                if (!response.ok) {
-                    console.log('Online status update failed:', response.status);
-                }
-            }).catch(error => {
-                console.log('Error updating online status:', error);
-            });
         }
 
         // Mobile menu functionality
@@ -784,66 +809,30 @@
                 }, 1000);
             }
 
-            // Update status when user leaves
-            window.addEventListener('beforeunload', function() {
-                if (userAuthenticated) {
-                    // Try to send via sendBeacon first
-                    if (navigator.sendBeacon) {
-                        const csrfToken = getCSRFToken();
-                        if (csrfToken) {
-                            const formData = new FormData();
-                            formData.append('csrfmiddlewaretoken', csrfToken);
-                            formData.append('online', false);
+            // Update status when user leaves (using sendBeacon for reliability)
+            window.addEventListener('beforeunload', sendBeforeUnloadBeacon);
 
-                            const blob = new Blob([JSON.stringify({
-                                online: false,
-                                csrfmiddlewaretoken: csrfToken
-                            })], {
-                                type: 'application/json'
-                            });
-                            navigator.sendBeacon('/chat/update-online-status/', blob);
-                        }
-                    } else {
-                        // Fallback to sync request
-                        updateOnlineStatus(false);
-                    }
+            // Also update on page hide (for mobile)
+            document.addEventListener('visibilitychange', function() {
+                if (document.visibilityState === 'hidden') {
+                    sendBeforeUnloadBeacon();
+                } else if (document.visibilityState === 'visible') {
+                    updateOnlineStatus(true);
                 }
             });
 
-            // Add CSRF token to all AJAX requests globally
-            const csrfToken = getCSRFToken();
-            if (csrfToken) {
-                // Override jQuery if present
-                if (window.jQuery) {
-                    $.ajaxSetup({
-                        headers: {
-                            'X-CSRFToken': csrfToken
-                        }
-                    });
+            // Add focus/blur handlers
+            window.addEventListener('focus', function() {
+                if (userAuthenticated) {
+                    updateOnlineStatus(true);
                 }
+            });
 
-                // Override fetch for all POST requests
-                const originalFetch = window.fetch;
-                window.fetch = function(url, options = {}) {
-                    if (!options.headers) options.headers = {};
-                    if (!options.credentials) options.credentials = 'same-origin';
-
-                    const method = options.method ? options.method.toUpperCase() : 'GET';
-                    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-                        // Add CSRF token to headers
-                        options.headers = {
-                            ...options.headers,
-                            'X-CSRFToken': csrfToken
-                        };
-
-                        // Also add to FormData if it's FormData
-                        if (options.body instanceof FormData) {
-                            options.body.append('csrfmiddlewaretoken', csrfToken);
-                        }
-                    }
-                    return originalFetch.call(this, url, options);
-                };
-            }
+            window.addEventListener('blur', function() {
+                if (userAuthenticated) {
+                    updateOnlineStatus(false);
+                }
+            });
         });
 
         // Prevent zoom on double-tap for mobile
@@ -915,30 +904,6 @@
                 }
             });
         }
-
-         // Function to get the CSRF token from cookies
-    function getCookie(name) {
-      let cookieValue = null;
-      if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-          const cookie = cookies[i].trim();
-          // Does this cookie string begin with the name we want?
-          if (cookie.substring(0, name.length + 1) === (name + '=')) {
-            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-            break;
-          }
-        }
-      }
-      return cookieValue;
-    }
-
-    // Set up jQuery AJAX to include CSRF token in all requests
-    $.ajaxSetup({
-      headers: {
-        'X-CSRFToken': getCookie('csrftoken')
-      }
-    });
     </script>
 
     {% block extra_js %}{% endblock %}
