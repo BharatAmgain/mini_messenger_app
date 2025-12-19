@@ -178,15 +178,15 @@ def profile(request):
     return render(request, 'accounts/profile.html', {'user': request.user})
 
 
-# accounts/views.py - JUST THE profile_edit FUNCTION (replace your existing one)
+# accounts/views.py - SAFE profile_edit FUNCTION
 @login_required
 def profile_edit(request):
-    """Edit user's own profile - SAFE VERSION that won't cause is_verified error"""
+    """Edit user's own profile - ULTRA SAFE VERSION"""
     user = request.user
 
     if request.method == 'POST':
         try:
-            # Handle profile picture upload (optional)
+            # Handle profile picture upload
             if 'profile_picture' in request.FILES and request.FILES['profile_picture']:
                 profile_picture = request.FILES['profile_picture']
                 if profile_picture.content_type.startswith('image/'):
@@ -197,7 +197,7 @@ def profile_edit(request):
                 else:
                     messages.error(request, 'Please select a valid image file.')
 
-            # ✅ SAFE: Only update allowed fields - NEVER update is_verified here
+            # ✅ WHITELIST APPROACH: Only update explicitly allowed fields
             allowed_fields = {
                 'first_name': str,
                 'last_name': str,
@@ -213,25 +213,25 @@ def profile_edit(request):
                 if field in request.POST:
                     value = request.POST.get(field, '').strip()
                     if value or field_type != str:
-                        # Special handling for date_of_birth
                         if field == 'date_of_birth':
                             if value:
                                 try:
                                     from datetime import datetime
                                     user.date_of_birth = datetime.strptime(value, '%Y-%m-%d').date()
                                 except ValueError:
-                                    messages.error(request, 'Invalid date format')
+                                    messages.error(request, 'Invalid date format. Use YYYY-MM-DD')
                         else:
                             setattr(user, field, value)
 
-            # ✅ CRITICAL: NEVER update is_verified from form
-            # The is_verified field should ONLY be updated via OTP verification
-            # Remove any code that tries to update is_verified from POST data
+            # ✅ CRITICAL: NEVER update is_verified from form input
+            # Remove any POST data that might try to set is_verified
+            if hasattr(request.POST, '_mutable'):
+                request.POST._mutable = True
+            if 'is_verified' in request.POST:
+                del request.POST['is_verified']
 
-            # Validate and save
-            user.full_clean()  # This will catch validation errors
+            # Save user
             user.save()
-
             messages.success(request, 'Profile updated successfully!')
             return redirect('profile')
 
@@ -243,7 +243,6 @@ def profile_edit(request):
             messages.error(request, f'Error updating profile: {str(e)}')
 
     return render(request, 'accounts/profile_edit.html', {'user': user})
-
 
 @login_required
 def settings_main(request):

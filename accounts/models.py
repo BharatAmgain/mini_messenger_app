@@ -18,8 +18,12 @@ import base64
 def user_profile_picture_path(instance, filename):
     """File upload path for user profile pictures"""
     ext = filename.split('.')[-1]
-    filename = f"profile_picture_{instance.id}.{ext}"
-    return os.path.join('profile_pictures', f'user_{instance.id}', filename)
+    if instance.id:
+        filename = f"profile_picture_{instance.id}.{ext}"
+    else:
+        # Fallback to username if no ID yet (during creation)
+        filename = f"profile_picture_{instance.username}.{ext}"
+    return os.path.join('profile_pictures', f'user_{instance.id if instance.id else instance.username}', filename)
 
 
 class CustomUser(AbstractUser):
@@ -36,8 +40,8 @@ class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
     bio = models.TextField(max_length=500, blank=True)
 
-    # ✅ CRITICAL FIX: is_verified as BooleanField (NOT a property/method)
-    is_verified = models.BooleanField(default=False)
+    # ✅ FIXED: is_verified as BooleanField with verbose name
+    is_verified = models.BooleanField(default=False, verbose_name="Email Verified")
 
     # PROFILE FIELDS
     date_of_birth = models.DateField(blank=True, null=True)
@@ -132,7 +136,7 @@ class CustomUser(AbstractUser):
         if self.date_of_birth:
             today = timezone.now().date()
             return today.year - self.date_of_birth.year - (
-                    (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day)
+                (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day)
             )
         return None
 
@@ -141,7 +145,7 @@ class CustomUser(AbstractUser):
         if self == other_user:
             return 'self'
 
-        from .models import Friendship, FriendRequest  # Import here to avoid circular import
+        from .models import Friendship, FriendRequest
 
         if Friendship.are_friends(self, other_user):
             return 'friends'
@@ -163,6 +167,8 @@ class CustomUser(AbstractUser):
             return 'request_received'
 
         return 'not_friends'
+
+    # ✅ NO is_verified property or method here - only the BooleanField above
 
 
 class SocialAccount(models.Model):
@@ -298,7 +304,7 @@ class Friendship(models.Model):
     def create_friendship(cls, user1, user2):
         """Create a friendship between two users"""
         if user1.id > user2.id:
-            user1, user2 = user2, user1  # Ensure consistent ordering
+            user1, user2 = user2, user1
         return cls.objects.get_or_create(user1=user1, user2=user2)
 
 
@@ -416,31 +422,11 @@ class OTPVerification(models.Model):
         return True
 
     @classmethod
-    def send_otp_sms(cls, phone_number, otp_code, verification_type='account_verification'):
-        """Send OTP via SMS using Twilio"""
-        try:
-            from twilio.rest import Client
-            client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-            message = client.messages.create(
-                body=f"Your Connect.io verification code is: {otp_code}. Valid for 5 minutes.",
-                from_=settings.TWILIO_PHONE_NUMBER,
-                to=phone_number
-            )
-            return True
-        except Exception as e:
-            print(f"Error sending SMS: {e}")
-            return False
-
-    @classmethod
     def create_otp(cls, user, verification_type='account_verification', email=None, phone_number=None):
         """Create and send OTP"""
-        # Generate OTP code
         otp_code = cls.generate_otp()
-
-        # Set expiration (5 minutes from now)
         expires_at = timezone.now() + timezone.timedelta(minutes=5)
 
-        # Create OTP record
         otp = cls.objects.create(
             user=user,
             verification_type=verification_type,
@@ -450,11 +436,8 @@ class OTPVerification(models.Model):
             expires_at=expires_at
         )
 
-        # Send OTP based on method
         if email:
             cls.send_otp_email(email, otp_code, verification_type)
-        elif phone_number:
-            cls.send_otp_sms(phone_number, otp_code, verification_type)
 
         return otp
 
@@ -497,13 +480,9 @@ class PasswordResetOTP(models.Model):
     @classmethod
     def create_password_reset_otp(cls, user, email=None, phone_number=None):
         """Create password reset OTP"""
-        # Generate OTP code
         otp_code = cls.generate_otp()
-
-        # Set expiration (10 minutes for password reset)
         expires_at = timezone.now() + timezone.timedelta(minutes=10)
 
-        # Create OTP record
         otp = cls.objects.create(
             user=user,
             otp_code=otp_code,
@@ -512,11 +491,8 @@ class PasswordResetOTP(models.Model):
             expires_at=expires_at
         )
 
-        # Send OTP
         if email:
             cls.send_password_reset_email(email, otp_code)
-        elif phone_number:
-            cls.send_password_reset_sms(phone_number, otp_code)
 
         return otp
 
@@ -552,22 +528,6 @@ class PasswordResetOTP(models.Model):
             fail_silently=False,
         )
 
-    @classmethod
-    def send_password_reset_sms(cls, phone_number, otp_code):
-        """Send password reset OTP via SMS"""
-        try:
-            from twilio.rest import Client
-            client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-            message = client.messages.create(
-                body=f"Your Connect.io password reset code is: {otp_code}. Valid for 10 minutes.",
-                from_=settings.TWILIO_PHONE_NUMBER,
-                to=phone_number
-            )
-            return True
-        except Exception as e:
-            print(f"Error sending SMS: {e}")
-            return False
-
     def verify_and_use(self, otp_code):
         """Verify and mark OTP as used"""
         if self.is_expired():
@@ -582,50 +542,3 @@ class PasswordResetOTP(models.Model):
             return True, "OTP verified successfully"
 
         return False, "Invalid OTP code"
-
-    def verify_with_twilio(self, code):
-        """Verify OTP using Twilio Verify API"""
-        if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN:
-            return False, "Twilio not configured"
-
-        if not self.phone_number:
-            return False, "No phone number associated"
-
-        # Twilio Verify API endpoint
-        service_sid = settings.TWILIO_VERIFY_SERVICE_SID
-        url = f"https://verify.twilio.com/v2/Services/{service_sid}/VerificationCheck"
-
-        # Basic auth encoding
-        auth_string = f"{settings.TWILIO_ACCOUNT_SID}:{settings.TWILIO_AUTH_TOKEN}"
-        auth_bytes = auth_string.encode('ascii')
-        base64_auth = base64.b64encode(auth_bytes).decode('ascii')
-
-        # Headers
-        headers = {
-            'Authorization': f'Basic {base64_auth}',
-            'Content-Type': 'application/x-www-form-urlencoded',
-        }
-
-        # Data
-        data = {
-            'To': self.phone_number,
-            'Code': code,
-        }
-
-        try:
-            response = requests.post(url, headers=headers, data=data)
-
-            if response.status_code == 201:
-                result = response.json()
-                if result.get('status') == 'approved' and result.get('valid') == True:
-                    # Mark OTP as used
-                    self.is_used = True
-                    self.save()
-                    return True, "Verification successful"
-                else:
-                    return False, "Invalid verification code"
-            else:
-                return False, f"Twilio API error: {response.status_code}"
-
-        except Exception as e:
-            return False, f"Verification error: {str(e)}"

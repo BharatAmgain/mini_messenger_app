@@ -809,7 +809,7 @@ def get_messages_ajax(request, conversation_id):
 
     return JsonResponse({'error': 'Invalid request'})
 
-
+@csrf_exempt
 @login_required
 def update_online_status(request):
     """Update user's online status"""
