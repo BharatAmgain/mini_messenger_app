@@ -1,7 +1,11 @@
 #!/bin/bash
-# startup.sh
-echo "Running database migrations..."
+# startup.sh - Run migrations and start server
+echo "=== Starting Messenger App ==="
+echo "1. Applying database migrations..."
 python manage.py migrate --no-input
 
-echo "Starting server..."
-gunicorn messenger.wsgi:application
+echo "2. Collecting static files..."
+python manage.py collectstatic --noinput
+
+echo "3. Starting Gunicorn server..."
+exec gunicorn messenger.wsgi:application

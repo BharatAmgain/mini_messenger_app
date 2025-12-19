@@ -14,15 +14,13 @@ sys.path.append(str(BASE_DIR / 'apps'))
 # Secret Key
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-production')
 
-# Debug Mode
-DEBUG = config('DEBUG', default=False, cast=bool)
+# Debug Mode - Set to True temporarily to see errors on Render
+DEBUG = config('DEBUG', default=True, cast=bool)  # CHANGED: True for debugging
 
-# Allowed Hosts
 ALLOWED_HOSTS = config('ALLOWED_HOSTS',
                        default='localhost,127.0.0.1,connect-io-lg60.onrender.com,mini-messenger-app.onrender.com',
                        cast=Csv())
 
-# CSRF Trusted Origins
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS',
                               default='https://connect-io-lg60.onrender.com,https://mini-messenger-app.onrender.com',
                               cast=Csv())
@@ -97,8 +95,10 @@ ASGI_APPLICATION = 'messenger.asgi.application'
 
 # Database - FIXED SECTION
 DATABASE_URL = config('DATABASE_URL', default='')
-if DATABASE_URL and DATABASE_URL.startswith('postgres'):
-    # PostgreSQL configuration
+
+# CRITICAL FIX: Fixed database configuration
+if DATABASE_URL:
+    # PostgreSQL configuration for production (Render)
     if DATABASE_URL.startswith('postgres://'):
         DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
 
@@ -108,14 +108,14 @@ if DATABASE_URL and DATABASE_URL.startswith('postgres'):
             conn_max_age=600,
             conn_health_checks=True,
             ssl_require=True,
-
         )
     }
+    # Ensure correct engine for PostgreSQL
+    DATABASES['default']['ENGINE'] = 'django.db.backends.postgresql'
 else:
     # SQLite configuration (default for development)
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql',
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
         }
@@ -186,13 +186,14 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'chat_home'
 LOGOUT_REDIRECT_URL = 'login'
 
-# Email Configuration
-EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+# Email Configuration - FIXED FOR TESTING
+# Use console backend for testing OTP
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')  # CHANGED
 EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='test@example.com')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@connect.io')
 EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=30, cast=int)
@@ -200,7 +201,7 @@ EMAIL_SUBJECT_PREFIX = config('SITE_NAME', default='[Connect.io] ')
 
 # Site Information
 SITE_NAME = config('SITE_NAME', default='Connect.io')
-SITE_DOMAIN = config('SITE_DOMAIN', default='connect-io-dbwj.onrender.com')
+SITE_DOMAIN = config('SITE_DOMAIN', default='connect-io-lg60.onrender.com')
 ADMIN_EMAIL = config('ADMIN_EMAIL', default='admin@connect.io')
 SUPPORT_EMAIL = config('SUPPORT_EMAIL', default='support@connect.io')
 
@@ -301,7 +302,7 @@ OTP_TWILIO_AUTH = config('TWILIO_AUTH_TOKEN', default='')
 OTP_TWILIO_TOKEN_VALIDITY = config('OTP_TWILIO_TOKEN_VALIDITY', default=300, cast=int)
 OTP_TOTP_ISSUER = SITE_NAME
 
-# Twilio Configuration (READ FROM .env - NO HARDCODED VALUES!)
+# Twilio Configuration
 TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID', default='')
 TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN', default='')
 TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER', default='')
@@ -352,8 +353,8 @@ CACHES = {
     }
 }
 
-# Logging Configuration
-LOG_LEVEL = config('LOG_LEVEL', default='INFO').upper()
+# Logging Configuration - ADDED DETAILED LOGGING
+LOG_LEVEL = config('LOG_LEVEL', default='DEBUG').upper()  # CHANGED: DEBUG level
 LOG_FILE = config('LOG_FILE', default=BASE_DIR / 'logs' / 'django.log')
 
 LOGGING = {
@@ -395,7 +396,6 @@ LOGGING = {
             'maxBytes': 1024 * 1024 * 10,  # 10MB
             'backupCount': 5,
             'formatter': 'verbose',
-            'filters': ['require_debug_false'],
         },
         'error_file': {
             'level': 'ERROR',
@@ -413,13 +413,13 @@ LOGGING = {
             'propagate': True,
         },
         'django.request': {
-            'handlers': ['error_file'],
-            'level': 'ERROR',
+            'handlers': ['console', 'error_file'],
+            'level': 'DEBUG',
             'propagate': False,
         },
         'django.db.backends': {
             'handlers': ['console'],
-            'level': 'INFO',
+            'level': 'DEBUG',
             'propagate': False,
         },
         'accounts': {
@@ -461,7 +461,31 @@ ENABLE_GROUP_CHATS = config('ENABLE_GROUP_CHATS', default=True, cast=bool)
 ENABLE_PUSH_NOTIFICATIONS = config('ENABLE_PUSH_NOTIFICATIONS', default=True, cast=bool)
 ENABLE_EMAIL_NOTIFICATIONS = config('ENABLE_EMAIL_NOTIFICATIONS', default=True, cast=bool)
 
-# Security settings for production
+# ADDED: Render-specific configuration
+import os
+
+# Auto-configure for Render
+if 'RENDER' in os.environ:
+    # Ensure proper configuration on Render
+    ALLOWED_HOSTS.append('connect-io-dbwj.onrender.com')
+    CSRF_TRUSTED_ORIGINS.append('https://connect-io-dbwj.onrender.com')
+
+    # Auto-detect if we have DATABASE_URL
+    if os.environ.get('DATABASE_URL'):
+        DATABASES = {
+            'default': dj_database_url.config(
+                default=os.environ['DATABASE_URL'],
+                conn_max_age=600,
+                ssl_require=True,
+            )
+        }
+        DATABASES['default']['ENGINE'] = 'django.db.backends.postgresql'
+
+    # Log everything on Render for debugging
+    LOGGING['loggers']['django']['level'] = 'DEBUG'
+    LOGGING['loggers']['django.request']['level'] = 'DEBUG'
+
+# Security settings for production - TEMPORARILY DISABLED FOR DEBUGGING
 if not DEBUG:
     # HTTPS settings
     SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
