@@ -1,5 +1,7 @@
 # messenger_app/accounts/views.py - COMPLETE FIXED VERSION
 import json
+
+from django.core.exceptions import ValidationError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
@@ -176,9 +178,10 @@ def profile(request):
     return render(request, 'accounts/profile.html', {'user': request.user})
 
 
+# accounts/views.py - JUST THE profile_edit FUNCTION (replace your existing one)
 @login_required
 def profile_edit(request):
-    """Edit user's own profile - Anytime, any changes"""
+    """Edit user's own profile - SAFE VERSION that won't cause is_verified error"""
     user = request.user
 
     if request.method == 'POST':
@@ -186,8 +189,6 @@ def profile_edit(request):
             # Handle profile picture upload (optional)
             if 'profile_picture' in request.FILES and request.FILES['profile_picture']:
                 profile_picture = request.FILES['profile_picture']
-
-                # Basic validation
                 if profile_picture.content_type.startswith('image/'):
                     if profile_picture.size <= 5 * 1024 * 1024:  # 5MB
                         user.profile_picture = profile_picture
@@ -196,35 +197,49 @@ def profile_edit(request):
                 else:
                     messages.error(request, 'Please select a valid image file.')
 
-            # Update all profile fields - FIXED: Use get() method with proper fallback
-            user.first_name = request.POST.get('first_name', user.first_name)
-            user.last_name = request.POST.get('last_name', user.last_name)
-            user.email = request.POST.get('email', user.email)
-            user.phone_number = request.POST.get('phone_number', user.phone_number)
-            user.bio = request.POST.get('bio', user.bio)
-            user.location = request.POST.get('location', user.location)
-            user.website = request.POST.get('website', user.website)
+            # ✅ SAFE: Only update allowed fields - NEVER update is_verified here
+            allowed_fields = {
+                'first_name': str,
+                'last_name': str,
+                'email': str,
+                'phone_number': str,
+                'bio': str,
+                'location': str,
+                'website': str,
+                'gender': str,
+            }
 
-            # Handle date_of_birth properly
-            date_of_birth = request.POST.get('date_of_birth')
-            if date_of_birth:
-                user.date_of_birth = date_of_birth
-            elif date_of_birth == '':  # If empty string, set to None
-                user.date_of_birth = None
+            for field, field_type in allowed_fields.items():
+                if field in request.POST:
+                    value = request.POST.get(field, '').strip()
+                    if value or field_type != str:
+                        # Special handling for date_of_birth
+                        if field == 'date_of_birth':
+                            if value:
+                                try:
+                                    from datetime import datetime
+                                    user.date_of_birth = datetime.strptime(value, '%Y-%m-%d').date()
+                                except ValueError:
+                                    messages.error(request, 'Invalid date format')
+                        else:
+                            setattr(user, field, value)
 
-            user.gender = request.POST.get('gender', user.gender)
+            # ✅ CRITICAL: NEVER update is_verified from form
+            # The is_verified field should ONLY be updated via OTP verification
+            # Remove any code that tries to update is_verified from POST data
 
-            # CRITICAL FIX: DO NOT update is_verified from form - it should only be set via OTP verification
-            # Remove any is_verified field from your template
-
-            # Save changes
+            # Validate and save
+            user.full_clean()  # This will catch validation errors
             user.save()
+
             messages.success(request, 'Profile updated successfully!')
             return redirect('profile')
 
+        except ValidationError as e:
+            for field, errors in e.message_dict.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
         except Exception as e:
-            # Print traceback for debugging
-            traceback.print_exc()
             messages.error(request, f'Error updating profile: {str(e)}')
 
     return render(request, 'accounts/profile_edit.html', {'user': user})

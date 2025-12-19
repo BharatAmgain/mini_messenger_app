@@ -1,22 +1,18 @@
-# messenger_app/accounts/models.py - COMPLETE FIXED VERSION
+# accounts/models.py - COMPLETE FIXED VERSION
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, Group, Permission
 import uuid
 from django.utils import timezone
 from django.db.models import Q
-from django.core.exceptions import ValidationError
 import os
 import random
 import string
-from django.core.cache import cache
-from twilio.rest import Client
 from django.core.mail import send_mail
 from django.conf import settings
 import phonenumbers
 from phonenumbers import NumberParseException
 import requests
 import base64
-from django.conf import settings
 
 
 def user_profile_picture_path(instance, filename):
@@ -27,6 +23,7 @@ def user_profile_picture_path(instance, filename):
 
 
 class CustomUser(AbstractUser):
+    # BASIC FIELDS
     online_status = models.BooleanField(default=False)
     profile_picture = models.ImageField(
         upload_to=user_profile_picture_path,
@@ -39,10 +36,10 @@ class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
     bio = models.TextField(max_length=500, blank=True)
 
-    # CRITICAL FIX: is_verified must be a BooleanField, NOT a property or method
+    # ✅ CRITICAL FIX: is_verified as BooleanField (NOT a property/method)
     is_verified = models.BooleanField(default=False)
 
-    # Additional profile fields
+    # PROFILE FIELDS
     date_of_birth = models.DateField(blank=True, null=True)
     location = models.CharField(max_length=100, blank=True)
     website = models.URLField(blank=True)
@@ -53,7 +50,7 @@ class CustomUser(AbstractUser):
         ('prefer_not', 'Prefer not to say')
     ], blank=True)
 
-    # Privacy settings
+    # PRIVACY SETTINGS
     show_online_status = models.BooleanField(default=True)
     allow_message_requests = models.BooleanField(default=True)
     allow_calls = models.BooleanField(default=True)
@@ -61,13 +58,11 @@ class CustomUser(AbstractUser):
     show_last_seen = models.BooleanField(default=True)
     show_profile_picture = models.BooleanField(default=True)
 
-    # Notification settings
+    # NOTIFICATION SETTINGS
     email_notifications = models.BooleanField(default=True)
     push_notifications = models.BooleanField(default=True)
     message_notifications = models.BooleanField(default=True)
     marketing_emails = models.BooleanField(default=False)
-
-    # New notification preference fields
     message_sound = models.BooleanField(default=True)
     message_preview = models.BooleanField(default=True)
     group_notifications = models.BooleanField(default=True)
@@ -78,27 +73,26 @@ class CustomUser(AbstractUser):
     marketing_notifications = models.BooleanField(default=False)
     desktop_notifications = models.BooleanField(default=True)
 
-    # Quiet hours - make null=True to handle disabled state
+    # QUIET HOURS
     quiet_hours_enabled = models.BooleanField(default=False)
     quiet_hours_start = models.TimeField(blank=True, null=True)
     quiet_hours_end = models.TimeField(blank=True, null=True)
 
-    # Security settings
+    # SECURITY & APPEARANCE
     two_factor_enabled = models.BooleanField(default=False)
-
-    # Appearance settings
     theme = models.CharField(max_length=10, choices=[
         ('light', 'Light'),
         ('dark', 'Dark'),
         ('auto', 'Auto')
     ], default='auto')
 
-    # Social auth fields
+    # SOCIAL AUTH
     social_avatar = models.URLField(blank=True, null=True)
     social_provider = models.CharField(max_length=20, blank=True, null=True)
 
+    # GROUPS AND PERMISSIONS - FIXED
     groups = models.ManyToManyField(
-        'auth.Group',
+        Group,
         verbose_name='groups',
         blank=True,
         help_text='The groups this user belongs to.',
@@ -106,7 +100,7 @@ class CustomUser(AbstractUser):
         related_query_name='customuser',
     )
     user_permissions = models.ManyToManyField(
-        'auth.Permission',
+        Permission,
         verbose_name='user permissions',
         blank=True,
         help_text='Specific permissions for this user.',
@@ -114,49 +108,16 @@ class CustomUser(AbstractUser):
         related_query_name='customuser',
     )
 
+    class Meta:
+        verbose_name = 'Custom User'
+        verbose_name_plural = 'Custom Users'
+
     def __str__(self):
         return self.username
-
-    def get_age(self):
-        if self.date_of_birth:
-            today = timezone.now().date()
-            return today.year - self.date_of_birth.year - (
-                    (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day)
-            )
-        return None
 
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}".strip() or self.username
-
-    def get_friend_status(self, other_user):
-        """Get friendship status between this user and another user"""
-        if self == other_user:
-            return 'self'
-
-        # Check if friends
-        if Friendship.are_friends(self, other_user):
-            return 'friends'
-
-        # Check if friend request sent
-        sent_request = FriendRequest.objects.filter(
-            from_user=self,
-            to_user=other_user,
-            status='pending'
-        ).first()
-        if sent_request:
-            return 'request_sent'
-
-        # Check if friend request received
-        received_request = FriendRequest.objects.filter(
-            from_user=other_user,
-            to_user=self,
-            status='pending'
-        ).first()
-        if received_request:
-            return 'request_received'
-
-        return 'not_friends'
 
     def get_profile_picture_url(self):
         """Get profile picture URL with fallback"""
@@ -166,6 +127,42 @@ class CustomUser(AbstractUser):
             return self.social_avatar
         else:
             return '/static/images/default-avatar.png'
+
+    def get_age(self):
+        if self.date_of_birth:
+            today = timezone.now().date()
+            return today.year - self.date_of_birth.year - (
+                    (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day)
+            )
+        return None
+
+    def get_friend_status(self, other_user):
+        """Get friendship status between this user and another user"""
+        if self == other_user:
+            return 'self'
+
+        from .models import Friendship, FriendRequest  # Import here to avoid circular import
+
+        if Friendship.are_friends(self, other_user):
+            return 'friends'
+
+        sent_request = FriendRequest.objects.filter(
+            from_user=self,
+            to_user=other_user,
+            status='pending'
+        ).first()
+        if sent_request:
+            return 'request_sent'
+
+        received_request = FriendRequest.objects.filter(
+            from_user=other_user,
+            to_user=self,
+            status='pending'
+        ).first()
+        if received_request:
+            return 'request_received'
+
+        return 'not_friends'
 
 
 class SocialAccount(models.Model):
@@ -385,7 +382,6 @@ class OTPVerification(models.Model):
         return f"{self.user.username} - {self.verification_type} - {self.otp_code}"
 
     def is_expired(self):
-        from django.utils import timezone
         return timezone.now() > self.expires_at
 
     @classmethod
@@ -423,6 +419,7 @@ class OTPVerification(models.Model):
     def send_otp_sms(cls, phone_number, otp_code, verification_type='account_verification'):
         """Send OTP via SMS using Twilio"""
         try:
+            from twilio.rest import Client
             client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
             message = client.messages.create(
                 body=f"Your Connect.io verification code is: {otp_code}. Valid for 5 minutes.",
@@ -437,14 +434,11 @@ class OTPVerification(models.Model):
     @classmethod
     def create_otp(cls, user, verification_type='account_verification', email=None, phone_number=None):
         """Create and send OTP"""
-        from django.utils import timezone
-        from datetime import timedelta
-
         # Generate OTP code
         otp_code = cls.generate_otp()
 
         # Set expiration (5 minutes from now)
-        expires_at = timezone.now() + timedelta(minutes=5)
+        expires_at = timezone.now() + timezone.timedelta(minutes=5)
 
         # Create OTP record
         otp = cls.objects.create(
@@ -466,8 +460,6 @@ class OTPVerification(models.Model):
 
     def verify_otp(self, otp_code):
         """Verify OTP code"""
-        from django.utils import timezone
-
         if self.is_expired():
             return False, "OTP has expired"
 
@@ -500,20 +492,16 @@ class PasswordResetOTP(models.Model):
         return f"{self.user.username} - Password Reset OTP"
 
     def is_expired(self):
-        from django.utils import timezone
         return timezone.now() > self.expires_at
 
     @classmethod
     def create_password_reset_otp(cls, user, email=None, phone_number=None):
         """Create password reset OTP"""
-        from django.utils import timezone
-        from datetime import timedelta
-
         # Generate OTP code
         otp_code = cls.generate_otp()
 
         # Set expiration (10 minutes for password reset)
-        expires_at = timezone.now() + timedelta(minutes=10)
+        expires_at = timezone.now() + timezone.timedelta(minutes=10)
 
         # Create OTP record
         otp = cls.objects.create(
@@ -568,6 +556,7 @@ class PasswordResetOTP(models.Model):
     def send_password_reset_sms(cls, phone_number, otp_code):
         """Send password reset OTP via SMS"""
         try:
+            from twilio.rest import Client
             client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
             message = client.messages.create(
                 body=f"Your Connect.io password reset code is: {otp_code}. Valid for 10 minutes.",
