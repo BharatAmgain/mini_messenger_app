@@ -9,10 +9,25 @@
     <div class="max-w-md w-full space-y-8">
         <!-- Header Section -->
         <div class="text-center">
-            {% include 'accounts/logo.html' %}
-            <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
-                Welcome Back
+            <!-- Using inline logo instead of include to avoid template issues -->
+            <div class="flex justify-center mb-4">
+                <div class="floating">
+                    <div class="relative">
+                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                            <i class="fas fa-comments text-white text-2xl"></i>
+                        </div>
+                        <div class="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center">
+                            <i class="fas fa-bolt text-white text-xs"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <h2 class="text-3xl font-bold text-gray-900 tracking-tight">
+                Connect<span class="text-blue-600">.io</span>
             </h2>
+            <h3 class="mt-2 text-3xl font-extrabold text-gray-900">
+                Welcome Back
+            </h3>
             <p class="mt-2 text-sm text-gray-600">
                 Don't have an account?
                 <a class="font-medium text-blue-600 hover:text-blue-500 transition duration-200"
@@ -32,11 +47,17 @@
                         <div class="flex">
                             <div class="flex-shrink-0">
                                 {% if message.tags == 'success' %}
-                                <i class="fas fa-check-circle text-green-400"></i>
+                                <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
                                 {% elif message.tags == 'error' %}
-                                <i class="fas fa-exclamation-circle text-red-400"></i>
+                                <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                </svg>
                                 {% else %}
-                                <i class="fas fa-info-circle text-blue-400"></i>
+                                <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                </svg>
                                 {% endif %}
                             </div>
                             <div class="ml-3">
@@ -51,6 +72,7 @@
                 {% endif %}
 
                 <!-- Social Login Section -->
+                {% if not social_errors %}
                 <div class="mb-8">
                     <div class="text-center mb-6">
                         <h3 class="text-lg font-semibold text-gray-900">Quick access</h3>
@@ -59,7 +81,7 @@
 
                     <div class="grid grid-cols-2 gap-4">
                         <!-- Google Login -->
-                        <a class="w-full inline-flex justify-center items-center py-3 px-4 border border-gray-200 rounded-xl shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 hover:border-blue-200"
+                        <a class="w-full inline-flex justify-center items-center py-3 px-4 border border-gray-200 rounded-xl shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 hover:border-blue-200 social-btn"
                            href="{% url 'social:begin' 'google-oauth2' %}">
                             <svg class="w-5 h-5 mr-3" viewBox="0 0 24 24">
                                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -75,7 +97,7 @@
                         </a>
 
                         <!-- Facebook Login -->
-                        <a class="w-full inline-flex justify-center items-center py-3 px-4 border border-gray-200 rounded-xl shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 hover:border-blue-200"
+                        <a class="w-full inline-flex justify-center items-center py-3 px-4 border border-gray-200 rounded-xl shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 hover:border-blue-200 social-btn"
                            href="{% url 'social:begin' 'facebook' %}">
                             <svg class="w-5 h-5 mr-3 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
@@ -84,6 +106,7 @@
                         </a>
                     </div>
                 </div>
+                {% endif %}
 
                 <!-- Divider -->
                 <div class="relative my-8">
@@ -99,7 +122,7 @@
                 <form class="space-y-6" method="POST">
                     {% csrf_token %}
 
-                    <div class="space-y-2">
+                    <div class="space-y-2 form-field">
                         <label class="block text-sm font-semibold text-gray-700" for="username">
                             Username
                             <span class="text-red-500">*</span>
@@ -111,7 +134,7 @@
                         </div>
                     </div>
 
-                    <div class="space-y-2">
+                    <div class="space-y-2 form-field">
                         <label class="block text-sm font-semibold text-gray-700" for="password">
                             Password
                             <span class="text-red-500">*</span>
@@ -132,7 +155,7 @@
                             </label>
                         </div>
 
-                        <!-- templates/accounts/login.html - Update forgot password link -->
+                        <!-- Forgot password link -->
                         <div class="text-sm text-center mt-4">
                             <a class="font-medium text-blue-600 hover:text-blue-500"
                                href="{% url 'password_reset_request' %}">
@@ -145,7 +168,9 @@
                     <div class="pt-4">
                         <button class="group w-full flex justify-center items-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-base font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
                                 type="submit">
-                            <i class="fas fa-sign-in-alt mr-3 group-hover:scale-110 transition-transform duration-300"></i>
+                            <svg class="w-5 h-5 mr-3 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                            </svg>
                             Sign In to Your Account
                         </button>
                     </div>
@@ -161,7 +186,9 @@
                         </a>
                     </p>
                     <p class="text-xs text-gray-500">
-                        <i class="fas fa-lock text-green-500 mr-1"></i>
+                        <svg class="w-4 h-4 inline-block mr-1 text-green-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path>
+                        </svg>
                         Your data is securely encrypted and protected
                     </p>
                 </div>
@@ -172,17 +199,23 @@
         <div class="text-center">
             <div class="inline-flex items-center space-x-4 text-sm text-gray-500">
                 <div class="flex items-center space-x-1">
-                    <i class="fas fa-shield-alt text-green-500"></i>
+                    <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
                     <span>Bank-level security</span>
                 </div>
                 <div class="w-1 h-1 bg-gray-300 rounded-full"></div>
                 <div class="flex items-center space-x-1">
-                    <i class="fas fa-user-lock text-blue-500"></i>
+                    <svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path>
+                    </svg>
                     <span>Privacy first</span>
                 </div>
                 <div class="w-1 h-1 bg-gray-300 rounded-full"></div>
                 <div class="flex items-center space-x-1">
-                    <i class="fas fa-globe text-purple-500"></i>
+                    <svg class="w-4 h-4 text-purple-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" clip-rule="evenodd"></path>
+                    </svg>
                     <span>Global connectivity</span>
                 </div>
             </div>
@@ -202,7 +235,7 @@
     }
 
     /* Form input styling */
-    input, select, textarea {
+    input[type="text"], input[type="password"], input[type="email"], select, textarea {
         transition: all 0.3s ease;
         border: 1px solid #d1d5db;
         border-radius: 0.75rem;
@@ -211,7 +244,7 @@
         font-size: 0.875rem;
     }
 
-    input:focus, select:focus, textarea:focus {
+    input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focus, select:focus, textarea:focus {
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
         border-color: #3b82f6;
@@ -257,9 +290,7 @@
     }
 
     input[type="checkbox"]:focus {
-        ring: 2px;
-        ring-color: #3b82f6;
-        ring-offset: 2px;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
     }
 </style>
 
@@ -267,7 +298,7 @@
     // Add some interactive animations
     document.addEventListener('DOMContentLoaded', function() {
         // Form input enhancements
-        const formInputs = document.querySelectorAll('input, select, textarea');
+        const formInputs = document.querySelectorAll('input[type="text"], input[type="password"], input[type="email"], select, textarea');
         formInputs.forEach(input => {
             input.addEventListener('focus', function() {
                 this.parentElement.classList.add('transform', 'scale-105');
