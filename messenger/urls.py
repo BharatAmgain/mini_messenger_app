@@ -20,6 +20,7 @@ path('oauth/', include('social_django.urls', namespace='social')),
     path('', RedirectView.as_view(pattern_name='chat_home', permanent=False)),
     path('privacy-policy/', TemplateView.as_view(template_name='privacy_policy.html'), name='privacy_policy'),
     path('terms/', TemplateView.as_view(template_name='terms_of_service.html'), name='terms_of_service'),
+    path('data-deletion/', TemplateView.as_view(template_name='data_deletion.html'), name='data_deletion'),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
