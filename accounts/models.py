@@ -1,4 +1,4 @@
-# messenger_app/accounts/models.py
+# messenger_app/accounts/models.py - COMPLETE FIXED VERSION
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 import uuid
@@ -21,24 +21,15 @@ from django.conf import settings
 
 def user_profile_picture_path(instance, filename):
     """File upload path for user profile pictures"""
-    # Upload to: profile_pictures/user_<id>/<filename>
     ext = filename.split('.')[-1]
-    filename = f"profile_picture.{ext}"
+    filename = f"profile_picture_{instance.id}.{ext}"
     return os.path.join('profile_pictures', f'user_{instance.id}', filename)
-
-class User(AbstractUser):
-    profile_picture = models.ImageField(
-        upload_to=user_profile_picture_path,
-        blank=True,
-        null=True,
-        default=None
-    )
 
 
 class CustomUser(AbstractUser):
     online_status = models.BooleanField(default=False)
     profile_picture = models.ImageField(
-        upload_to='profile_pics/',
+        upload_to=user_profile_picture_path,
         blank=True,
         null=True,
         default=None
@@ -47,6 +38,8 @@ class CustomUser(AbstractUser):
     phone_number = models.CharField(max_length=20, blank=True, null=True, unique=True)
     email = models.EmailField(unique=True)
     bio = models.TextField(max_length=500, blank=True)
+
+    # CRITICAL FIX: is_verified must be a BooleanField, NOT a property or method
     is_verified = models.BooleanField(default=False)
 
     # Additional profile fields
@@ -499,7 +492,6 @@ class PasswordResetOTP(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
     verification_sid = models.CharField(max_length=100, blank=True, null=True)
-
 
     class Meta:
         ordering = ['-created_at']

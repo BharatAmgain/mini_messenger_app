@@ -1,4 +1,4 @@
-# messenger_app/accounts/urls.py
+# messenger_app/accounts/urls.py - COMPLETE FIXED VERSION
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from . import views
@@ -113,4 +113,8 @@ urlpatterns = [
 
     # Resend OTP
     path('resend-otp/<str:otp_type>/', views.resend_otp, name='resend_otp'),
+
+    # API URLs for profile updates
+    path('api/profile/update/', views.update_profile, name='update_profile_api'),
+    path('api/profile/get/', views.get_profile, name='get_profile_api'),
 ]

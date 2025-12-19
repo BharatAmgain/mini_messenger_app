@@ -1,4 +1,4 @@
-# messenger_app/accounts/forms.py
+# messenger_app/accounts/forms.py - NO CHANGES NEEDED, KEEP AS IS
 from django import forms
 from django.contrib.auth.forms import (
     UserCreationForm,

@@ -1,4 +1,5 @@
-# messenger_app/accounts/views.py - UPDATED PASSWORD RESET SECTION
+# messenger_app/accounts/views.py - COMPLETE FIXED VERSION
+import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
@@ -12,6 +13,10 @@ import string
 import requests
 import base64
 import traceback
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
 from .forms import (
     CustomUserCreationForm,
@@ -28,7 +33,6 @@ from twilio.rest import Client
 from django.conf import settings
 import phonenumbers
 from phonenumbers import NumberParseException
-
 
 
 def register(request):
@@ -61,6 +65,109 @@ def register(request):
         form = CustomUserCreationForm()
 
     return render(request, 'accounts/register.html', {'form': form})
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def update_profile(request):
+    """Update user profile"""
+    try:
+        user = request.user
+
+        # Parse request data
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+        else:
+            data = request.POST.dict()
+
+        # Handle profile picture separately if it's base64 encoded
+        if 'profile_picture_base64' in data and data['profile_picture_base64']:
+            try:
+                # Decode base64 image
+                format, imgstr = data['profile_picture_base64'].split(';base64,')
+                ext = format.split('/')[-1]
+                image_data = base64.b64decode(imgstr)
+
+                # Save to file
+                filename = f"profile_{user.id}.{ext}"
+                file_path = default_storage.save(
+                    f"profile_pictures/{filename}",
+                    ContentFile(image_data)
+                )
+                user.profile_picture = file_path
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Invalid image data: {str(e)}'
+                }, status=400)
+
+        # Update other fields - EXCLUDE is_verified from user input
+        # Only allow updating specific fields
+        allowed_fields = [
+            'username', 'email', 'first_name', 'last_name',
+            'phone_number', 'bio', 'date_of_birth',
+            'facebook_url', 'twitter_url', 'instagram_url'
+        ]
+
+        for field in allowed_fields:
+            if field in data and data[field] is not None:
+                # Special handling for boolean fields
+                if field in ['email_notifications', 'push_notifications']:
+                    setattr(user, field, bool(data[field]))
+                else:
+                    setattr(user, field, data[field])
+
+        # Validate and save
+        user.full_clean()
+        user.save()
+
+        # Return updated user data
+        return JsonResponse({
+            'success': True,
+            'message': 'Profile updated successfully',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'profile_picture_url': user.get_profile_picture_url(),
+                'is_verified': user.is_verified,  # This is now a proper boolean field
+                'phone_number': user.phone_number,
+                'bio': user.bio
+            }
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+
+@login_required
+def get_profile(request):
+    """Get current user's profile"""
+    user = request.user
+    return JsonResponse({
+        'success': True,
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'profile_picture_url': user.get_profile_picture_url(),
+            'is_verified': user.is_verified,  # This is now a proper boolean field
+            'phone_number': user.phone_number,
+            'bio': user.bio,
+            'date_of_birth': str(user.date_of_birth) if user.date_of_birth else None,
+            'location': user.location,
+            'website': user.website,
+            'gender': user.gender
+        }
+    })
 
 
 @login_required
@@ -107,7 +214,7 @@ def profile_edit(request):
 
             user.gender = request.POST.get('gender', user.gender)
 
-            # DO NOT update is_verified from form - it should only be set via OTP verification
+            # CRITICAL FIX: DO NOT update is_verified from form - it should only be set via OTP verification
             # Remove any is_verified field from your template
 
             # Save changes
@@ -898,6 +1005,7 @@ def verify_twilio_code(phone_number, code):
     except Exception as e:
         return False, f"Error: {str(e)}"
 
+
 def password_reset_request(request):
     """Request password reset with OTP - FIXED VERSION"""
     if request.user.is_authenticated:
@@ -1540,7 +1648,7 @@ def verify_account_otp(request):
             if success:
                 # Mark user as verified
                 user = request.user
-                user.is_verified = True
+                user.is_verified = True  # CRITICAL: This sets the BooleanField to True
                 user.save()
 
                 # Mark OTP as verified

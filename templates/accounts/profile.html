@@ -1,4 +1,4 @@
-<!-- templates/accounts/profile.html -->
+<!-- messenger_app/templates/accounts/profile.html - COMPLETE FIXED VERSION -->
 {% extends 'base.html' %}
 
 {% block title %}Profile - {{ user.username }} - Messenger{% endblock %}
@@ -44,6 +44,17 @@
                             <p class="text-gray-600 text-sm md:text-base">{{ user.email }}</p>
                             {% if user.first_name or user.last_name %}
                             <p class="text-gray-600 text-sm md:text-base">{{ user.first_name }} {{ user.last_name }}</p>
+                            {% endif %}
+
+                            <!-- Verification Status -->
+                            {% if user.is_verified %}
+                            <span class="inline-flex items-center px-2 py-1 mt-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <i class="fas fa-check-circle mr-1"></i> Verified Account
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2 py-1 mt-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                <i class="fas fa-exclamation-circle mr-1"></i> Not Verified
+                            </span>
                             {% endif %}
                         </div>
                     </div>
@@ -146,6 +157,25 @@
                             <div class="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200">
                                 <div class="text-xs text-gray-500 font-medium mb-1">Last Login</div>
                                 <div class="text-gray-900">{{ user.last_login|date:"F d, Y H:i" }}</div>
+                            </div>
+
+                            <!-- Verification Status -->
+                            <div class="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200">
+                                <div class="text-xs text-gray-500 font-medium mb-1">Account Status</div>
+                                <div class="text-gray-900">
+                                    {% if user.is_verified %}
+                                    <span class="inline-flex items-center text-green-600">
+                                        <i class="fas fa-check-circle mr-1"></i> Verified
+                                    </span>
+                                    {% else %}
+                                    <span class="inline-flex items-center text-yellow-600">
+                                        <i class="fas fa-exclamation-circle mr-1"></i> Not Verified
+                                    </span>
+                                    <a href="{% url 'send_verification_otp' %}" class="ml-2 text-sm text-blue-600 hover:text-blue-700">
+                                        Verify Now
+                                    </a>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                     </div>
