@@ -279,7 +279,8 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
 # Facebook OAuth2
 SOCIAL_AUTH_FACEBOOK_KEY = config('FACEBOOK_APP_ID', default='')
 SOCIAL_AUTH_FACEBOOK_SECRET = config('FACEBOOK_APP_SECRET', default='')
-SOCIAL_AUTH_FACEBOOK_SCOPE = ['email', 'public_profile']
+# 👉 CHANGE HERE: Removed 'email' to fix "Invalid Scopes" error during App Review
+SOCIAL_AUTH_FACEBOOK_SCOPE = ['public_profile']  # Temporary fix until 'email' permission is approved
 SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {
     'fields': 'id,name,email,picture.type(large),first_name,last_name',
     'locale': 'en_US',
@@ -536,6 +537,11 @@ if 'RENDER' in os.environ:
     if os.environ.get('DATABASE_URL'):
         DATABASE_URL = os.environ['DATABASE_URL']
         print("✅ Using Render PostgreSQL database from environment")
+
+    # 👉 CHANGE HERE: Force HTTPS for OAuth redirects on Render
+    # 🔧 CRITICAL: This fixes 'redirect_uri_mismatch' errors
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SOCIAL_AUTH_REDIRECT_IS_HTTPS = True  # This tells social-auth to use HTTPS
 
     # Run migrations
     ensure_migrations_and_user()
