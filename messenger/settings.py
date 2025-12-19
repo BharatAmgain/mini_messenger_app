@@ -11,19 +11,30 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Add apps directory to Python path
 sys.path.append(str(BASE_DIR / 'apps'))
 
-# Secret Key
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-production')
+# Secret Key - CRITICAL: Generate a new one for production
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-79_MPQq2_F4ryVm17Fm81fJnzhI2uSxMlgyUKq0hAyaZTrhIJBl')
 
-# Debug Mode - Set to True temporarily to see errors on Render
-DEBUG = config('DEBUG', default=True, cast=bool)  # CHANGED: True for debugging
+# Debug Mode - SET TO TRUE TO SEE ERRORS
+DEBUG = True  # TEMPORARILY TRUE FOR DEBUGGING - CHANGE TO FALSE IN PRODUCTION
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS',
-                       default='localhost,127.0.0.1,connect-io-lg60.onrender.com,mini-messenger-app.onrender.com',
-                       cast=Csv())
+# Allowed Hosts - UPDATED WITH YOUR LATEST URL
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    'connect-io-0cql.onrender.com',  # NEW URL
+    'connect-io-lg60.onrender.com',
+    'connect-io-dbwj.onrender.com',
+    'mini-messenger-app.onrender.com',
+    '*',  # TEMPORARY FOR TESTING - REMOVE IN PRODUCTION
+]
 
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS',
-                              default='https://connect-io-lg60.onrender.com,https://mini-messenger-app.onrender.com',
-                              cast=Csv())
+# CSRF Trusted Origins - UPDATED
+CSRF_TRUSTED_ORIGINS = [
+    'https://connect-io-0cql.onrender.com',  # NEW URL
+    'https://connect-io-lg60.onrender.com',
+    'https://connect-io-dbwj.onrender.com',
+    'https://mini-messenger-app.onrender.com',
+]
 
 # Installed Apps
 INSTALLED_APPS = [
@@ -93,33 +104,19 @@ TEMPLATES = [
 WSGI_APPLICATION = 'messenger.wsgi.application'
 ASGI_APPLICATION = 'messenger.asgi.application'
 
-# Database - FIXED SECTION
-DATABASE_URL = config('DATABASE_URL', default='')
+# Database - USING YOUR PROVIDED DATABASE URL
+DATABASE_URL = 'postgresql://messenger_db_qgbv_user:sqo0VNUxDOIH5GI5hKUx8sqj1f9qeItT@dpg-d524vbali9vc73evrbfg-a/messenger_db_qgbv'
 
-# CRITICAL FIX: Fixed database configuration
-if DATABASE_URL:
-    # PostgreSQL configuration for production (Render)
-    if DATABASE_URL.startswith('postgres://'):
-        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
-
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=DATABASE_URL,
-            conn_max_age=600,
-            conn_health_checks=True,
-            ssl_require=True,
-        )
-    }
-    # Ensure correct engine for PostgreSQL
-    DATABASES['default']['ENGINE'] = 'django.db.backends.postgresql'
-else:
-    # SQLite configuration (default for development)
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+DATABASES = {
+    'default': dj_database_url.config(
+        default=DATABASE_URL,
+        conn_max_age=600,
+        conn_health_checks=True,
+        ssl_require=True,
+    )
+}
+# Ensure correct engine
+DATABASES['default']['ENGINE'] = 'django.db.backends.postgresql'
 
 # Password Validators
 AUTH_PASSWORD_VALIDATORS = [
@@ -146,26 +143,26 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = config('TIME_ZONE', default='Asia/Kathmandu')
+TIME_ZONE = 'Asia/Kathmandu'
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
 # Static files
-STATIC_URL = config('STATIC_URL', default='/static/')
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
-STATIC_ROOT = BASE_DIR / config('STATIC_ROOT', default='staticfiles')
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files
-MEDIA_URL = config('MEDIA_URL', default='/media/')
-MEDIA_ROOT = BASE_DIR / config('MEDIA_ROOT', default='media')
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Channels Configuration
-REDIS_URL = config('REDIS_URL', default='redis://localhost:6379')
+REDIS_URL = 'redis://localhost:6379'
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
@@ -186,30 +183,30 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'chat_home'
 LOGOUT_REDIRECT_URL = 'login'
 
-# Email Configuration - FIXED FOR TESTING
-# Use console backend for testing OTP
-EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')  # CHANGED
-EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
-EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
-EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='test@example.com')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@connect.io')
-EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=30, cast=int)
-EMAIL_SUBJECT_PREFIX = config('SITE_NAME', default='[Connect.io] ')
+# Email Configuration - SET TO CONSOLE FOR TESTING
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+EMAIL_HOST_USER = ''
+EMAIL_HOST_PASSWORD = ''
+DEFAULT_FROM_EMAIL = 'noreply@connect.io'
+EMAIL_TIMEOUT = 30
+EMAIL_SUBJECT_PREFIX = '[Connect.io] '
 
-# Site Information
-SITE_NAME = config('SITE_NAME', default='Connect.io')
-SITE_DOMAIN = config('SITE_DOMAIN', default='connect-io-lg60.onrender.com')
-ADMIN_EMAIL = config('ADMIN_EMAIL', default='admin@connect.io')
-SUPPORT_EMAIL = config('SUPPORT_EMAIL', default='support@connect.io')
+# Site Information - UPDATED
+SITE_NAME = 'Connect.io'
+SITE_DOMAIN = 'connect-io-0cql.onrender.com'  # NEW URL
+ADMIN_EMAIL = 'admin@connect.io'
+SUPPORT_EMAIL = 'support@connect.io'
 
 # CORS Configuration
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS',
-                              default='http://localhost:3000,http://localhost:8000',
-                              cast=Csv())
-CORS_ALLOW_CREDENTIALS = config('CORS_ALLOW_CREDENTIALS', default=True, cast=bool)
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://localhost:8000',
+]
+CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
     'DELETE',
     'GET',
@@ -238,8 +235,8 @@ AUTHENTICATION_BACKENDS = (
 )
 
 # Google OAuth2
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config('GOOGLE_OAUTH2_KEY', default='')
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config('GOOGLE_OAUTH2_SECRET', default='')
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = ''
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = ''
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'https://www.googleapis.com/auth/userinfo.email',
     'https://www.googleapis.com/auth/userinfo.profile',
@@ -251,8 +248,8 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
 }
 
 # Facebook OAuth2
-SOCIAL_AUTH_FACEBOOK_KEY = config('FACEBOOK_APP_ID', default='')
-SOCIAL_AUTH_FACEBOOK_SECRET = config('FACEBOOK_APP_SECRET', default='')
+SOCIAL_AUTH_FACEBOOK_KEY = ''
+SOCIAL_AUTH_FACEBOOK_SECRET = ''
 SOCIAL_AUTH_FACEBOOK_SCOPE = ['email', 'public_profile']
 SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {
     'fields': 'id,name,email,picture.type(large),first_name,last_name',
@@ -293,30 +290,29 @@ SOCIAL_AUTH_RAISE_EXCEPTIONS = DEBUG
 SOCIAL_AUTH_REDIRECT_IS_HTTPS = not DEBUG
 
 # OTP Configuration
-OTP_TWILIO_NO_DELIVERY = config('OTP_TWILIO_NO_DELIVERY', default=False, cast=bool)
-OTP_TWILIO_CHALLENGE_MESSAGE = config('OTP_TWILIO_CHALLENGE_MESSAGE',
-                                      default='Your verification code is {token}')
-OTP_TWILIO_FROM = config('TWILIO_PHONE_NUMBER', default='')
-OTP_TWILIO_ACCOUNT = config('TWILIO_ACCOUNT_SID', default='')
-OTP_TWILIO_AUTH = config('TWILIO_AUTH_TOKEN', default='')
-OTP_TWILIO_TOKEN_VALIDITY = config('OTP_TWILIO_TOKEN_VALIDITY', default=300, cast=int)
+OTP_TWILIO_NO_DELIVERY = False
+OTP_TWILIO_CHALLENGE_MESSAGE = 'Your verification code is {token}'
+OTP_TWILIO_FROM = ''
+OTP_TWILIO_ACCOUNT = ''
+OTP_TWILIO_AUTH = ''
+OTP_TWILIO_TOKEN_VALIDITY = 300
 OTP_TOTP_ISSUER = SITE_NAME
 
 # Twilio Configuration
-TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID', default='')
-TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN', default='')
-TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER', default='')
-TWILIO_VERIFY_SERVICE_SID = config('TWILIO_VERIFY_SERVICE_SID', default='')
+TWILIO_ACCOUNT_SID = ''
+TWILIO_AUTH_TOKEN = ''
+TWILIO_PHONE_NUMBER = ''
+TWILIO_VERIFY_SERVICE_SID = ''
 
 # File Upload Limits
-DATA_UPLOAD_MAX_MEMORY_SIZE = config('MAX_UPLOAD_SIZE', default=52428800, cast=int)
-FILE_UPLOAD_MAX_MEMORY_SIZE = config('MAX_UPLOAD_SIZE', default=52428800, cast=int)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800
+FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800
 FILE_UPLOAD_PERMISSIONS = 0o644
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
 
 # Session Configuration
-SESSION_COOKIE_AGE = config('SESSION_COOKIE_AGE', default=1209600, cast=int)
-SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=False, cast=bool)
+SESSION_COOKIE_AGE = 1209600
+SESSION_COOKIE_SECURE = False
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
@@ -325,15 +321,15 @@ SESSION_SAVE_EVERY_REQUEST = True
 
 # CSRF Configuration
 CSRF_COOKIE_AGE = 31449600  # 1 year
-CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
+CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_FAILURE_VIEW = 'messenger.views.csrf_failure'
 
 # Cache Configuration
-CACHE_BACKEND = config('CACHE_BACKEND', default='django.core.cache.backends.redis.RedisCache')
-CACHE_LOCATION = config('CACHE_LOCATION', default='redis://localhost:6379/1')
-CACHE_TIMEOUT = config('CACHE_TIMEOUT', default=300, cast=int)
+CACHE_BACKEND = 'django.core.cache.backends.redis.RedisCache'
+CACHE_LOCATION = 'redis://localhost:6379/1'
+CACHE_TIMEOUT = 300
 
 CACHES = {
     'default': {
@@ -342,7 +338,7 @@ CACHES = {
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
             'CONNECTION_POOL_KWARGS': {
-                'max_connections': config('REDIS_MAX_CONNECTIONS', default=10, cast=int),
+                'max_connections': 10,
             },
             'SOCKET_CONNECT_TIMEOUT': 5,
             'SOCKET_TIMEOUT': 5,
@@ -353,10 +349,7 @@ CACHES = {
     }
 }
 
-# Logging Configuration - ADDED DETAILED LOGGING
-LOG_LEVEL = config('LOG_LEVEL', default='DEBUG').upper()  # CHANGED: DEBUG level
-LOG_FILE = config('LOG_FILE', default=BASE_DIR / 'logs' / 'django.log')
-
+# Logging Configuration - DETAILED FOR DEBUGGING
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -369,51 +362,22 @@ LOGGING = {
             'format': '{levelname} {message}',
             'style': '{',
         },
-        'json': {
-            'format': '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "module": "%(module)s", "message": "%(message)s"}',
-            'datefmt': '%Y-%m-%dT%H:%M:%SZ',
-        },
-    },
-    'filters': {
-        'require_debug_true': {
-            '()': 'django.utils.log.RequireDebugTrue',
-        },
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse',
-        },
     },
     'handlers': {
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
-            'filters': ['require_debug_true'],
-        },
-        'file': {
-            'level': LOG_LEVEL,
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': LOG_FILE,
-            'maxBytes': 1024 * 1024 * 10,  # 10MB
-            'backupCount': 5,
-            'formatter': 'verbose',
-        },
-        'error_file': {
-            'level': 'ERROR',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'error.log',
-            'maxBytes': 1024 * 1024 * 10,
-            'backupCount': 5,
-            'formatter': 'verbose',
         },
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file', 'error_file'],
-            'level': LOG_LEVEL,
+            'handlers': ['console'],
+            'level': 'DEBUG',
             'propagate': True,
         },
         'django.request': {
-            'handlers': ['console', 'error_file'],
+            'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': False,
         },
@@ -423,18 +387,13 @@ LOGGING = {
             'propagate': False,
         },
         'accounts': {
-            'handlers': ['console', 'file', 'error_file'],
-            'level': LOG_LEVEL,
+            'handlers': ['console'],
+            'level': 'DEBUG',
             'propagate': False,
         },
         'chat': {
-            'handlers': ['console', 'file', 'error_file'],
-            'level': LOG_LEVEL,
-            'propagate': False,
-        },
-        'social': {
-            'handlers': ['console', 'file', 'error_file'],
-            'level': LOG_LEVEL,
+            'handlers': ['console'],
+            'level': 'DEBUG',
             'propagate': False,
         },
     },
@@ -445,32 +404,83 @@ log_dir = BASE_DIR / 'logs'
 log_dir.mkdir(exist_ok=True)
 
 # Application Settings
-MESSAGE_RETENTION_DAYS = config('MESSAGE_RETENTION_DAYS', default=30, cast=int)
-MAX_GROUP_MEMBERS = config('MAX_GROUP_MEMBERS', default=50, cast=int)
-TYPING_INDICATOR_TIMEOUT = config('TYPING_INDICATOR_TIMEOUT', default=5, cast=int)
-PAGINATION_SIZE = config('PAGINATION_SIZE', default=20, cast=int)
-MAX_LOGIN_ATTEMPTS = config('MAX_LOGIN_ATTEMPTS', default=5, cast=int)
-LOGIN_LOCKOUT_TIME = config('LOGIN_LOCKOUT_TIME', default=300, cast=int)
-NOTIFICATION_RETENTION_DAYS = config('NOTIFICATION_RETENTION_DAYS', default=90, cast=int)
+MESSAGE_RETENTION_DAYS = 30
+MAX_GROUP_MEMBERS = 50
+TYPING_INDICATOR_TIMEOUT = 5
+PAGINATION_SIZE = 20
+MAX_LOGIN_ATTEMPTS = 5
+LOGIN_LOCKOUT_TIME = 300
+NOTIFICATION_RETENTION_DAYS = 90
 
 # Feature Flags
-ENABLE_TWO_FACTOR = config('ENABLE_TWO_FACTOR', default=False, cast=bool)
-ENABLE_SOCIAL_AUTH = config('ENABLE_SOCIAL_AUTH', default=True, cast=bool)
-ENABLE_FILE_UPLOADS = config('ENABLE_FILE_UPLOADS', default=True, cast=bool)
-ENABLE_GROUP_CHATS = config('ENABLE_GROUP_CHATS', default=True, cast=bool)
-ENABLE_PUSH_NOTIFICATIONS = config('ENABLE_PUSH_NOTIFICATIONS', default=True, cast=bool)
-ENABLE_EMAIL_NOTIFICATIONS = config('ENABLE_EMAIL_NOTIFICATIONS', default=True, cast=bool)
+ENABLE_TWO_FACTOR = False
+ENABLE_SOCIAL_AUTH = True
+ENABLE_FILE_UPLOADS = True
+ENABLE_GROUP_CHATS = True
+ENABLE_PUSH_NOTIFICATIONS = True
+ENABLE_EMAIL_NOTIFICATIONS = True
 
-# ADDED: Render-specific configuration
-import os
+# ========== CRITICAL FIX: AUTO-RUN MIGRATIONS ==========
+# This ensures migrations run even without Shell access
+import sys
 
-# Auto-configure for Render
+
+def ensure_migrations_and_user():
+    """Run migrations and create test user automatically"""
+    try:
+        from django.core.management import execute_from_command_line
+        print("=" * 50)
+        print("STARTING DATABASE SETUP")
+        print("=" * 50)
+
+        # Run migrations
+        print("1. Running database migrations...")
+        execute_from_command_line(['manage.py', 'migrate', '--no-input'])
+        print("✅ Migrations completed")
+
+        # Create test user
+        print("2. Creating test user...")
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        if not User.objects.filter(email='test@example.com').exists():
+            User.objects.create_user(
+                username='testuser',
+                email='test@example.com',
+                password='TestPass123!',
+                phone_number='+9779800000000',
+                is_verified=True
+            )
+            print("✅ Created test user: test@example.com / TestPass123!")
+        else:
+            print("✅ Test user already exists")
+
+        print("=" * 50)
+        print("DATABASE SETUP COMPLETE")
+        print("=" * 50)
+
+    except Exception as e:
+        print(f"❌ Database setup error: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+# Run setup when Django starts (for Render)
+if 'RENDER' in os.environ or 'DATABASE_URL' in os.environ:
+    ensure_migrations_and_user()
+
+# ========== RENDER-SPECIFIC CONFIGURATION ==========
 if 'RENDER' in os.environ:
-    # Ensure proper configuration on Render
-    ALLOWED_HOSTS.append('connect-io-dbwj.onrender.com')
-    CSRF_TRUSTED_ORIGINS.append('https://connect-io-dbwj.onrender.com')
+    print("🌐 Running on Render - Applying production settings...")
 
-    # Auto-detect if we have DATABASE_URL
+    # Auto-add Render URL to allowed hosts
+    render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'connect-io-0cql.onrender.com')
+    if render_host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(render_host)
+        CSRF_TRUSTED_ORIGINS.append(f'https://{render_host}')
+        print(f"✅ Added {render_host} to allowed hosts")
+
+    # Use environment DATABASE_URL if available
     if os.environ.get('DATABASE_URL'):
         DATABASES = {
             'default': dj_database_url.config(
@@ -480,53 +490,17 @@ if 'RENDER' in os.environ:
             )
         }
         DATABASES['default']['ENGINE'] = 'django.db.backends.postgresql'
+        print("✅ Using Render PostgreSQL database")
 
-    # Log everything on Render for debugging
-    LOGGING['loggers']['django']['level'] = 'DEBUG'
-    LOGGING['loggers']['django.request']['level'] = 'DEBUG'
+# Security settings - DISABLED FOR DEBUGGING
+# Note: In production, set DEBUG=False and enable these
+SECURE_SSL_REDIRECT = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+SECURE_HSTS_SECONDS = 0
 
-# Security settings for production - TEMPORARILY DISABLED FOR DEBUGGING
-if not DEBUG:
-    # HTTPS settings
-    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
-    # HSTS settings
-    SECURE_HSTS_SECONDS = 31536000  # 1 year
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-
-    # Cookie settings
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-
-    # Security headers
-    SECURE_BROWSER_XSS_FILTER = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    X_FRAME_OPTIONS = 'DENY'
-
-    # Referrer policy
-    SECURE_REFERRER_POLICY = 'same-origin'
-
-    # Clickjacking protection
-    SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
-
-    # Force HTTPS
-    os.environ['HTTPS'] = "on"
-    os.environ['wsgi.url_scheme'] = 'https'
-
-# Development settings
+# Development settings (when DEBUG=True)
 if DEBUG:
-    # Debug toolbar (optional)
-    if config('DJANGO_DEBUG_TOOLBAR', default=False, cast=bool):
-        INSTALLED_APPS.append('debug_toolbar')
-        MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
-        INTERNAL_IPS = ['127.0.0.1']
-
-    # Allow more lenient settings for development
+    print("🔧 Running in DEBUG mode - showing detailed errors")
     CORS_ALLOW_ALL_ORIGINS = True
-    CSRF_TRUSTED_ORIGINS.extend(['http://localhost:8000', 'http://127.0.0.1:8000'])
-
-    # Email backend for development
-    if config('DJANGO_DEV_SERVER', default=True, cast=bool):
-        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
