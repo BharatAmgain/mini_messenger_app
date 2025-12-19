@@ -1,173 +1,148 @@
-<!-- templates/accounts/profile_edit.html -->
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Edit Profile - Messenger{% endblock %}
-
-{% block mobile_title %}Edit Profile{% endblock %}
+{% block title %}Edit Profile - Connect.io{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50 pb-20 md:pb-0">
-    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- Mobile Back Button -->
-        <div class="desktop-hidden mb-4 pt-2">
-            <button onclick="window.history.back()" class="flex items-center text-blue-600 hover:text-blue-700">
-                <i class="fas fa-arrow-left mr-2"></i>
-                Back
-            </button>
+<div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Edit Profile</h1>
+            <p class="mt-2 text-gray-600">Update your personal information and profile settings.</p>
         </div>
 
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div class="px-4 md:px-6 py-4 border-b border-gray-200">
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0">
-                    <div>
-                        <h1 class="text-xl md:text-2xl font-bold text-gray-900">Edit Your Profile</h1>
-                        <p class="text-gray-600 text-sm md:text-base">Update your profile anytime</p>
-                    </div>
-                    <a href="{% url 'profile' %}" class="text-blue-600 hover:text-blue-700 text-sm md:text-base flex items-center">
-                        <i class="fas fa-arrow-left mr-2"></i>Back to Profile
-                    </a>
-                </div>
+        <!-- Success/Error Messages -->
+        {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+            <div class="p-4 rounded-md {% if message.tags == 'success' %}bg-green-50 text-green-800{% else %}bg-red-50 text-red-800{% endif %}">
+                {{ message }}
             </div>
+            {% endfor %}
+        </div>
+        {% endif %}
 
-            <div class="p-4 md:p-6">
-                <!-- Success/Error Messages -->
-                {% if messages %}
-                <div class="mb-6 rounded-md bg-green-50 p-4 border border-green-200">
-                    {% for message in messages %}
-                    <div class="text-sm text-green-700">{{ message }}</div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-
-                <form method="POST" enctype="multipart/form-data" class="space-y-6" id="profile-edit-form">
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+            <div class="px-6 py-8 sm:p-10">
+                <form method="POST" enctype="multipart/form-data" class="space-y-8">
                     {% csrf_token %}
 
                     <!-- Profile Picture Section -->
-                    <div class="border-b border-gray-200 pb-6">
-                        <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                            <i class="fas fa-camera mr-2 text-blue-600"></i>Profile Picture
-                        </h3>
-                        <div class="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-6">
-                            <div class="flex-shrink-0">
-                                <div class="relative">
-                                    {% if user.profile_picture %}
-                                    <img id="current-photo" src="{{ user.profile_picture.url }}" alt="{{ user.username }}"
-                                         class="w-24 h-24 md:w-32 md:h-32 rounded-full border-2 border-gray-300 object-cover">
-                                    {% else %}
-                                    <div id="current-photo" class="w-24 h-24 md:w-32 md:h-32 rounded-full bg-gray-300 border-2 border-gray-300 flex items-center justify-center">
-                                        <i class="fas fa-user text-gray-500 text-3xl"></i>
-                                    </div>
-                                    {% endif %}
-                                    <div id="photo-preview" class="hidden absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
-                                        <span class="text-white text-sm">Preview</span>
-                                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Profile Picture</label>
+                            <div class="flex items-center space-x-6">
+                                <div class="shrink-0">
+                                    <img class="h-24 w-24 object-cover rounded-full border-2 border-gray-300"
+                                         src="{{ user.get_profile_picture_url }}"
+                                         alt="Current profile picture">
                                 </div>
-                            </div>
-                            <div class="flex-1">
-                                <div class="space-y-3">
-                                    <div>
-                                        <label for="profile_picture" class="block text-sm font-medium text-gray-700 mb-2">
-                                            Upload New Photo
-                                        </label>
-                                        <div class="flex items-center space-x-2">
-                                            <input type="file" id="profile_picture" name="profile_picture"
-                                                   accept="image/*"
-                                                   class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                                        </div>
-                                        <p class="text-xs text-gray-500 mt-1">JPG, PNG, GIF • Max 5MB</p>
-                                    </div>
-
-                                    {% if user.profile_picture %}
-                                    <div class="pt-2 border-t border-gray-100">
-                                        <button type="button" onclick="removeProfilePicture()"
-                                                class="text-sm text-red-600 hover:text-red-700 flex items-center">
-                                            <i class="fas fa-trash-alt mr-2"></i>
-                                            Remove Current Picture
-                                        </button>
-                                    </div>
-                                    {% endif %}
+                                <div class="flex-1">
+                                    <input type="file"
+                                           name="profile_picture"
+                                           accept="image/*"
+                                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                    <p class="mt-1 text-xs text-gray-500">JPG, PNG or GIF (Max 5MB)</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Personal Information -->
-                    <div class="border-b border-gray-200 pb-6">
-                        <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                            <i class="fas fa-id-card mr-2 text-green-600"></i>Personal Information
-                        </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="space-y-6">
+                        <h3 class="text-lg font-medium text-gray-900">Personal Information</h3>
+
+                        <!-- First Name & Last Name -->
+                        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                             <div>
-                                <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                                <input type="text" id="first_name" name="first_name" value="{{ user.first_name }}"
-                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
+                                <label for="first_name" class="block text-sm font-medium text-gray-700">First Name</label>
+                                <input type="text"
+                                       name="first_name"
+                                       id="first_name"
+                                       value="{{ user.first_name }}"
+                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
                             </div>
-
                             <div>
-                                <label for="last_name" class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                                <input type="text" id="last_name" name="last_name" value="{{ user.last_name }}"
-                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
+                                <label for="last_name" class="block text-sm font-medium text-gray-700">Last Name</label>
+                                <input type="text"
+                                       name="last_name"
+                                       id="last_name"
+                                       value="{{ user.last_name }}"
+                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
                             </div>
                         </div>
 
-                        <div class="mt-4">
-                            <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                            <input type="text" id="username" name="username" value="{{ user.username }}" required
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
+                        <!-- Username -->
+                        <div>
+                            <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+                            <div class="mt-1 flex rounded-md shadow-sm">
+                                <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
+                                    @
+                                </span>
+                                <input type="text"
+                                       name="username"
+                                       id="username"
+                                       value="{{ user.username }}"
+                                       disabled
+                                       class="block w-full rounded-none rounded-r-md border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500">Username cannot be changed.</p>
                         </div>
 
-                        <div class="mt-4">
-                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                            <input type="email" id="email" name="email" value="{{ user.email }}" required
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
+                        <!-- Email -->
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
+                            <input type="email"
+                                   name="email"
+                                   id="email"
+                                   value="{{ user.email }}"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
                         </div>
 
-                        <div class="mt-4">
-                            <label for="phone_number" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                            <input type="tel" id="phone_number" name="phone_number" value="{{ user.phone_number|default:'' }}"
-                                placeholder="+1 (555) 123-4567"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
+                        <!-- Phone Number -->
+                        <div>
+                            <label for="phone_number" class="block text-sm font-medium text-gray-700">Phone Number</label>
+                            <input type="tel"
+                                   name="phone_number"
+                                   id="phone_number"
+                                   value="{{ user.phone_number|default:'' }}"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                            <p class="mt-1 text-xs text-gray-500">Format: +9779800000000</p>
+                        </div>
+
+                        <!-- Bio -->
+                        <div>
+                            <label for="bio" class="block text-sm font-medium text-gray-700">Bio</label>
+                            <textarea name="bio"
+                                      id="bio"
+                                      rows="3"
+                                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                      placeholder="Tell us about yourself...">{{ user.bio|default:'' }}</textarea>
                         </div>
                     </div>
 
                     <!-- Additional Information -->
-                    <div class="border-b border-gray-200 pb-6">
-                        <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                            <i class="fas fa-info-circle mr-2 text-purple-600"></i>Additional Information
-                        </h3>
+                    <div class="space-y-6">
+                        <h3 class="text-lg font-medium text-gray-900">Additional Information</h3>
 
-                        <div class="mb-4">
-                            <label for="bio" class="block text-sm font-medium text-gray-700 mb-1">Bio</label>
-                            <textarea id="bio" name="bio" rows="3" placeholder="Tell us about yourself..."
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base resize-none">{{ user.bio|default:'' }}</textarea>
-                            <div class="text-xs text-gray-500 mt-1">Max 500 characters</div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                            <!-- Date of Birth -->
                             <div>
-                                <label for="location" class="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                                <input type="text" id="location" name="location" value="{{ user.location|default:'' }}" placeholder="Your city"
-                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
+                                <label for="date_of_birth" class="block text-sm font-medium text-gray-700">Date of Birth</label>
+                                <input type="date"
+                                       name="date_of_birth"
+                                       id="date_of_birth"
+                                       value="{{ user.date_of_birth|date:'Y-m-d'|default:'' }}"
+                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
                             </div>
 
+                            <!-- Gender -->
                             <div>
-                                <label for="website" class="block text-sm font-medium text-gray-700 mb-1">Website</label>
-                                <input type="url" id="website" name="website" value="{{ user.website|default:'' }}" placeholder="https://example.com"
-                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                            <div>
-                                <label for="date_of_birth" class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
-                                <input type="date" id="date_of_birth" name="date_of_birth"
-                                       value="{% if user.date_of_birth %}{{ user.date_of_birth|date:'Y-m-d' }}{% endif %}"
-                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
-                            </div>
-
-                            <div>
-                                <label for="gender" class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                                <select id="gender" name="gender" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base">
+                                <label for="gender" class="block text-sm font-medium text-gray-700">Gender</label>
+                                <select name="gender"
+                                        id="gender"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
                                     <option value="">Select Gender</option>
                                     <option value="male" {% if user.gender == 'male' %}selected{% endif %}>Male</option>
                                     <option value="female" {% if user.gender == 'female' %}selected{% endif %}>Female</option>
@@ -176,235 +151,344 @@
                                 </select>
                             </div>
                         </div>
+
+                        <!-- Location -->
+                        <div>
+                            <label for="location" class="block text-sm font-medium text-gray-700">Location</label>
+                            <input type="text"
+                                   name="location"
+                                   id="location"
+                                   value="{{ user.location|default:'' }}"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                   placeholder="City, Country">
+                        </div>
+
+                        <!-- Website -->
+                        <div>
+                            <label for="website" class="block text-sm font-medium text-gray-700">Website</label>
+                            <input type="url"
+                                   name="website"
+                                   id="website"
+                                   value="{{ user.website|default:'' }}"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                   placeholder="https://example.com">
+                        </div>
                     </div>
 
-                    <!-- Privacy Settings Preview -->
-                    <div class="pb-6">
-                        <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                            <i class="fas fa-shield-alt mr-2 text-red-600"></i>Privacy Settings
-                        </h3>
-                        <div class="bg-gray-50 p-4 rounded-lg">
-                            <p class="text-sm text-gray-600 mb-2">Manage your privacy settings to control who can see your information.</p>
-                            <a href="{% url 'privacy_settings' %}" class="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center">
-                                <i class="fas fa-external-link-alt mr-2"></i>Go to Privacy Settings
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Action Buttons -->
-                    <div class="flex flex-col md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0 pt-4 border-t border-gray-200">
-                        <div class="flex items-center space-x-2 text-sm text-gray-600">
-                            <i class="fas fa-info-circle"></i>
-                            <span>You can update your profile anytime</span>
-                        </div>
-                        <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
-                            <a href="{% url 'profile' %}"
-                                class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition duration-200 text-center font-medium">
-                                Cancel
-                            </a>
-                            <button type="submit"
-                                    class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 font-medium flex items-center justify-center">
-                                <i class="fas fa-save mr-2"></i>
-                                Save Changes
-                            </button>
-                        </div>
+                    <!-- Form Actions -->
+                    <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                        <a href="{% url 'profile' %}"
+                           class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Cancel
+                        </a>
+                        <button type="submit"
+                                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Save Changes
+                        </button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- Additional Actions -->
+        <div class="mt-8 bg-white shadow rounded-lg overflow-hidden">
+            <div class="px-6 py-8 sm:p-10">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Account Verification</h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    {% if user.is_verified %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        ✓ Verified Account
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        ⚠️ Not Verified
+                    </span>
+                    {% endif %}
+                </p>
+                <p class="text-sm text-gray-600 mb-6">
+                    Verify your account to unlock all features. Verification helps us ensure account security and prevent spam.
+                </p>
+                <a href="{% url 'send_verification_otp' %}"
+                   class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    {% if user.is_verified %}Re-verify Account{% else %}Verify Account{% endif %}
+                </a>
+            </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="mt-8 bg-white shadow rounded-lg overflow-hidden border border-red-200">
+            <div class="px-6 py-8 sm:p-10">
+                <h3 class="text-lg font-medium text-red-900 mb-4">Danger Zone</h3>
+                <p class="text-sm text-gray-600 mb-6">
+                    These actions are irreversible. Please proceed with caution.
+                </p>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-4 bg-red-50 rounded-md">
+                        <div>
+                            <h4 class="text-sm font-medium text-red-900">Deactivate Account</h4>
+                            <p class="mt-1 text-xs text-red-700">Your account will be disabled but not deleted.</p>
+                        </div>
+                        <a href="{% url 'deactivate_account' %}"
+                           onclick="return confirm('Are you sure you want to deactivate your account? You can reactivate by logging in.');"
+                           class="px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                            Deactivate
+                        </a>
+                    </div>
+
+                    <div class="flex items-center justify-between p-4 bg-red-50 rounded-md">
+                        <div>
+                            <h4 class="text-sm font-medium text-red-900">Delete Account</h4>
+                            <p class="mt-1 text-xs text-red-700">Permanently delete your account and all data.</p>
+                        </div>
+                        <a href="{% url 'delete_account' %}"
+                           onclick="return confirm('WARNING: This will permanently delete your account and all data. This action cannot be undone. Are you sure?');"
+                           class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                            Delete
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- JavaScript for form validation -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const profilePictureInput = document.getElementById('profile_picture');
-    const currentPhoto = document.getElementById('current-photo');
-    const photoPreview = document.getElementById('photo-preview');
-    const form = document.getElementById('profile-edit-form');
+    const form = document.querySelector('form');
 
-    // Profile picture preview
-    if (profilePictureInput) {
-        profilePictureInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                // Validate file size (5MB)
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('File size must be less than 5MB');
-                    this.value = '';
-                    return;
-                }
+    form.addEventListener('submit', function(event) {
+        // Validate file size if file is selected
+        const fileInput = document.querySelector('input[type="file"]');
+        if (fileInput && fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            const maxSize = 5 * 1024 * 1024; // 5MB in bytes
 
-                // Validate file type
-                if (!file.type.startsWith('image/')) {
-                    alert('Please select an image file (JPG, PNG, GIF)');
-                    this.value = '';
-                    return;
-                }
+            if (file.size > maxSize) {
+                alert('File size exceeds 5MB limit. Please select a smaller file.');
+                event.preventDefault();
+                return false;
+            }
 
+            // Validate file type
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+            if (!allowedTypes.includes(file.type)) {
+                alert('Please select a valid image file (JPG, PNG, or GIF).');
+                event.preventDefault();
+                return false;
+            }
+        }
+
+        // Validate email
+        const emailInput = document.getElementById('email');
+        if (emailInput && emailInput.value) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(emailInput.value)) {
+                alert('Please enter a valid email address.');
+                event.preventDefault();
+                return false;
+            }
+        }
+
+        // Validate phone number format if provided
+        const phoneInput = document.getElementById('phone_number');
+        if (phoneInput && phoneInput.value) {
+            const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+            if (!phoneRegex.test(phoneInput.value)) {
+                alert('Please enter a valid phone number (e.g., +9779800000000).');
+                event.preventDefault();
+                return false;
+            }
+        }
+
+        // Validate date of birth if provided
+        const dobInput = document.getElementById('date_of_birth');
+        if (dobInput && dobInput.value) {
+            const dob = new Date(dobInput.value);
+            const today = new Date();
+            const minAge = 13; // Minimum age requirement
+
+            let age = today.getFullYear() - dob.getFullYear();
+            const monthDiff = today.getMonth() - dob.getMonth();
+
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+                age--;
+            }
+
+            if (age < minAge) {
+                alert(`You must be at least ${minAge} years old to use this service.`);
+                event.preventDefault();
+                return false;
+            }
+        }
+
+        return true;
+    });
+
+    // Preview image before upload
+    const fileInput = document.querySelector('input[type="file"]');
+    const profileImage = document.querySelector('img[alt="Current profile picture"]');
+
+    if (fileInput && profileImage) {
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
                 const reader = new FileReader();
+
                 reader.onload = function(e) {
-                    if (currentPhoto.tagName === 'IMG') {
-                        currentPhoto.src = e.target.result;
-                    } else {
-                        // Replace div with image
-                        const container = currentPhoto.parentElement;
-                        const newImg = document.createElement('img');
-                        newImg.src = e.target.result;
-                        newImg.alt = 'Preview';
-                        newImg.className = 'w-24 h-24 md:w-32 md:h-32 rounded-full border-2 border-gray-300 object-cover';
-                        newImg.id = 'current-photo';
-                        container.innerHTML = '';
-                        container.appendChild(newImg);
+                    profileImage.src = e.target.result;
+                }
 
-                        // Re-add the preview overlay
-                        const previewDiv = document.createElement('div');
-                        previewDiv.id = 'photo-preview';
-                        previewDiv.className = 'absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center hidden';
-                        previewDiv.innerHTML = '<span class="text-white text-sm">Preview</span>';
-                        container.appendChild(previewDiv);
-                    }
-
-                    // Show preview overlay on hover
-                    const newCurrentPhoto = document.getElementById('current-photo');
-                    const newPhotoPreview = document.getElementById('photo-preview');
-
-                    newCurrentPhoto.addEventListener('mouseenter', () => newPhotoPreview.classList.remove('hidden'));
-                    newCurrentPhoto.addEventListener('mouseleave', () => newPhotoPreview.classList.add('hidden'));
-                };
-                reader.readAsDataURL(file);
+                reader.readAsDataURL(this.files[0]);
             }
         });
     }
 
-    // Remove profile picture
-    window.removeProfilePicture = function() {
-        if (confirm('Are you sure you want to remove your profile picture?')) {
-            // In a real application, this would send an AJAX request to remove the picture
-            // For now, we'll just clear the input and show default avatar
-            if (profilePictureInput) {
-                profilePictureInput.value = '';
-            }
-
-            const container = currentPhoto.parentElement;
-            container.innerHTML = `
-                <div id="current-photo" class="w-24 h-24 md:w-32 md:h-32 rounded-full bg-gray-300 border-2 border-gray-300 flex items-center justify-center">
-                    <i class="fas fa-user text-gray-500 text-3xl"></i>
-                </div>
-                <div id="photo-preview" class="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center hidden">
-                    <span class="text-white text-sm">Preview</span>
-                </div>
-            `;
-
-            alert('Profile picture will be removed when you save changes.');
-        }
-    };
-
-    // Character counter for bio
+    // Add character counter for bio
     const bioTextarea = document.getElementById('bio');
     if (bioTextarea) {
-        const charCount = document.createElement('div');
-        charCount.className = 'text-xs text-gray-500 text-right mt-1';
-        charCount.id = 'char-count';
-        bioTextarea.parentElement.appendChild(charCount);
+        const charCounter = document.createElement('p');
+        charCounter.className = 'mt-1 text-xs text-gray-500';
+        charCounter.textContent = `${bioTextarea.value.length}/500 characters`;
 
-        function updateCharCount() {
-            const remaining = 500 - bioTextarea.value.length;
-            charCount.textContent = `${remaining} characters remaining`;
-            charCount.className = `text-xs ${remaining < 50 ? 'text-red-500' : 'text-gray-500'} text-right mt-1`;
-        }
+        bioTextarea.parentNode.insertBefore(charCounter, bioTextarea.nextSibling);
 
-        bioTextarea.addEventListener('input', updateCharCount);
-        updateCharCount();
-    }
+        bioTextarea.addEventListener('input', function() {
+            charCounter.textContent = `${this.value.length}/500 characters`;
 
-    // Form validation
-    form.addEventListener('submit', function(e) {
-        const email = document.getElementById('email').value;
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-        if (!emailRegex.test(email)) {
-            e.preventDefault();
-            alert('Please enter a valid email address.');
-            return;
-        }
-
-        const bio = document.getElementById('bio').value;
-        if (bio.length > 500) {
-            e.preventDefault();
-            alert('Bio must be 500 characters or less.');
-            return;
-        }
-
-        // Show loading state
-        const submitBtn = this.querySelector('button[type="submit"]');
-        if (submitBtn) {
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
-            submitBtn.disabled = true;
-        }
-    });
-
-    // Show preview overlay on hover
-    if (currentPhoto && photoPreview) {
-        currentPhoto.addEventListener('mouseenter', () => photoPreview.classList.remove('hidden'));
-        currentPhoto.addEventListener('mouseleave', () => photoPreview.classList.add('hidden'));
-    }
-
-    // Mobile-specific optimizations
-    if (window.innerWidth <= 768) {
-        // Make form inputs more mobile-friendly
-        const inputs = form.querySelectorAll('input, textarea, select');
-        inputs.forEach(input => {
-            input.addEventListener('focus', function() {
-                // Scroll to input on mobile
-                setTimeout(() => {
-                    this.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 300);
-            });
+            if (this.value.length > 500) {
+                charCounter.classList.add('text-red-500');
+            } else {
+                charCounter.classList.remove('text-red-500');
+            }
         });
     }
 });
-
-// Helper function for mobile detection
-function isMobile() {
-    return window.innerWidth <= 768;
-}
 </script>
 
 <style>
-/* Mobile-specific styles */
-@media (max-width: 768px) {
-    .mobile-input {
-        font-size: 16px; /* Prevents iOS zoom on focus */
-    }
-
-    input, textarea, select {
-        font-size: 16px !important; /* Prevents iOS zoom on focus */
-    }
-
-    #profile-edit-form {
-        padding-bottom: 80px; /* Account for bottom nav */
-    }
-}
-
-/* Focus styles */
+/* Custom styles for better form appearance */
 input:focus, textarea:focus, select:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    ring: 2px;
+    ring-color: #3b82f6;
 }
 
-/* Transition effects */
-.smooth-transition {
+/* Style for disabled inputs */
+input:disabled, input[readonly] {
+    background-color: #f9fafb;
+    cursor: not-allowed;
+}
+
+/* Style for form sections */
+.space-y-6 > div {
     transition: all 0.3s ease;
 }
 
-/* Loading animation */
-.fa-spinner {
-    animation: spin 1s linear infinite;
+.space-y-6 > div:focus-within {
+    transform: translateY(-2px);
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+/* Style for danger zone */
+.bg-red-50 {
+    background-color: #fef2f2;
+}
+
+.border-red-200 {
+    border-color: #fecaca;
+}
+
+/* Animation for success messages */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.bg-green-50, .bg-red-50 {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Style for verification badge */
+.inline-flex.items-center.px-2\\.5.py-0\\.5.rounded-full.text-xs.font-medium {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.8; }
+    100% { opacity: 1; }
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 640px) {
+    .flex.items-center.space-x-6 {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .grid.grid-cols-1.gap-6.sm\\:grid-cols-2 {
+        grid-template-columns: 1fr;
+    }
+
+    .flex.justify-end.space-x-4 {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .flex.justify-end.space-x-4 > * {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .min-h-screen.bg-gray-50 {
+        background-color: #111827;
+    }
+
+    .text-gray-900 {
+        color: #f9fafb;
+    }
+
+    .text-gray-600 {
+        color: #d1d5db;
+    }
+
+    .bg-white {
+        background-color: #1f2937;
+    }
+
+    .border-gray-200, .border-gray-300 {
+        border-color: #374151;
+    }
+
+    input, textarea, select {
+        background-color: #374151;
+        border-color: #4b5563;
+        color: #f9fafb;
+    }
+
+    input:disabled, input[readonly] {
+        background-color: #4b5563;
+        color: #9ca3af;
+    }
+
+    .bg-red-50 {
+        background-color: #451a1a;
+    }
+
+    .text-red-900 {
+        color: #fecaca;
+    }
+
+    .text-red-700 {
+        color: #fca5a5;
+    }
+
+    .border-red-200 {
+        border-color: #7f1d1d;
+    }
 }
 </style>
 {% endblock %}

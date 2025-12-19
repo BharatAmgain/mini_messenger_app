@@ -11,6 +11,7 @@ import random
 import string
 import requests
 import base64
+import traceback
 
 from .forms import (
     CustomUserCreationForm,
@@ -106,12 +107,17 @@ def profile_edit(request):
 
             user.gender = request.POST.get('gender', user.gender)
 
+            # DO NOT update is_verified from form - it should only be set via OTP verification
+            # Remove any is_verified field from your template
+
             # Save changes
             user.save()
             messages.success(request, 'Profile updated successfully!')
             return redirect('profile')
 
         except Exception as e:
+            # Print traceback for debugging
+            traceback.print_exc()
             messages.error(request, f'Error updating profile: {str(e)}')
 
     return render(request, 'accounts/profile_edit.html', {'user': user})
@@ -1126,73 +1132,6 @@ def password_reset_confirm(request):
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f'{field}: {error}')
-    else:
-        form = OTPPasswordResetForm(user)
-
-    context = {
-        'form': form,
-        'user': user
-    }
-    return render(request, 'accounts/password_reset_confirm.html', context)
-
-
-
-def password_reset_confirm(request):
-    """Set new password after OTP verification"""
-    if request.user.is_authenticated:
-        return redirect('chat_home')
-
-    # Check if verification is complete
-    if not request.session.get('password_reset_verified'):
-        messages.error(request, 'Please verify OTP first.')
-        return redirect('password_reset_request')
-
-    user_id = request.session.get('verified_user_id')
-    if not user_id:
-        messages.error(request, 'Invalid session. Please start over.')
-        return redirect('password_reset_request')
-
-    try:
-        user = CustomUser.objects.get(id=user_id, is_active=True)
-    except CustomUser.DoesNotExist:
-        messages.error(request, 'User not found.')
-        # Clear session
-        if 'password_reset_verified' in request.session:
-            del request.session['password_reset_verified']
-        if 'verified_user_id' in request.session:
-            del request.session['verified_user_id']
-        return redirect('password_reset_request')
-
-    if request.method == 'POST':
-        form = OTPPasswordResetForm(user, request.POST)
-        if form.is_valid():
-            # Clear all session data
-            session_keys = [
-                'password_reset_user_id',
-                'password_reset_otp_id',
-                'password_reset_method',
-                'password_reset_verified',
-                'verified_user_id',
-                'twilio_verification_sid'
-            ]
-            for key in session_keys:
-                if key in request.session:
-                    del request.session[key]
-
-            # Save new password
-            form.save()
-
-            # Create notification
-            Notification.objects.create(
-                user=user,
-                notification_type='system',
-                title="Password Reset",
-                message="Your password has been reset successfully.",
-                related_url="/accounts/settings/"
-            )
-
-            messages.success(request, 'Your password has been reset successfully. You can now log in.')
-            return redirect('login')
     else:
         form = OTPPasswordResetForm(user)
 

@@ -18,22 +18,14 @@ import requests
 import base64
 from django.conf import settings
 
-def user_profile_picture_path(instance, filename):
-    """Generate file path for user profile picture"""
-    # Get file extension
-    ext = filename.split('.')[-1]
-    # Create unique filename
-    filename = f"profile_picture_{instance.id}.{ext}"
-    return os.path.join('profile_pics', f"user_{instance.id}", filename)
-
 
 class CustomUser(AbstractUser):
     online_status = models.BooleanField(default=False)
     profile_picture = models.ImageField(
-        upload_to=user_profile_picture_path,
+        upload_to='profile_pics/',
         blank=True,
         null=True,
-        default=None  # CHANGED: Remove default image to avoid issues
+        default=None
     )
     last_seen = models.DateTimeField(auto_now=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True, unique=True)
@@ -164,7 +156,7 @@ class CustomUser(AbstractUser):
         elif self.social_avatar:
             return self.social_avatar
         else:
-            return '/static/images/default-avatar.png'  # Add this static file
+            return '/static/images/default-avatar.png'
 
 
 class SocialAccount(models.Model):
@@ -490,7 +482,7 @@ class PasswordResetOTP(models.Model):
     is_used = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
-    verification_sid = models.CharField(max_length=100, blank=True, null=True)  # ADD THIS
+    verification_sid = models.CharField(max_length=100, blank=True, null=True)
 
 
     class Meta:
