@@ -15,7 +15,7 @@ sys.path.append(str(BASE_DIR / 'apps'))
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-production')
 
 # Debug Mode
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 # Allowed Hosts
 ALLOWED_HOSTS = config('ALLOWED_HOSTS',
