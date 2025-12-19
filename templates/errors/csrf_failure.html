@@ -1,5 +1,6 @@
 <!-- templates/errors/csrf_failure.html -->
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Security Error - {{ SITE_NAME }}{% endblock %}
 
@@ -23,12 +24,12 @@
             <!-- Error Content -->
             <div class="p-8">
                 <div class="text-center mb-8">
-                    <div class="mx-auto h-20 w-20 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                    <div class="mx-auto h-20 w-20 bg-red-100 rounded-full flex items-center justify-center mb-4 error-icon">
                         <i class="fas fa-exclamation-triangle text-red-600 text-3xl"></i>
                     </div>
                     <h2 class="text-xl font-bold text-gray-900 mb-2">CSRF Verification Failed</h2>
                     <p class="text-gray-600 mb-6">
-                        {{ message }}
+                        {{ message|default:"The request could not be processed because a security token was invalid or missing." }}
                     </p>
                 </div>
 
@@ -41,19 +42,23 @@
                     <ul class="space-y-2">
                         <li class="flex items-start">
                             <i class="fas fa-clock text-yellow-500 mt-1 mr-2"></i>
-                            <span>Your session expired (logged out automatically)</span>
+                            <span class="text-gray-700">Your session expired (logged out automatically)</span>
                         </li>
                         <li class="flex items-start">
                             <i class="fas fa-browser text-blue-500 mt-1 mr-2"></i>
-                            <span>Page was open in multiple tabs or browsers</span>
+                            <span class="text-gray-700">Page was open in multiple tabs or browsers</span>
                         </li>
                         <li class="flex items-start">
                             <i class="fas fa-hourglass-end text-orange-500 mt-1 mr-2"></i>
-                            <span>The page was idle for too long without activity</span>
+                            <span class="text-gray-700">The page was idle for too long without activity</span>
                         </li>
                         <li class="flex items-start">
                             <i class="fas fa-key text-purple-500 mt-1 mr-2"></i>
-                            <span>Security tokens expired or were missing</span>
+                            <span class="text-gray-700">Security tokens expired or were missing</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-shield text-green-500 mt-1 mr-2"></i>
+                            <span class="text-gray-700">Browser extensions or security software interfering</span>
                         </li>
                     </ul>
                 </div>
@@ -67,39 +72,59 @@
                     <ol class="space-y-3">
                         <li class="flex items-start">
                             <span class="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mr-3 flex-shrink-0">1</span>
-                            <span>Refresh the page and try again</span>
+                            <span class="text-blue-800">Refresh the page and try again</span>
                         </li>
                         <li class="flex items-start">
                             <span class="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mr-3 flex-shrink-0">2</span>
-                            <span>Log in again if you were logged out</span>
+                            <span class="text-blue-800">Log in again if you were logged out</span>
                         </li>
                         <li class="flex items-start">
                             <span class="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mr-3 flex-shrink-0">3</span>
-                            <span>Clear your browser cache and cookies if the problem persists</span>
+                            <span class="text-blue-800">Clear your browser cache and cookies</span>
                         </li>
                         <li class="flex items-start">
                             <span class="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mr-3 flex-shrink-0">4</span>
-                            <span>Use the "Back" button to return to the previous page</span>
+                            <span class="text-blue-800">Disable browser extensions that might interfere</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mr-3 flex-shrink-0">5</span>
+                            <span class="text-blue-800">Try using a different browser</span>
                         </li>
                     </ol>
                 </div>
 
                 <!-- Technical Details (only in DEBUG mode) -->
                 {% if DEBUG %}
-                <div class="bg-gray-900 rounded-xl p-6 mb-8">
+                <div class="bg-gray-900 rounded-xl p-6 mb-8 tech-details">
                     <h3 class="font-semibold text-white mb-4 flex items-center">
                         <i class="fas fa-code text-green-400 mr-2"></i>
                         Technical Details (Debug Mode):
                     </h3>
-                    <div class="text-gray-300 text-sm font-mono overflow-x-auto">
-                        <p>Reason: {{ reason|default:"CSRF token missing or incorrect" }}</p>
-                        <p>Path: {{ request.path }}</p>
-                        <p>Method: {{ request.method }}</p>
-                        <p>User: {{ user.username|default:"Anonymous" }}</p>
-                        <p>CSRF Token Present: {% if csrf_token %}Yes{% else %}No{% endif %}</p>
+                    <div class="text-gray-300 text-sm font-mono">
+                        <div class="space-y-1">
+                            <p><span class="text-green-400">Reason:</span> {{ reason|default:"CSRF token missing or incorrect" }}</p>
+                            <p><span class="text-green-400">Path:</span> {{ request.path }}</p>
+                            <p><span class="text-green-400">Method:</span> {{ request.method }}</p>
+                            <p><span class="text-green-400">User:</span> {% if user.is_authenticated %}{{ user.username }}{% else %}Anonymous{% endif %}</p>
+                            <p><span class="text-green-400">CSRF Token:</span> {% if csrf_token %}Present{% else %}Missing{% endif %}</p>
+                            <p><span class="text-green-400">User Agent:</span> {{ request.META.HTTP_USER_AGENT|truncatechars:50 }}</p>
+                            <p><span class="text-green-400">Time:</span> {% now "Y-m-d H:i:s" %}</p>
+                        </div>
                     </div>
                 </div>
                 {% endif %}
+
+                <!-- Quick Fix Button -->
+                <div class="mb-8">
+                    <button onclick="fixCSRFIssue()"
+                            class="w-full inline-flex justify-center items-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-200 transform hover:scale-105">
+                        <i class="fas fa-magic mr-3"></i>
+                        Quick Fix: Reload & Restore Session
+                    </button>
+                    <p class="text-xs text-gray-500 text-center mt-2">
+                        This will reload the page and attempt to restore your session
+                    </p>
+                </div>
 
                 <!-- Action Buttons -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -116,7 +141,7 @@
                     </a>
 
                     <a href="{% url 'chat_home' %}"
-                       class="w-full sm:col-span-2 inline-flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-200">
+                       class="w-full sm:col-span-2 inline-flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition duration-200">
                         <i class="fas fa-home mr-2"></i>
                         Go to Homepage
                     </a>
@@ -133,6 +158,10 @@
                     <p class="text-xs text-gray-500 mt-2">
                         <i class="fas fa-lock text-green-500 mr-1"></i>
                         This security check helps protect your account from unauthorized access
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">
+                        <i class="fas fa-clock text-orange-500 mr-1"></i>
+                        Auto-redirecting to login in <span id="countdown">30</span> seconds
                     </p>
                 </div>
             </div>
@@ -174,6 +203,7 @@
     /* Custom scrollbar for technical details */
     .tech-details::-webkit-scrollbar {
         height: 8px;
+        width: 8px;
     }
 
     .tech-details::-webkit-scrollbar-track {
@@ -189,37 +219,138 @@
     .tech-details::-webkit-scrollbar-thumb:hover {
         background: #6b7280;
     }
+
+    /* Button hover effects */
+    button, a {
+        transition: all 0.2s ease;
+    }
+
+    button:hover, a:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Gradient animation for Quick Fix button */
+    @keyframes gradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    button[onclick="fixCSRFIssue()"] {
+        background-size: 200% 200%;
+        animation: gradientShift 3s ease infinite;
+    }
 </style>
 
 <script>
     // Add interactive elements
     document.addEventListener('DOMContentLoaded', function() {
-        // Add copy email functionality
-        const supportEmail = "{{ SUPPORT_EMAIL }}";
-        const emailLinks = document.querySelectorAll('a[href^="mailto:"]');
-        emailLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
-                // Optional: Add animation or confirmation
-                this.classList.add('text-green-600');
-                setTimeout(() => {
-                    this.classList.remove('text-green-600');
-                }, 1000);
-            });
-        });
-
-        // Auto-refresh after 30 seconds if still on error page
-        setTimeout(() => {
-            if (window.location.pathname.includes('csrf-failure')) {
-                window.location.reload();
+        // Countdown timer
+        let seconds = 30;
+        const countdownElement = document.getElementById('countdown');
+        const countdownInterval = setInterval(() => {
+            seconds--;
+            if (countdownElement) {
+                countdownElement.textContent = seconds;
             }
-        }, 30000);
+            if (seconds <= 0) {
+                clearInterval(countdownInterval);
+                window.location.href = "{% url 'login' %}";
+            }
+        }, 1000);
 
         // Log error for debugging
         console.warn('CSRF Verification Failed:', {
             reason: "{{ reason|default:'Unknown' }}",
             path: window.location.pathname,
+            user: "{% if user.is_authenticated %}{{ user.username }}{% else %}Anonymous{% endif %}",
             timestamp: new Date().toISOString()
         });
+
+        // Add animation to action buttons
+        const buttons = document.querySelectorAll('button, a[href]');
+        buttons.forEach(button => {
+            button.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px)';
+                this.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.15)';
+            });
+            button.addEventListener('mouseleave', function() {
+                this.style.transform = '';
+                this.style.boxShadow = '';
+            });
+        });
+
+        // Add click animation
+        buttons.forEach(button => {
+            button.addEventListener('click', function() {
+                this.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 200);
+            });
+        });
     });
+
+    // Quick fix function
+    function fixCSRFIssue() {
+        // Show loading state
+        const quickFixBtn = document.querySelector('button[onclick="fixCSRFIssue()"]');
+        const originalText = quickFixBtn.innerHTML;
+        quickFixBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-3"></i>Fixing...';
+        quickFixBtn.disabled = true;
+
+        // Clear any problematic cookies
+        document.cookie.split(";").forEach(function(c) {
+            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+        });
+
+        // Clear localStorage and sessionStorage (except for important data)
+        const keepKeys = ['user_preferences', 'theme', 'language'];
+        Object.keys(localStorage).forEach(key => {
+            if (!keepKeys.includes(key)) {
+                localStorage.removeItem(key);
+            }
+        });
+
+        Object.keys(sessionStorage).forEach(key => {
+            if (!keepKeys.includes(key)) {
+                sessionStorage.removeItem(key);
+            }
+        });
+
+        // Force a hard reload with cache clearing
+        setTimeout(() => {
+            // Add cache-busting parameter
+            const url = new URL(window.location.href);
+            url.searchParams.set('_t', Date.now());
+
+            // Try to go back first, then reload
+            if (window.history.length > 1) {
+                window.history.back();
+                setTimeout(() => {
+                    window.location.href = url.toString();
+                }, 500);
+            } else {
+                window.location.href = url.toString();
+            }
+        }, 1000);
+    }
+
+    // Auto-attempt to fix on page load
+    setTimeout(() => {
+        // Try to get fresh CSRF token
+        const metaToken = document.querySelector('meta[name="csrf-token"]');
+        if (metaToken) {
+            // Update cookies with fresh token
+            document.cookie = `csrftoken=${metaToken.getAttribute('content')}; path=/; SameSite=Lax`;
+            console.log('CSRF token refreshed from meta tag');
+        }
+    }, 500);
+
+    // Prevent form resubmission warning
+    if (window.history.replaceState) {
+        window.history.replaceState(null, null, window.location.href);
+    }
 </script>
 {% endblock %}

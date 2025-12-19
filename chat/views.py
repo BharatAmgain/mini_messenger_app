@@ -15,6 +15,7 @@ import os
 from django.conf import settings
 from .utils import EmojiManager
 import emoji
+from django.views.decorators.csrf import csrf_exempt
 
 @login_required
 def chat_home(request):
@@ -1163,3 +1164,25 @@ def quick_chat(request, user_id):
     except CustomUser.DoesNotExist:
         messages.error(request, 'User not found.')
         return redirect('discover_users')
+
+    @csrf_exempt
+    @login_required
+    def update_online_status(request):
+        """Update user's online status - exempt from CSRF for WebSocket compatibility"""
+        if request.method == 'POST':
+            try:
+                data = json.loads(request.body)
+                is_online = data.get('online', True)
+
+                # Update user's online status
+                request.user.is_online = is_online
+                request.user.last_seen = timezone.now()
+                request.user.save()
+
+                # Broadcast to friends/channels if needed
+                # ... rest of your code ...
+
+                return JsonResponse({'status': 'success'})
+            except Exception as e:
+                return JsonResponse({'status': 'error', 'message': str(e)})
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method'})

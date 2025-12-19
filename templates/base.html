@@ -10,7 +10,8 @@
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-
+    <!-- Include CSRF fix script -->
+    <script src="{% static 'js/csrf_fix.js' %}"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -596,21 +597,34 @@
         </div>
     </div>
 
-    <!-- JavaScript -->
+       <!-- JavaScript -->
     <script>
-        // Function to get CSRF token from cookies
+        // Function to get CSRF token from cookies - FIXED VERSION
         function getCSRFToken() {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
                 const cookies = document.cookie.split(';');
                 for (let i = 0; i < cookies.length; i++) {
                     const cookie = cookies[i].trim();
-                    if (cookie.substring(0, 10) === 'csrftoken=') {
-                        cookieValue = decodeURIComponent(cookie.substring(10));
+                    // Check for both possible cookie names
+                    if (cookie.startsWith('csrftoken=')) {
+                        cookieValue = decodeURIComponent(cookie.substring('csrftoken='.length));
+                        break;
+                    } else if (cookie.startsWith('csrf_token=')) {
+                        cookieValue = decodeURIComponent(cookie.substring('csrf_token='.length));
                         break;
                     }
                 }
             }
+
+            // Fallback: get from meta tag
+            if (!cookieValue) {
+                const metaToken = document.querySelector('meta[name="csrf-token"]');
+                if (metaToken) {
+                    cookieValue = metaToken.getAttribute('content');
+                }
+            }
+
             return cookieValue;
         }
 
@@ -665,24 +679,34 @@
                 });
         }
 
-        // Update online status with CSRF protection
+        // Update online status with CSRF protection - FIXED VERSION
         function updateOnlineStatus(isOnline) {
             const csrfToken = getCSRFToken();
+
+            if (!csrfToken) {
+                console.warn('CSRF token not found, skipping online status update');
+                return;
+            }
+
+            // Create form data for proper CSRF handling
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', csrfToken);
+            formData.append('online', isOnline);
 
             fetch('/chat/update-online-status/', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: JSON.stringify({ online: isOnline }),
+                body: formData,
                 credentials: 'same-origin'
             }).then(response => {
                 if (!response.ok) {
-                    console.error('Failed to update online status:', response.status);
+                    console.log('Online status update failed:', response.status);
                 }
             }).catch(error => {
-                console.error('Error updating online status:', error);
+                console.log('Error updating online status:', error);
             });
         }
 
@@ -752,8 +776,10 @@
                 // Update notification count every 30 seconds
                 setInterval(fetchNotificationCount, 30000);
 
-                // Update online status when page loads
-                updateOnlineStatus(true);
+                // Update online status when page loads (with delay to ensure CSRF token is available)
+                setTimeout(() => {
+                    updateOnlineStatus(true);
+                }, 1000);
             }
 
             // Update status when user leaves
@@ -762,16 +788,60 @@
                     // Try to send via sendBeacon first
                     if (navigator.sendBeacon) {
                         const csrfToken = getCSRFToken();
-                        const blob = new Blob([JSON.stringify({ online: false })], {
-                            type: 'application/json'
-                        });
-                        navigator.sendBeacon('/chat/update-online-status/', blob);
+                        if (csrfToken) {
+                            const formData = new FormData();
+                            formData.append('csrfmiddlewaretoken', csrfToken);
+                            formData.append('online', false);
+
+                            const blob = new Blob([JSON.stringify({
+                                online: false,
+                                csrfmiddlewaretoken: csrfToken
+                            })], {
+                                type: 'application/json'
+                            });
+                            navigator.sendBeacon('/chat/update-online-status/', blob);
+                        }
                     } else {
                         // Fallback to sync request
                         updateOnlineStatus(false);
                     }
                 }
             });
+
+            // Add CSRF token to all AJAX requests globally
+            const csrfToken = getCSRFToken();
+            if (csrfToken) {
+                // Override jQuery if present
+                if (window.jQuery) {
+                    $.ajaxSetup({
+                        headers: {
+                            'X-CSRFToken': csrfToken
+                        }
+                    });
+                }
+
+                // Override fetch for all POST requests
+                const originalFetch = window.fetch;
+                window.fetch = function(url, options = {}) {
+                    if (!options.headers) options.headers = {};
+                    if (!options.credentials) options.credentials = 'same-origin';
+
+                    const method = options.method ? options.method.toUpperCase() : 'GET';
+                    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+                        // Add CSRF token to headers
+                        options.headers = {
+                            ...options.headers,
+                            'X-CSRFToken': csrfToken
+                        };
+
+                        // Also add to FormData if it's FormData
+                        if (options.body instanceof FormData) {
+                            options.body.append('csrfmiddlewaretoken', csrfToken);
+                        }
+                    }
+                    return originalFetch.call(this, url, options);
+                };
+            }
         });
 
         // Prevent zoom on double-tap for mobile
