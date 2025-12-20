@@ -55,7 +55,9 @@ urlpatterns = [
     path('notifications/mark-all-unread/', views.mark_all_notifications_unread, name='mark_all_notifications_unread'),
     path('notifications/archive-all/', views.archive_all_notifications, name='archive_all_notifications'),
     path('notifications/clear-all/', views.clear_all_notifications, name='clear_all_notifications'),
-    path('notifications/unread-count/', views.get_unread_count, name='get_unread_count'),
+
+    # ✅ ADD THIS MISSING URL:
+    path('get-unread-count/', views.get_unread_count, name='get_unread_count'),
 
     # Friends URLs
     path('friend-requests/', views.friend_requests, name='friend_requests'),
@@ -70,17 +72,4 @@ urlpatterns = [
     path('debug/force-verify/', views.force_verify_user, name='force_verify_user'),
     path('debug/session/', views.debug_session, name='debug_session'),
     path('debug/test-profile-update/', views.test_profile_update, name='test_profile_update'),
-]
-
-# Django built-in auth URLs (optional - if you want to keep them as fallback)
-urlpatterns += [
-    path('password-reset-done/',
-         auth_views.PasswordResetDoneView.as_view(template_name='accounts/password_reset_done.html'),
-         name='password_reset_done'),
-    path('password-reset-confirm/<uidb64>/<token>/',
-         auth_views.PasswordResetConfirmView.as_view(template_name='accounts/password_reset_confirm.html'),
-         name='password_reset_confirm'),
-    path('password-reset-complete/',
-         auth_views.PasswordResetCompleteView.as_view(template_name='accounts/password_reset_complete.html'),
-         name='password_reset_complete'),
 ]

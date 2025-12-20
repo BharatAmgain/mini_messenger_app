@@ -1,3 +1,4 @@
+# messenger/settings.py - COMPLETE FIXED VERSION
 import os
 import sys
 from pathlib import Path
@@ -278,9 +279,10 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
 )
 
-# Google OAuth2
+# Google OAuth2 - FIXED WITH CORRECT PATH
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config('GOOGLE_OAUTH2_KEY', default='')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config('GOOGLE_OAUTH2_SECRET', default='')
+SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI = config('SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI', default='')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'https://www.googleapis.com/auth/userinfo.email',
     'https://www.googleapis.com/auth/userinfo.profile',
@@ -290,6 +292,17 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
     'access_type': 'online',
     'prompt': 'select_account',
 }
+
+# Set default redirect URI based on environment - FIXED WITH /accounts/ PATH
+if not SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI:
+    if 'RENDER' in os.environ or not DEBUG:
+        # Production on Render - USING /accounts/ PATH
+        SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI = 'https://connect-io-0cql.onrender.com/accounts/complete/google-oauth2/'
+        print(f"✅ Using production Google OAuth2 redirect URI: {SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}")
+    else:
+        # Local development - USING /accounts/ PATH
+        SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI = 'http://127.0.0.1:8000/accounts/complete/google-oauth2/'
+        print(f"✅ Using local Google OAuth2 redirect URI: {SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}")
 
 # Facebook OAuth2
 SOCIAL_AUTH_FACEBOOK_KEY = config('FACEBOOK_APP_ID', default='')
@@ -431,15 +444,21 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
         },
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'debug.log',
+            'formatter': 'verbose',
+        },
     },
     'loggers': {
         'django': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': LOG_LEVEL,
             'propagate': True,
         },
         'django.request': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': LOG_LEVEL,
             'propagate': False,
         },
@@ -449,18 +468,23 @@ LOGGING = {
             'propagate': False,
         },
         'accounts': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': LOG_LEVEL,
             'propagate': False,
         },
         'chat': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': LOG_LEVEL,
             'propagate': False,
         },
         'social': {
-            'handlers': ['console'],
-            'level': LOG_LEVEL,
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG' if DEBUG else LOG_LEVEL,
+            'propagate': False,
+        },
+        'social_core': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG' if DEBUG else LOG_LEVEL,
             'propagate': False,
         },
     },
@@ -626,3 +650,23 @@ else:
         print("✅ PASSWORD RESET: Will work locally (emails to console)")
     elif 'sendgrid' in EMAIL_HOST:
         print("✅ PASSWORD RESET: Using SendGrid for local testing")
+
+# ========== DEBUG OUTPUT FOR GOOGLE OAUTH ==========
+print("\n" + "=" * 60)
+print("GOOGLE OAUTH CONFIGURATION STATUS")
+print("=" * 60)
+print(f"Client ID: {'✅ SET' if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY else '❌ MISSING'}")
+print(f"Client Secret: {'✅ SET' if SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET else '❌ MISSING'}")
+print(f"Redirect URI: {SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}")
+print(f"Environment: {'Render (Production)' if 'RENDER' in os.environ else 'Local (Development)'}")
+print("=" * 60)
+
+# ========== SOCIAL AUTH DEBUGGING ==========
+if DEBUG:
+    # Enable social auth debugging in development
+    SOCIAL_AUTH_LOG_LEVEL = 'DEBUG'
+    print("\n🔧 Social Auth debugging enabled")
+
+# Run database setup on startup
+if __name__ == 'messenger.settings':
+    ensure_migrations_and_user()
