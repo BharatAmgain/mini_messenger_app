@@ -75,7 +75,7 @@ MIDDLEWARE = [
     'social_django.middleware.SocialAuthExceptionMiddleware',
     'django_otp.middleware.OTPMiddleware',
 
-    # Custom mobile middleware
+    # Custom middleware
     'messenger.middleware.MobileMiddleware',
 ]
 

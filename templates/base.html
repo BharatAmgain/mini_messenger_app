@@ -10,44 +10,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>{% block title %}Connect.io App{% endblock %}</title>
 
-    <!-- Primary Meta Tags -->
-    <meta name="description" content="Connect.io - Modern messaging platform for everyone. Chat with friends, join groups, and share moments instantly.">
-    <meta name="keywords" content="messaging, chat, connect, social, friends, groups, mobile chat">
-    <meta name="author" content="Connect.io">
-
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://connect.io/">
-    <meta property="og:title" content="Connect.io - Modern Messaging">
-    <meta property="og:description" content="Modern messaging platform for everyone. Chat with friends, join groups, and share moments instantly.">
-    <meta property="og:image" content="{% static 'logo.png' %}">
-
-      <!-- Include your CSRF JavaScript -->
-    <script src="{% static 'js/csrf.js' %}"></script>
-
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://connect.io/">
-    <meta property="twitter:title" content="Connect.io - Modern Messaging">
-    <meta property="twitter:description" content="Modern messaging platform for everyone. Chat with friends, join groups, and share moments instantly.">
-    <meta property="twitter:image" content="{% static 'logo.png' %}">
-
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Mobile Detection JS -->
-    <script src="{% static 'js/mobile-detection.js' %}"></script>
+    <!-- Include CSRF fix script -->
+    <script src="{% static 'js/csrf_fix.js' %}"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Mobile-specific CSS -->
-    <link rel="stylesheet" href="{% static 'css/mobile.css' %}">
-
     <!-- CSRF Token for JavaScript -->
     <meta name="csrf-token" content="{{ csrf_token }}">
-
-    <!-- Favicon -->
-    <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
-    <link rel="apple-touch-icon" href="{% static 'apple-touch-icon.png' %}">
 
     <!-- Custom CSS -->
     <style>
@@ -300,96 +271,16 @@
         .swipe-area {
             touch-action: pan-y;
         }
-
-        /* Mobile toast notification */
-        .mobile-toast {
-            position: fixed;
-            bottom: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 25px;
-            z-index: 9999;
-            animation: toastSlideUp 0.3s ease;
-            max-width: 90%;
-            text-align: center;
-        }
-
-        @keyframes toastSlideUp {
-            from {
-                opacity: 0;
-                transform: translate(-50%, 20px);
-            }
-            to {
-                opacity: 1;
-                transform: translate(-50%, 0);
-            }
-        }
-
-        /* Long press menu */
-        .long-press-menu {
-            position: fixed;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            z-index: 1000;
-            animation: scaleIn 0.2s ease-out;
-        }
-
-        @keyframes scaleIn {
-            from {
-                opacity: 0;
-                transform: scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        /* Mobile vibration effect */
-        @keyframes vibrate {
-            0%, 100% {
-                transform: translateX(0);
-            }
-            25% {
-                transform: translateX(-2px);
-            }
-            75% {
-                transform: translateX(2px);
-            }
-        }
-
-        .vibrate {
-            animation: vibrate 0.1s linear 2;
-        }
-
-        /* Mobile loading spinner */
-        .mobile-spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #3b82f6;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
     </style>
 </head>
-<body class="h-full bg-gray-50 {% if user.is_authenticated %}user-authenticated{% endif %} {% if is_mobile %}mobile-device{% endif %}">
+<body class="h-full bg-gray-50 {% if user.is_authenticated %}user-authenticated{% endif %}">
     <!-- Mobile Top Navigation -->
-    <div class="desktop-hidden top-nav safe-area-inset-top">
+    <div class="desktop-hidden top-nav">
         <div class="flex items-center justify-between w-full">
             <!-- Left side: Menu button or Back button -->
             <div class="flex items-center space-x-3">
-                {% if 'conversation' in request.resolver_match.url_name or 'profile' in request.resolver_match.url_name or 'settings' in request.resolver_match.url_name or 'discover' in request.resolver_match.url_name %}
-                <button onclick="window.history.back()" class="p-2 text-gray-700 mobile-back-button">
+                {% if 'conversation' in request.resolver_match.url_name or 'profile' in request.resolver_match.url_name %}
+                <button onclick="window.history.back()" class="p-2 text-gray-700">
                     <i class="fas fa-arrow-left text-lg"></i>
                 </button>
                 {% else %}
@@ -438,7 +329,7 @@
     <div id="mobileMenuOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
 
     <!-- Mobile Menu -->
-    <div id="mobileMenu" class="mobile-menu fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 p-4 swipe-area safe-area-inset-left safe-area-inset-right">
+    <div id="mobileMenu" class="mobile-menu fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 p-4 swipe-area">
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-lg font-semibold">Menu</h2>
             <button id="closeMobileMenu" class="p-2">
@@ -532,7 +423,7 @@
 
     <!-- Mobile Bottom Navigation -->
     {% if user.is_authenticated %}
-    <div class="desktop-hidden bottom-nav safe-area-inset-bottom">
+    <div class="desktop-hidden bottom-nav">
         <a href="{% url 'chat_home' %}"
            class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}text-blue-600{% endif %}">
             <i class="fas fa-comments text-xl mb-1"></i>
@@ -736,7 +627,7 @@
                 }
             }
 
-            // Final fallback: use window.csrftoken from mobile-detection.js
+            // Final fallback: use window.csrftoken from csrf_fix.js
             if (!cookieValue && window.csrftoken) {
                 cookieValue = window.csrftoken;
             }
@@ -895,10 +786,6 @@
                 input.addEventListener('focus', function() {
                     if (window.innerWidth <= 768) {
                         document.body.classList.add('keyboard-open');
-                        // Scroll input into view on mobile
-                        setTimeout(() => {
-                            this.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }, 300);
                     }
                 });
 
@@ -946,17 +833,6 @@
                     updateOnlineStatus(false);
                 }
             });
-
-            // Initialize mobile detection and optimizations
-            if (typeof window.MobileDetector !== 'undefined') {
-                const mobileDetector = new window.MobileDetector();
-                mobileDetector.applyMobileOptimizations();
-
-                // Send device info to server
-                if (mobileDetector.isMobile) {
-                    mobileDetector.sendDeviceInfo();
-                }
-            }
         });
 
         // Prevent zoom on double-tap for mobile
@@ -1013,99 +889,6 @@
                     }
                 }
             }
-
-            // Add long press support for messages
-            document.addEventListener('touchstart', function(e) {
-                const target = e.target;
-                if (target.classList.contains('message-bubble') || target.closest('.message-bubble')) {
-                    const messageBubble = target.classList.contains('message-bubble') ? target : target.closest('.message-bubble');
-                    let pressTimer;
-
-                    pressTimer = setTimeout(() => {
-                        showMessageActions(messageBubble, e.touches[0].clientX, e.touches[0].clientY);
-                    }, 500);
-
-                    // Store timer to clear on touch end
-                    messageBubble.dataset.pressTimer = pressTimer;
-
-                    const clearPressTimer = function() {
-                        clearTimeout(pressTimer);
-                        messageBubble.removeEventListener('touchend', clearPressTimer);
-                        messageBubble.removeEventListener('touchmove', clearPressTimer);
-                    };
-
-                    messageBubble.addEventListener('touchend', clearPressTimer);
-                    messageBubble.addEventListener('touchmove', clearPressTimer);
-                }
-            });
-
-            function showMessageActions(messageBubble, x, y) {
-                // Check if actions already exist
-                const existingActions = messageBubble.querySelector('.message-actions');
-                if (existingActions) {
-                    existingActions.classList.toggle('hidden');
-                    return;
-                }
-
-                // Get message ID
-                const messageGroup = messageBubble.closest('.message-group');
-                const messageId = messageGroup ? messageGroup.dataset.messageId : null;
-
-                if (!messageId) return;
-
-                // Create mobile actions menu
-                const actionsMenu = document.createElement('div');
-                actionsMenu.className = 'long-press-menu';
-                actionsMenu.style.left = `${x - 100}px`;
-                actionsMenu.style.top = `${y - 100}px`;
-
-                // Determine if it's user's own message
-                const isOwnMessage = messageGroup.classList.contains('justify-end');
-
-                let actionsHTML = `
-                    <div class="py-2">
-                        <button onclick="replyToMessage('${messageId}')" class="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-100">
-                            <i class="fas fa-reply mr-3"></i> Reply
-                        </button>
-                        <button onclick="forwardMessage('${messageId}')" class="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-100">
-                            <i class="fas fa-share mr-3"></i> Forward
-                        </button>
-                `;
-
-                if (isOwnMessage) {
-                    actionsHTML += `
-                        <button onclick="editMessage('${messageId}')" class="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-100">
-                            <i class="fas fa-edit mr-3"></i> Edit
-                        </button>
-                        <button onclick="unsendMessage('${messageId}')" class="flex items-center w-full px-4 py-2 text-red-600 hover:bg-red-50">
-                            <i class="fas fa-trash mr-3"></i> Delete
-                        </button>
-                    `;
-                }
-
-                actionsHTML += `
-                        <button onclick="copyMessage('${messageId}')" class="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-100">
-                            <i class="fas fa-copy mr-3"></i> Copy
-                        </button>
-                    </div>
-                `;
-
-                actionsMenu.innerHTML = actionsHTML;
-                document.body.appendChild(actionsMenu);
-
-                // Close menu when clicking outside
-                setTimeout(() => {
-                    const closeMenu = function(e) {
-                        if (!actionsMenu.contains(e.target)) {
-                            actionsMenu.remove();
-                            document.removeEventListener('click', closeMenu);
-                            document.removeEventListener('touchstart', closeMenu);
-                        }
-                    };
-                    document.addEventListener('click', closeMenu);
-                    document.addEventListener('touchstart', closeMenu);
-                }, 100);
-            }
         }
 
         // Handle mobile back button
@@ -1119,83 +902,8 @@
                         closeMobileMenu.click();
                     }
                 }
-
-                // Close any open action menus
-                document.querySelectorAll('.long-press-menu').forEach(menu => {
-                    menu.remove();
-                });
             });
         }
-
-        // Mobile toast notification
-        function showMobileToast(message, type = 'info') {
-            // Remove existing toast
-            const existingToast = document.querySelector('.mobile-toast');
-            if (existingToast) {
-                existingToast.remove();
-            }
-
-            const toast = document.createElement('div');
-            toast.className = `mobile-toast ${type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'}`;
-            toast.textContent = message;
-
-            document.body.appendChild(toast);
-
-            // Auto remove after 3 seconds
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transition = 'opacity 0.3s';
-                setTimeout(() => {
-                    toast.remove();
-                }, 300);
-            }, 3000);
-        }
-
-        // Message action functions
-        function replyToMessage(messageId) {
-            // Implementation for reply
-            showMobileToast('Reply feature coming soon', 'info');
-        }
-
-        function forwardMessage(messageId) {
-            // Implementation for forward
-            showMobileToast('Forward feature coming soon', 'info');
-        }
-
-        function editMessage(messageId) {
-            // Implementation for edit
-            showMobileToast('Edit message', 'info');
-        }
-
-        function unsendMessage(messageId) {
-            if (confirm('Are you sure you want to delete this message?')) {
-                // Implementation for delete
-                showMobileToast('Message deleted', 'success');
-            }
-        }
-
-        function copyMessage(messageId) {
-            const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
-            if (messageElement) {
-                const text = messageElement.querySelector('.message-content')?.textContent;
-                if (text) {
-                    navigator.clipboard.writeText(text).then(() => {
-                        showMobileToast('Message copied to clipboard', 'success');
-                    }).catch(() => {
-                        showMobileToast('Failed to copy message', 'error');
-                    });
-                }
-            }
-        }
-
-        // Expose functions globally
-        window.showMobileToast = showMobileToast;
-        window.getCSRFToken = getCSRFToken;
-        window.replyToMessage = replyToMessage;
-        window.forwardMessage = forwardMessage;
-        window.editMessage = editMessage;
-        window.unsendMessage = unsendMessage;
-        window.copyMessage = copyMessage;
     </script>
 
     {% block extra_js %}{% endblock %}

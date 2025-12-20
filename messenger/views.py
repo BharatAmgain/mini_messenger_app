@@ -1,22 +1,14 @@
-# messenger/views.py - COMPLETE VERSION WITH ERROR HANDLERS
-from django.http import HttpResponse, JsonResponse, HttpResponseNotFound
-from django.shortcuts import render, redirect
-from django.views.decorators.http import require_GET, require_http_methods
+# messenger/views.py - COMPLETE VERSION
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render
+from django.views.decorators.http import require_GET
 from django.middleware.csrf import get_token
-from django.utils import timezone
-import json
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 def csrf_failure(request, reason=""):
-    """Custom CSRF failure view - MOBILE OPTIMIZED"""
+    """Custom CSRF failure view - FIXED VERSION"""
     # Get CSRF token for the response
     csrf_token = get_token(request)
-
-    # Check if it's a mobile device
-    is_mobile = getattr(request, 'is_mobile', False)
 
     # For AJAX requests, return JSON response
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -24,8 +16,7 @@ def csrf_failure(request, reason=""):
             'error': 'CSRF verification failed',
             'detail': 'CSRF token missing or incorrect',
             'reason': reason,
-            'csrf_token': csrf_token,
-            'timestamp': timezone.now().isoformat()
+            'csrf_token': csrf_token
         }, status=403)
 
     context = {
@@ -33,172 +24,124 @@ def csrf_failure(request, reason=""):
         'message': 'The request could not be processed because a security token was invalid or missing.',
         'detail': 'This is usually caused by:',
         'reasons': [
-            'Your session expired (you were logged out)',
+            'Your session expired (logged out)',
             'You submitted a form without proper security tokens',
-            'You tried to access the page from a different browser or tab',
-            'The page was open for too long without activity',
-            'You have cookies disabled in your browser'
+            'You tried to access the page from a different browser/tab',
+            'The page was open for too long without activity'
         ],
         'reason': reason,
         'csrf_token': csrf_token,
         'user': request.user,
-        'is_mobile': is_mobile,
-        'suggestions': [
-            'Refresh the page and try again',
-            'Clear your browser cookies and cache',
-            'Make sure cookies are enabled in your browser',
-            'Try using a different browser',
-            'Log out and log back in'
-        ]
     }
-
-    # Use mobile-optimized template if on mobile
-    template = 'errors/csrf_failure_mobile.html' if is_mobile else 'errors/csrf_failure.html'
-
-    return render(request, template, context, status=403)
+    return render(request, 'errors/csrf_failure.html', context, status=403)
 
 
-@require_GET
 def health_check(request):
     """Simple health check endpoint for monitoring"""
     return JsonResponse({
-        'status': 'healthy',
+        'status': 'ok',
         'service': 'Connect.io Messenger',
-        'timestamp': timezone.now().isoformat(),
-        'version': '1.0.0',
-        'features': {
-            'chat': True,
-            'groups': True,
-            'files': True,
-            'notifications': True,
-            'mobile': True
-        }
+        'timestamp': 'server_time_placeholder'
     })
 
 
 @require_GET
 def data_deletion_view(request):
-    """Facebook-required data deletion instructions page - MOBILE OPTIMIZED"""
-    is_mobile = getattr(request, 'is_mobile', False)
-
-    html_content = f"""<!DOCTYPE html>
+    """Facebook-required data deletion instructions page"""
+    html_content = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Data deletion instructions for Connect.io">
     <title>Data Deletion Instructions - Connect.io</title>
     <style>
-        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{ 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             line-height: 1.6; 
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: {'15px' if is_mobile else '20px'};
+            padding: 20px;
             color: #333;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }}
-        .container {{
-            max-width: {'95%' if is_mobile else '800px'};
-            margin: {'20px auto' if is_mobile else '40px auto'};
+        }
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
             background: white;
-            padding: {'20px' if is_mobile else '40px'};
-            border-radius: {'10px' if is_mobile else '15px'};
-            box-shadow: 0 {'10px' if is_mobile else '20px'} 60px rgba(0,0,0,0.3);
-        }}
-        h1 {{ 
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 { 
             color: #2563eb;
             text-align: center;
-            margin-bottom: {'20px' if is_mobile else '30px'};
-            border-bottom: 2px solid #2563eb;
-            padding-bottom: {'10px' if is_mobile else '15px'};
-            font-size: {'1.5em' if is_mobile else '2.2em'};
-            font-weight: 700;
-        }}
-        h2 {{ 
+            margin-bottom: 30px;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 15px;
+            font-size: 2.2em;
+        }
+        h2 { 
             color: #4b5563;
-            margin-top: {'20px' if is_mobile else '30px'};
-            margin-bottom: {'10px' if is_mobile else '15px'};
-            font-size: {'1.2em' if is_mobile else '1.5em'};
-            border-bottom: 1px solid #e5e7eb;
-            padding-bottom: {'8px' if is_mobile else '10px'};
-            font-weight: 600;
-        }}
-        h3 {{
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        h3 {
             color: #374151;
-            margin-top: {'15px' if is_mobile else '20px'};
-            margin-bottom: {'8px' if is_mobile else '10px'};
-            font-size: {'1.1em' if is_mobile else '1.2em'};
-            font-weight: 600;
-        }}
-        .step {{
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        .step {
             background: #f8fafc;
-            padding: {'15px' if is_mobile else '20px'};
+            padding: 20px;
             border-left: 4px solid #3b82f6;
-            margin: {'15px 0' if is_mobile else '20px 0'};
+            margin: 20px 0;
             border-radius: 8px;
-        }}
-        .warning {{
+        }
+        .warning {
             background: #fef3c7;
             border: 2px solid #f59e0b;
-            padding: {'15px' if is_mobile else '20px'};
+            padding: 20px;
             border-radius: 8px;
-            margin: {'15px 0' if is_mobile else '25px 0'};
-        }}
-        .button {{
+            margin: 25px 0;
+        }
+        .button {
             display: inline-block;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: {'10px 20px' if is_mobile else '12px 30px'};
+            padding: 12px 30px;
             text-decoration: none;
             border-radius: 50px;
-            font-weight: 600;
-            margin: {'5px' if is_mobile else '10px 5px'};
+            font-weight: bold;
+            margin: 10px 5px;
             border: none;
             cursor: pointer;
             transition: all 0.3s;
-            font-size: {'14px' if is_mobile else '16px'};
-            min-height: 44px;
-            min-width: 44px;
-        }}
-        .button:hover {{ 
+        }
+        .button:hover { 
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }}
-        ul, ol {{ 
-            padding-left: {'20px' if is_mobile else '25px'};
-            margin: {'10px 0' if is_mobile else '15px 0'};
-        }}
-        li {{ 
-            margin: {'8px 0' if is_mobile else '10px 0'};
+        }
+        ul, ol { 
+            padding-left: 25px;
+            margin: 15px 0;
+        }
+        li { 
+            margin: 10px 0;
             padding-left: 5px;
-        }}
-        p {{ margin: {'10px 0' if is_mobile else '15px 0'}; }}
-        .text-center {{ text-align: center; }}
-        .mt-20 {{ margin-top: {'15px' if is_mobile else '20px'}; }}
-        .mt-40 {{ margin-top: {'30px' if is_mobile else '40px'}; }}
-        .contact-info {{
+        }
+        p { margin: 15px 0; }
+        .text-center { text-align: center; }
+        .mt-40 { margin-top: 40px; }
+        .contact-info {
             background: #ecfdf5;
-            padding: {'15px' if is_mobile else '20px'};
-            border-radius: {'8px' if is_mobile else '10px'};
-            margin: {'15px 0' if is_mobile else '20px 0'};
-        }}
-        .contact-info p {{ margin: {'5px 0' if is_mobile else '8px 0'}; }}
-        @media (max-width: 768px) {{
-            .button-container {{
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-            }}
-            .button {{
-                width: 100%;
-                text-align: center;
-            }}
-        }}
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .contact-info p { margin: 8px 0; }
     </style>
-    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 </head>
 <body>
     <div class="container">
@@ -271,13 +214,13 @@ def data_deletion_view(request):
             <p><strong>📍 Address:</strong> Kavresthali, Kathmandu, Nepal</p>
         </div>
 
-        <div class="text-center mt-40 {'button-container' if is_mobile else ''}">
+        <div class="text-center mt-40">
             <a href="/" class="button">🏠 Back to Home</a>
             <a href="/privacy-policy/" class="button">📄 Privacy Policy</a>
             <a href="/terms/" class="button">📜 Terms of Service</a>
         </div>
 
-        <div style="text-align: center; margin-top: 30px; color: #666; font-size: 0.9em;">
+        <div style="text-align: center; margin-top: 40px; color: #666; font-size: 0.9em;">
             <p>© 2025 Connect.io. All rights reserved.</p>
             <p>Last updated: December 2025</p>
         </div>
@@ -289,110 +232,88 @@ def data_deletion_view(request):
 
 @require_GET
 def privacy_policy_view(request):
-    """Privacy Policy page - MOBILE OPTIMIZED"""
-    is_mobile = getattr(request, 'is_mobile', False)
-
-    html_content = f"""<!DOCTYPE html>
+    """Privacy Policy page"""
+    html_content = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Privacy Policy for Connect.io messaging service">
     <title>Privacy Policy - Connect.io</title>
     <style>
-        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{ 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             line-height: 1.6; 
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             min-height: 100vh;
-            padding: {'15px' if is_mobile else '20px'};
+            padding: 20px;
             color: #333;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }}
-        .container {{
-            max-width: {'95%' if is_mobile else '800px'};
-            margin: {'20px auto' if is_mobile else '40px auto'};
+        }
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
             background: white;
-            padding: {'20px' if is_mobile else '40px'};
-            border-radius: {'10px' if is_mobile else '15px'};
-            box-shadow: 0 {'10px' if is_mobile else '20px'} 60px rgba(0,0,0,0.3);
-        }}
-        h1 {{ 
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 { 
             color: #dc2626;
             text-align: center;
-            border-bottom: 2px solid #dc2626;
-            padding-bottom: {'10px' if is_mobile else '15px'};
-            font-size: {'1.5em' if is_mobile else '2.2em'};
-            margin-bottom: {'20px' if is_mobile else '30px'};
-            font-weight: 700;
-        }}
-        h2 {{ 
+            border-bottom: 3px solid #dc2626;
+            padding-bottom: 15px;
+            font-size: 2.2em;
+            margin-bottom: 30px;
+        }
+        h2 { 
             color: #4b5563;
-            margin-top: {'20px' if is_mobile else '30px'};
-            margin-bottom: {'10px' if is_mobile else '15px'};
-            font-size: {'1.2em' if is_mobile else '1.5em'};
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 1.5em;
             border-bottom: 1px solid #e5e7eb;
-            padding-bottom: {'8px' if is_mobile else '10px'};
-            font-weight: 600;
-        }}
-        .update {{ 
+            padding-bottom: 10px;
+        }
+        .update { 
             background: #fef3c7;
             border: 2px solid #f59e0b;
-            padding: {'12px' if is_mobile else '15px'};
+            padding: 15px;
             border-radius: 8px;
-            margin: {'15px 0' if is_mobile else '20px 0'};
-        }}
-        .section {{
-            margin: {'15px 0' if is_mobile else '25px 0'};
-        }}
-        ul, ol {{
-            padding-left: {'20px' if is_mobile else '25px'};
-            margin: {'10px 0' if is_mobile else '15px 0'};
-        }}
-        li {{
-            margin: {'8px 0' if is_mobile else '10px 0'};
-        }}
-        .button {{
+            margin: 20px 0;
+        }
+        .section {
+            margin: 25px 0;
+        }
+        ul, ol {
+            padding-left: 25px;
+            margin: 15px 0;
+        }
+        li {
+            margin: 10px 0;
+        }
+        .button {
             display: inline-block;
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             color: white;
-            padding: {'10px 20px' if is_mobile else '12px 30px'};
+            padding: 12px 30px;
             text-decoration: none;
             border-radius: 50px;
-            font-weight: 600;
-            margin: {'5px' if is_mobile else '10px 5px'};
+            font-weight: bold;
+            margin: 10px 5px;
             transition: all 0.3s;
-            font-size: {'14px' if is_mobile else '16px'};
-            min-height: 44px;
-            min-width: 44px;
-        }}
-        .button:hover {{
+        }
+        .button:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }}
-        .text-center {{ text-align: center; }}
-        .mt-40 {{ margin-top: {'30px' if is_mobile else '40px'}; }}
-        .contact-info {{
+        }
+        .text-center { text-align: center; }
+        .mt-40 { margin-top: 40px; }
+        .contact-info {
             background: #ecfdf5;
-            padding: {'15px' if is_mobile else '20px'};
-            border-radius: {'8px' if is_mobile else '10px'};
-            margin: {'15px 0' if is_mobile else '20px 0'};
-        }}
-        @media (max-width: 768px) {{
-            .button-container {{
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-            }}
-            .button {{
-                width: 100%;
-                text-align: center;
-            }}
-        }}
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
     </style>
-    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 </head>
 <body>
     <div class="container">
@@ -486,13 +407,13 @@ def privacy_policy_view(request):
             </ul>
         </div>
 
-        <div class="text-center mt-40 {'button-container' if is_mobile else ''}">
+        <div class="text-center mt-40">
             <a href="/" class="button">🏠 Back to Home</a>
             <a href="/data-deletion/" class="button">🗑️ Data Deletion</a>
             <a href="/terms/" class="button">📜 Terms of Service</a>
         </div>
 
-        <div style="text-align: center; margin-top: 30px; color: #666; font-size: 0.9em;">
+        <div style="text-align: center; margin-top: 40px; color: #666; font-size: 0.9em;">
             <p>© 2025 Connect.io. All rights reserved.</p>
             <p>This policy may be updated periodically. Please check back for changes.</p>
         </div>
@@ -504,111 +425,89 @@ def privacy_policy_view(request):
 
 @require_GET
 def terms_view(request):
-    """Terms of Service page - MOBILE OPTIMIZED"""
-    is_mobile = getattr(request, 'is_mobile', False)
-
-    html_content = f"""<!DOCTYPE html>
+    """Terms of Service page"""
+    html_content = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Terms of Service for Connect.io messaging platform">
     <title>Terms of Service - Connect.io</title>
     <style>
-        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{ 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             line-height: 1.6; 
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             min-height: 100vh;
-            padding: {'15px' if is_mobile else '20px'};
+            padding: 20px;
             color: #333;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }}
-        .container {{
-            max-width: {'95%' if is_mobile else '800px'};
-            margin: {'20px auto' if is_mobile else '40px auto'};
+        }
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
             background: white;
-            padding: {'20px' if is_mobile else '40px'};
-            border-radius: {'10px' if is_mobile else '15px'};
-            box-shadow: 0 {'10px' if is_mobile else '20px'} 60px rgba(0,0,0,0.3);
-        }}
-        h1 {{ 
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 { 
             color: #0891b2;
             text-align: center;
-            border-bottom: 2px solid #0891b2;
-            padding-bottom: {'10px' if is_mobile else '15px'};
-            font-size: {'1.5em' if is_mobile else '2.2em'};
-            margin-bottom: {'20px' if is_mobile else '30px'};
-            font-weight: 700;
-        }}
-        h2 {{ 
+            border-bottom: 3px solid #0891b2;
+            padding-bottom: 15px;
+            font-size: 2.2em;
+            margin-bottom: 30px;
+        }
+        h2 { 
             color: #4b5563;
-            margin-top: {'20px' if is_mobile else '30px'};
-            margin-bottom: {'10px' if is_mobile else '15px'};
-            font-size: {'1.2em' if is_mobile else '1.5em'};
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 1.5em;
             border-bottom: 1px solid #e5e7eb;
-            padding-bottom: {'8px' if is_mobile else '10px'};
-            font-weight: 600;
-        }}
-        .acceptance {{
+            padding-bottom: 10px;
+        }
+        .acceptance {
             background: #dbeafe;
             border: 2px solid #3b82f6;
-            padding: {'12px' if is_mobile else '15px'};
+            padding: 15px;
             border-radius: 8px;
-            margin: {'15px 0' if is_mobile else '20px 0'};
-        }}
-        .section {{
-            margin: {'15px 0' if is_mobile else '25px 0'};
-        }}
-        ul, ol {{
-            padding-left: {'20px' if is_mobile else '25px'};
-            margin: {'10px 0' if is_mobile else '15px 0'};
-        }}
-        li {{
-            margin: {'8px 0' if is_mobile else '10px 0'};
-        }}
-        .button {{
+            margin: 20px 0;
+        }
+        .section {
+            margin: 25px 0;
+        }
+        ul, ol {
+            padding-left: 25px;
+            margin: 15px 0;
+        }
+        li {
+            margin: 10px 0;
+        }
+        .button {
             display: inline-block;
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             color: white;
-            padding: {'10px 20px' if is_mobile else '12px 30px'};
+            padding: 12px 30px;
             text-decoration: none;
             border-radius: 50px;
-            font-weight: 600;
-            margin: {'5px' if is_mobile else '10px 5px'};
+            font-weight: bold;
+            margin: 10px 5px;
             transition: all 0.3s;
-            font-size: {'14px' if is_mobile else '16px'};
-            min-height: 44px;
-            min-width: 44px;
-        }}
-        .button:hover {{
+        }
+        .button:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }}
-        .text-center {{ text-align: center; }}
-        .mt-40 {{ margin-top: {'30px' if is_mobile else '40px'}; }}
-        .prohibited {{
+        }
+        .text-center { text-align: center; }
+        .mt-40 { margin-top: 40px; }
+        .prohibited {
             background: #fee2e2;
             border: 2px solid #ef4444;
-            padding: {'15px' if is_mobile else '20px'};
+            padding: 20px;
             border-radius: 8px;
-            margin: {'15px 0' if is_mobile else '20px 0'};
-        }}
-        @media (max-width: 768px) {{
-            .button-container {{
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-            }}
-            .button {{
-                width: 100%;
-                text-align: center;
-            }}
-        }}
+            margin: 20px 0;
+        }
     </style>
-    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 </head>
 <body>
     <div class="container">
@@ -697,13 +596,13 @@ def terms_view(request):
             <p><strong>📍 Address:</strong> Kavresthali, Kathmandu, Nepal</p>
         </div>
 
-        <div class="text-center mt-40 {'button-container' if is_mobile else ''}">
+        <div class="text-center mt-40">
             <a href="/" class="button">🏠 Back to Home</a>
             <a href="/privacy-policy/" class="button">🔒 Privacy Policy</a>
             <a href="/data-deletion/" class="button">🗑️ Data Deletion</a>
         </div>
 
-        <div style="text-align: center; margin-top: 30px; color: #666; font-size: 0.9em;">
+        <div style="text-align: center; margin-top: 40px; color: #666; font-size: 0.9em;">
             <p>© 2025 Connect.io. All rights reserved.</p>
             <p>Last Updated: December 2025</p>
         </div>
@@ -713,51 +612,6 @@ def terms_view(request):
     return HttpResponse(html_content)
 
 
-# Error handlers
-def bad_request(request, exception=None):
-    """400 Bad Request handler"""
-    is_mobile = getattr(request, 'is_mobile', False)
-    context = {
-        'error_code': 400,
-        'error_message': 'Bad Request',
-        'error_description': 'The server could not understand your request.',
-        'is_mobile': is_mobile,
-    }
-    return render(request, 'errors/400.html', context, status=400)
-
-
-def permission_denied(request, exception=None):
-    """403 Permission Denied handler"""
-    is_mobile = getattr(request, 'is_mobile', False)
-    context = {
-        'error_code': 403,
-        'error_message': 'Permission Denied',
-        'error_description': 'You do not have permission to access this page.',
-        'is_mobile': is_mobile,
-    }
-    return render(request, 'errors/403.html', context, status=403)
-
-
-def page_not_found(request, exception=None):
-    """404 Page Not Found handler"""
-    is_mobile = getattr(request, 'is_mobile', False)
-    context = {
-        'error_code': 404,
-        'error_message': 'Page Not Found',
-        'error_description': 'The page you are looking for does not exist.',
-        'is_mobile': is_mobile,
-        'request_path': request.path,
-    }
-    return render(request, 'errors/404.html', context, status=404)
-
-
-def server_error(request):
-    """500 Server Error handler"""
-    is_mobile = getattr(request, 'is_mobile', False)
-    context = {
-        'error_code': 500,
-        'error_message': 'Server Error',
-        'error_description': 'Something went wrong on our end. Please try again later.',
-        'is_mobile': is_mobile,
-    }
-    return render(request, 'errors/500.html', context, status=500)
+def home_view(request):
+    """Home page view"""
+    return render(request, 'home.html', {})

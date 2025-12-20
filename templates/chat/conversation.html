@@ -10,14 +10,13 @@
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50 flex flex-col mobile-chat-container"
-     style="height: 100vh; max-height: -webkit-fill-available;">
+<div class="min-h-screen bg-gray-50 flex flex-col" style="height: calc(var(--vh, 1vh) * 100);">
     <!-- Chat Header -->
-    <div class="bg-white border-b border-gray-200 p-4 sticky top-0 z-30 md:relative mobile-chat-header">
+    <div class="bg-white border-b border-gray-200 p-4 sticky top-0 z-30 md:relative">
         <div class="flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <!-- Back Button (Mobile) -->
-                <a href="{% url 'chat_home' %}" class="md:hidden text-gray-600 mobile-back-btn">
+                <a href="{% url 'chat_home' %}" class="md:hidden text-gray-600">
                     <i class="fas fa-arrow-left text-lg"></i>
                 </a>
 
@@ -83,9 +82,9 @@
                             </button>
                         </form>
                         {% else %}
-                        <button type="button" onclick="blockUser()" class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 text-sm">
+                        <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 text-sm">
                             <i class="fas fa-user-slash mr-2"></i>Block User
-                        </button>
+                        </a>
                         {% endif %}
                     </div>
                 </div>
@@ -94,8 +93,9 @@
     </div>
 
     <!-- Messages Area -->
-    <div class="flex-1 overflow-y-auto p-4 bg-gray-50 custom-scrollbar mobile-messages-area"
-         id="messages-container">
+    <div class="flex-1 overflow-y-auto p-4 bg-gray-50 custom-scrollbar"
+         id="messages-container"
+         style="padding-bottom: 80px;">
         <div class="space-y-3" id="messages-list">
             {% for message in messages %}
             <div class="message-group flex {% if message.sender == request.user %}justify-end{% else %}justify-start{% endif %}"
@@ -123,7 +123,7 @@
                         {% elif message.message_type == 'image' %}
                         <div class="mb-2">
                             <img src="{{ message.file.url }}" alt="Shared image"
-                                 class="max-w-full h-auto rounded-lg cursor-pointer mobile-media"
+                                 class="max-w-full h-auto rounded-lg cursor-pointer"
                                  onclick="openMediaModal('{{ message.file.url }}', 'image')">
                         </div>
                         {% if message.content %}
@@ -131,7 +131,7 @@
                         {% endif %}
                         {% elif message.message_type == 'video' %}
                         <div class="mb-2">
-                            <video controls class="max-w-full h-auto rounded-lg cursor-pointer mobile-media"
+                            <video controls class="max-w-full h-auto rounded-lg cursor-pointer"
                                    onclick="openMediaModal('{{ message.file.url }}', 'video')">
                                 <source src="{{ message.file.url }}" type="video/mp4">
                                 Your browser does not support the video tag.
@@ -142,7 +142,7 @@
                         {% endif %}
                         {% elif message.message_type == 'audio' %}
                         <div class="mb-2">
-                            <audio controls class="w-full mobile-audio">
+                            <audio controls class="w-full">
                                 <source src="{{ message.file.url }}" type="audio/mpeg">
                                 Your browser does not support the audio element.
                             </audio>
@@ -242,7 +242,7 @@
                             <div id="reactions-{{ message.id }}" class="reaction-picker absolute bottom-full left-0 bg-white border border-gray-300 rounded-lg shadow-lg p-2 hidden grid grid-cols-3 gap-1 z-50">
                                 {% for emoji in '👍,❤️,😂,😮,😢,😡'|split:',' %}
                                 <button onclick="addReaction('{{ message.id }}', '{{ emoji }}')"
-                                        class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200 mobile-reaction-btn">
+                                        class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">
                                     {{ emoji }}
                                 </button>
                                 {% endfor %}
@@ -262,7 +262,7 @@
                             <div id="reactions-{{ message.id }}" class="reaction-picker absolute bottom-full left-0 bg-white border border-gray-300 rounded-lg shadow-lg p-2 hidden grid grid-cols-3 gap-1 z-50">
                                 {% for emoji in '👍,❤️,😂,😮,😢,😡'|split:',' %}
                                 <button onclick="addReaction('{{ message.id }}', '{{ emoji }}')"
-                                        class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200 mobile-reaction-btn">
+                                        class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">
                                     {{ emoji }}
                                 </button>
                                 {% endfor %}
@@ -309,7 +309,7 @@
     </div>
 
     <!-- Enhanced Mobile Message Input -->
-    <div class="bg-white border-t border-gray-200 p-3 mobile-input-container">
+    <div class="bg-white border-t border-gray-200 p-3 fixed bottom-0 left-0 right-0 md:relative">
         <form method="POST" class="flex items-end space-x-2" id="message-form"
               action="{% url 'conversation' conversation.id %}" enctype="multipart/form-data">
             {% csrf_token %}
@@ -317,19 +317,19 @@
             <!-- File Upload -->
             <div class="relative">
                 <input type="file" id="file-input" name="file"
-                       accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip" class="hidden mobile-file-input">
-                <button type="button" onclick="openFilePicker()"
-                        class="p-2 text-gray-600 hover:text-blue-600 rounded-full transition duration-200 mobile-attach-btn">
+                       accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip" class="hidden">
+                <button type="button" onclick="document.getElementById('file-input').click()"
+                        class="p-2 text-gray-600 hover:text-blue-600 rounded-full transition duration-200">
                     <i class="fas fa-paperclip text-lg"></i>
                 </button>
             </div>
 
             <!-- Enhanced Emoji Picker -->
             <div class="relative flex-1">
-                <div class="flex items-end space-x-2 mobile-input-row">
+                <div class="flex items-end space-x-2">
                     <!-- Emoji Button -->
                     <button type="button" onclick="toggleEmojiPicker()"
-                            class="p-2 text-gray-600 hover:text-yellow-500 rounded-full transition duration-200 flex-shrink-0 mobile-emoji-btn">
+                            class="p-2 text-gray-600 hover:text-yellow-500 rounded-full transition duration-200 flex-shrink-0">
                         <i class="fas fa-smile text-lg"></i>
                     </button>
 
@@ -339,7 +339,7 @@
                             id="message-input"
                             name="content"
                             placeholder="{% if is_group %}Type a message...{% else %}Type a message...{% endif %}"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none mobile-message-input"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                             rows="1"
                             style="max-height: 120px; min-height: 48px;"
                             oninput="autoResize(this)"></textarea>
@@ -347,7 +347,7 @@
 
                     <!-- Send Button -->
                     <button type="submit"
-                            class="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition duration-200 flex-shrink-0 mobile-send-btn">
+                            class="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition duration-200 flex-shrink-0">
                         <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
@@ -397,7 +397,7 @@
 <!-- Media Modal -->
 <div id="mediaModal" class="fixed inset-0 bg-black bg-opacity-90 hidden items-center justify-center z-50 p-4">
     <div class="relative max-w-4xl max-h-full w-full">
-        <button onclick="closeMediaModal()" class="absolute -top-12 right-0 text-white hover:text-gray-300 text-2xl z-10 mobile-modal-close">
+        <button onclick="closeMediaModal()" class="absolute -top-12 right-0 text-white hover:text-gray-300 text-2xl z-10">
             <i class="fas fa-times"></i>
         </button>
         <div id="media-content" class="bg-transparent rounded-lg overflow-hidden">
@@ -408,26 +408,24 @@
 
 <!-- Edit Message Modal -->
 <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-lg p-6 w-96 mobile-edit-modal">
+    <div class="bg-white rounded-lg p-6 w-96">
         <h3 class="text-lg font-semibold mb-4">Edit Message</h3>
-        <textarea id="editMessageContent" class="w-full border border-gray-300 rounded-md p-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 mobile-edit-textarea" rows="3"></textarea>
+        <textarea id="editMessageContent" class="w-full border border-gray-300 rounded-md p-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3"></textarea>
         <div class="flex justify-end space-x-3">
-            <button onclick="closeEditModal()" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-200 mobile-cancel-btn">
+            <button onclick="closeEditModal()" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-200">
                 Cancel
             </button>
-            <button onclick="saveEditedMessage()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200 mobile-save-btn">
+            <button onclick="saveEditedMessage()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200">
                 Save Changes
             </button>
         </div>
     </div>
 </div>
 
+<!-- Enhanced JavaScript for mobile and emoji support -->
 <script>
 // Enhanced mobile functionality
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize mobile chat
-    initMobileChat();
-
     // Mobile chat menu
     const chatMenuBtn = document.getElementById('chat-menu-btn');
     const chatMenu = document.getElementById('chat-menu');
@@ -447,13 +445,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Auto-resize textarea
     function autoResize(textarea) {
         textarea.style.height = 'auto';
-        const scrollHeight = textarea.scrollHeight;
-        textarea.style.height = Math.min(scrollHeight, 120) + 'px';
-
-        // Adjust container height on mobile
-        if (isMobile()) {
-            adjustInputContainerHeight();
-        }
+        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
     }
 
     // Enhanced mobile keyboard handling
@@ -463,26 +455,12 @@ document.addEventListener('DOMContentLoaded', function() {
             // Scroll to bottom when keyboard opens
             setTimeout(() => {
                 scrollToBottom();
-                // On mobile, scroll input into view
-                if (isMobile()) {
-                    this.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
             }, 300);
         });
 
         messageInput.addEventListener('input', function() {
             autoResize(this);
             startTyping();
-        });
-
-        // Handle enter key for mobile (send on mobile, new line on desktop)
-        messageInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                if (isMobile() && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessageMobile();
-                }
-            }
         });
     }
 
@@ -497,14 +475,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     emojiPicker.classList.add('hidden');
                 });
             }
-
-            // Close emoji picker when tapping outside
-            document.addEventListener('click', function(event) {
-                if (!event.target.closest('.emoji-picker-mobile') &&
-                    !event.target.closest('.mobile-emoji-btn')) {
-                    emojiPicker.classList.add('hidden');
-                }
-            });
         }
     }
 
@@ -517,34 +487,29 @@ document.addEventListener('DOMContentLoaded', function() {
         messageBubbles.forEach(bubble => {
             let touchStartTime = 0;
             let touchTimer = null;
-            let touchMoved = false;
 
             bubble.addEventListener('touchstart', function(e) {
                 touchStartTime = Date.now();
-                touchMoved = false;
                 touchTimer = setTimeout(() => {
                     // Long press - show reaction options
-                    if (!touchMoved) {
-                        showReactionOptions(e.touches[0].clientX, e.touches[0].clientY, bubble);
-                    }
+                    showReactionOptions(e.touches[0].clientX, e.touches[0].clientY, bubble);
                 }, 500);
-            });
-
-            bubble.addEventListener('touchmove', function(e) {
-                touchMoved = true;
-                clearTimeout(touchTimer);
             });
 
             bubble.addEventListener('touchend', function(e) {
                 clearTimeout(touchTimer);
 
                 // Quick tap - toggle message actions
-                if (!touchMoved && Date.now() - touchStartTime < 500) {
+                if (Date.now() - touchStartTime < 500) {
                     const actions = this.querySelector('.message-actions');
                     if (actions) {
                         actions.classList.toggle('hidden');
                     }
                 }
+            });
+
+            bubble.addEventListener('touchmove', function(e) {
+                clearTimeout(touchTimer);
             });
         });
     }
@@ -552,43 +517,27 @@ document.addEventListener('DOMContentLoaded', function() {
     function showReactionOptions(x, y, messageBubble) {
         const messageId = messageBubble.closest('.message-group').dataset.messageId;
 
-        // Remove existing reaction picker
-        const existingPicker = document.querySelector('.mobile-reaction-picker');
-        if (existingPicker) {
-            existingPicker.remove();
-        }
-
         // Create reaction picker at touch position
         const reactionPicker = document.createElement('div');
-        reactionPicker.className = 'mobile-reaction-picker fixed bg-white border border-gray-300 rounded-lg shadow-lg p-2 z-50';
-
-        // Position the picker
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-
-        let left = x - 60;
-        let top = y - 80;
-
-        // Ensure picker stays within viewport
-        if (left < 10) left = 10;
-        if (left > viewportWidth - 130) left = viewportWidth - 130;
-        if (top < 10) top = 10;
-        if (top > viewportHeight - 100) top = viewportHeight - 100;
-
-        reactionPicker.style.left = left + 'px';
-        reactionPicker.style.top = top + 'px';
+        reactionPicker.className = 'fixed bg-white border border-gray-300 rounded-lg shadow-lg p-2 z-50';
+        reactionPicker.style.left = (x - 60) + 'px';
+        reactionPicker.style.top = (y - 60) + 'px';
 
         const reactions = ['👍', '❤️', '😂', '😮', '😢', '😡'];
         reactionPicker.innerHTML = `
             <div class="grid grid-cols-3 gap-1">
                 ${reactions.map(emoji => `
-                    <button onclick="addReactionMobile('${messageId}', '${emoji}')"
-                            class="p-2 hover:bg-gray-100 rounded text-2xl transition duration-200 mobile-reaction-option">
+                    <button onclick="addReaction('${messageId}', '${emoji}'); this.closest('.reaction-picker').remove()"
+                            class="p-2 hover:bg-gray-100 rounded text-xl transition duration-200">
                         ${emoji}
                     </button>
                 `).join('')}
             </div>
         `;
+
+        reactionPicker.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
 
         document.body.appendChild(reactionPicker);
 
@@ -598,271 +547,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!reactionPicker.contains(e.target)) {
                     reactionPicker.remove();
                     document.removeEventListener('click', closePicker);
-                    document.removeEventListener('touchstart', closePicker);
                 }
             };
             document.addEventListener('click', closePicker);
-            document.addEventListener('touchstart', closePicker);
         }, 100);
     }
 
     // Initialize touch reactions
     setupTouchReactions();
-
-    // File input for mobile
-    function openFilePicker() {
-        const fileInput = document.getElementById('file-input');
-        if (fileInput) {
-            // For mobile, ensure click works
-            if (isMobile()) {
-                fileInput.style.display = 'block';
-                fileInput.click();
-                setTimeout(() => {
-                    fileInput.style.display = 'none';
-                }, 100);
-            } else {
-                fileInput.click();
-            }
-        }
-    }
-
-    // Handle file selection
-    document.getElementById('file-input').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            showFilePreview(file);
-            // Auto-scroll to show preview
-            setTimeout(() => {
-                document.getElementById('file-preview').scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'nearest'
-                });
-            }, 100);
-        }
-    });
-
-    // Submit form on mobile send
-    const messageForm = document.getElementById('message-form');
-    if (messageForm) {
-        messageForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            sendMessage();
-        });
-    }
 });
 
 // Enhanced mobile message sending
-function sendMessage() {
-    const messageForm = document.getElementById('message-form');
-    const messageInput = document.getElementById('message-input');
-    const fileInput = document.getElementById('file-input');
-
-    if (!messageForm) return;
-
-    const content = messageInput.value.trim();
-    const hasFile = fileInput.files.length > 0;
-
-    if (!content && !hasFile) {
-        // Show error message on mobile
-        if (isMobile()) {
-            showMobileToast('Please enter a message or select a file');
-        }
-        return;
-    }
-
-    // Get CSRF token
-    const csrfToken = getCSRFToken();
-    if (!csrfToken) {
-        console.error('CSRF token not found');
-        return;
-    }
-
-    // Create form data
-    const formData = new FormData();
-    formData.append('content', content);
-    if (hasFile) {
-        formData.append('file', fileInput.files[0]);
-    }
-    formData.append('csrfmiddlewaretoken', csrfToken);
-
-    // Show sending indicator on mobile
-    if (isMobile()) {
-        const sendBtn = document.querySelector('.mobile-send-btn');
-        if (sendBtn) {
-            const originalHTML = sendBtn.innerHTML;
-            sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            sendBtn.disabled = true;
-        }
-    }
-
-    // Send AJAX request
-    fetch(`/chat/${conversationId}/send-message/`, {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-        },
-        body: formData,
-        credentials: 'same-origin'
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            // Clear input
-            messageInput.value = '';
-            messageInput.style.height = 'auto';
-
-            // Clear file input and preview
-            clearFilePreview();
-            document.getElementById('file-input').value = '';
-
-            // Stop typing
-            stopTyping();
-
-            // Add message to UI
-            if (data.message_id) {
-                addMessageToUI(data, true);
-            }
-
-            // Show success on mobile
-            if (isMobile()) {
-                showMobileToast('Message sent', 'success');
-            }
-        } else {
-            throw new Error(data.error || 'Failed to send message');
-        }
-    })
-    .catch(error => {
-        console.error('Error sending message:', error);
-        if (isMobile()) {
-            showMobileToast('Failed to send message: ' + error.message, 'error');
-        }
-    })
-    .finally(() => {
-        // Reset send button
-        if (isMobile()) {
-            const sendBtn = document.querySelector('.mobile-send-btn');
-            if (sendBtn) {
-                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
-                sendBtn.disabled = false;
-            }
-        }
-    });
-}
-
 function sendMessageMobile() {
-    sendMessage();
-}
-
-// Mobile toast notification
-function showMobileToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `mobile-toast fixed bottom-20 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg shadow-lg z-50 ${
-        type === 'success' ? 'bg-green-500 text-white' :
-        type === 'error' ? 'bg-red-500 text-white' :
-        'bg-blue-500 text-white'
-    }`;
-    toast.textContent = message;
-    toast.style.maxWidth = '90%';
-
-    document.body.appendChild(toast);
-
-    // Auto remove after 3 seconds
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transition = 'opacity 0.3s';
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.parentNode.removeChild(toast);
-            }
-        }, 300);
-    }, 3000);
+    const messageForm = document.getElementById('message-form');
+    if (messageForm) {
+        messageForm.dispatchEvent(new Event('submit', { bubbles: true }));
+    }
 }
 
 // Enhanced scroll to bottom for mobile
 function scrollToBottom() {
     const messagesContainer = document.getElementById('messages-container');
     if (messagesContainer) {
-        // Small delay to ensure content is loaded
-        setTimeout(() => {
-            messagesContainer.scrollTo({
-                top: messagesContainer.scrollHeight,
-                behavior: 'smooth'
-            });
-        }, 100);
-    }
-}
-
-// Adjust input container height on mobile
-function adjustInputContainerHeight() {
-    const inputContainer = document.querySelector('.mobile-input-container');
-    const messageInput = document.getElementById('message-input');
-
-    if (isMobile() && inputContainer && messageInput) {
-        const inputHeight = messageInput.scrollHeight;
-        const minHeight = 48;
-        const maxHeight = 120;
-        const height = Math.min(Math.max(inputHeight, minHeight), maxHeight);
-
-        inputContainer.style.minHeight = (height + 24) + 'px'; // Add padding
-    }
-}
-
-// Add reaction from mobile
-function addReactionMobile(messageId, emoji) {
-    addReaction(messageId, emoji);
-
-    // Remove mobile reaction picker
-    const picker = document.querySelector('.mobile-reaction-picker');
-    if (picker) {
-        picker.remove();
-    }
-}
-
-// Initialize mobile chat
-function initMobileChat() {
-    // Set viewport height
-    function setVH() {
-        let vh = window.innerHeight * 0.01;
-        document.documentElement.style.setProperty('--vh', `${vh}px`);
-
-        // Adjust chat container height
-        const chatContainer = document.querySelector('.mobile-chat-container');
-        if (chatContainer) {
-            chatContainer.style.height = 'calc(var(--vh, 1vh) * 100)';
-        }
-    }
-
-    setVH();
-    window.addEventListener('resize', setVH);
-    window.addEventListener('orientationchange', function() {
-        setTimeout(setVH, 100);
-    });
-
-    // Prevent zoom on input focus
-    const inputs = document.querySelectorAll('input, textarea');
-    inputs.forEach(input => {
-        input.addEventListener('focus', function() {
-            if (isMobile()) {
-                this.style.fontSize = '16px'; // Prevent iOS zoom
-            }
-        });
-    });
-
-    // Handle keyboard show/hide
-    if (isMobile()) {
-        let originalViewport = document.querySelector('meta[name="viewport"]').content;
-
-        window.addEventListener('focusin', function() {
-            document.querySelector('meta[name="viewport"]').content = originalViewport + ', height=' + window.innerHeight;
-        });
-
-        window.addEventListener('focusout', function() {
-            document.querySelector('meta[name="viewport"]').content = originalViewport;
+        messagesContainer.scrollTo({
+            top: messagesContainer.scrollHeight,
+            behavior: 'smooth'
         });
     }
 }
@@ -872,23 +581,16 @@ let currentEmojiCategory = 'smileys_people';
 
 function toggleEmojiPicker() {
     const emojiPicker = document.getElementById('emoji-picker');
-    const isHidden = emojiPicker.classList.contains('hidden');
+    emojiPicker.classList.toggle('hidden');
 
-    if (isHidden) {
-        emojiPicker.classList.remove('hidden');
+    if (!emojiPicker.classList.contains('hidden')) {
         loadEmojiCategories();
         loadEmojisByCategory('smileys_people');
-
-        // On mobile, adjust position
-        if (isMobile()) {
-            emojiPicker.style.bottom = '60px';
-        }
-    } else {
-        emojiPicker.classList.add('hidden');
     }
 }
 
 function loadEmojiCategories() {
+    // Emoji categories data
     const categories = {
         'smileys_people': '😀',
         'animals_nature': '🐶',
@@ -905,7 +607,7 @@ function loadEmojiCategories() {
     for (const category in categories) {
         html += `
             <button onclick="loadEmojisByCategory('${category}')"
-                    class="flex-shrink-0 px-3 py-2 text-lg hover:bg-gray-100 ${currentEmojiCategory === category ? 'bg-blue-50 border-b-2 border-blue-500' : ''} mobile-category-btn">
+                    class="flex-shrink-0 px-3 py-2 text-lg hover:bg-gray-100 ${currentEmojiCategory === category ? 'bg-blue-50 border-b-2 border-blue-500' : ''}">
                 ${categories[category]}
             </button>
         `;
@@ -916,8 +618,9 @@ function loadEmojiCategories() {
 
 function loadEmojisByCategory(category) {
     currentEmojiCategory = category;
-    loadEmojiCategories();
+    loadEmojiCategories(); // Update active category
 
+    // Complete emoji data for all categories
     const emojiData = {
         'smileys_people': [
             '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚',
@@ -992,13 +695,11 @@ function loadEmojisByCategory(category) {
     const emojiGrid = document.getElementById('emoji-grid');
     const emojis = emojiData[category] || [];
 
-    // Adjust columns for mobile
-    const cols = isMobile() ? 6 : 8;
-    let html = `<div class="grid grid-cols-${cols} gap-${isMobile() ? '1' : '2'}">`;
+    let html = '<div class="grid grid-cols-8 gap-2">';
     emojis.forEach(emojiChar => {
         html += `
             <button onclick="insertEmoji('${emojiChar}')"
-                    class="text-xl p-${isMobile() ? '1' : '2'} hover:bg-gray-100 rounded-lg transition duration-200 mobile-emoji-option">
+                    class="text-xl p-2 hover:bg-gray-100 rounded-lg transition duration-200">
                 ${emojiChar}
             </button>
         `;
@@ -1010,40 +711,32 @@ function loadEmojisByCategory(category) {
 
 function insertEmoji(emojiChar) {
     const messageInput = document.getElementById('message-input');
-    if (!messageInput) return;
-
-    const cursorPosition = messageInput.selectionStart;
     const currentValue = messageInput.value;
+    const cursorPosition = messageInput.selectionStart;
 
     messageInput.value = currentValue.substring(0, cursorPosition) + emojiChar + currentValue.substring(cursorPosition);
     messageInput.focus();
+    messageInput.selectionStart = cursorPosition + emojiChar.length;
+    messageInput.selectionEnd = cursorPosition + emojiChar.length;
 
-    // Move cursor after inserted emoji
-    setTimeout(() => {
-        messageInput.selectionStart = cursorPosition + emojiChar.length;
-        messageInput.selectionEnd = cursorPosition + emojiChar.length;
-    }, 10);
+    // Close emoji picker
+    document.getElementById('emoji-picker').classList.add('hidden');
 
-    // Trigger input event for typing indicator and auto-resize
+    // Trigger input event for typing indicator
     messageInput.dispatchEvent(new Event('input'));
-
-    // Close emoji picker on mobile
-    if (isMobile()) {
-        document.getElementById('emoji-picker').classList.add('hidden');
-    }
 }
 
 // Close emoji picker when clicking outside
 document.addEventListener('click', function(event) {
     const emojiPicker = document.getElementById('emoji-picker');
-    const emojiButton = event.target.closest('button[onclick*="toggleEmojiPicker"], .mobile-emoji-btn');
+    const emojiButton = event.target.closest('button[onclick*="toggleEmojiPicker"]');
 
     if (emojiPicker && !emojiPicker.contains(event.target) && !emojiButton) {
         emojiPicker.classList.add('hidden');
     }
 });
 
-// Search emojis
+// Search emojis on input
 document.getElementById('emoji-search').addEventListener('input', function() {
     const query = this.value.toLowerCase();
     if (query.length === 0) {
@@ -1055,14 +748,11 @@ document.getElementById('emoji-search').addEventListener('input', function() {
     const allEmojis = Object.values({
         'smileys_people': ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇'],
         'animals_nature': ['🐵', '🐒', '🦍', '🦧', '🐶', '🐕', '🦮', '🐕‍🦺', '🐩', '🐺'],
-        'food_drink': ['🍇', '🍈', '🍉', '🍊', '🍋', '🍌', '🍍', '🥭', '🍎', '🍏'],
-        'activities': ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱'],
-        'travel_places': ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐'],
-        'objects': ['⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '🕹️'],
-        'symbols': ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔']
+        // Add more emojis for search...
     }).flat();
 
     const results = allEmojis.filter(emoji => {
+        // Simple search - you can enhance this with proper emoji descriptions
         return emoji.includes(query) || query.length === 0;
     }).slice(0, 48);
 
@@ -1073,12 +763,11 @@ document.getElementById('emoji-search').addEventListener('input', function() {
         return;
     }
 
-    const cols = isMobile() ? 6 : 8;
-    let html = `<div class="grid grid-cols-${cols} gap-${isMobile() ? '1' : '2'}">`;
+    let html = '<div class="grid grid-cols-8 gap-2">';
     results.forEach(emojiChar => {
         html += `
             <button onclick="insertEmoji('${emojiChar}')"
-                    class="text-xl p-${isMobile() ? '1' : '2'} hover:bg-gray-100 rounded-lg transition duration-200">
+                    class="text-xl p-2 hover:bg-gray-100 rounded-lg transition duration-200">
                 ${emojiChar}
             </button>
         `;
@@ -1094,10 +783,10 @@ function openMediaModal(url, type) {
     const content = document.getElementById('media-content');
 
     if (type === 'image') {
-        content.innerHTML = `<img src="${url}" alt="Shared image" class="w-full h-auto max-h-screen object-contain mobile-full-image">`;
+        content.innerHTML = `<img src="${url}" alt="Shared image" class="w-full h-auto max-h-screen object-contain">`;
     } else if (type === 'video') {
         content.innerHTML = `
-            <video controls autoplay class="w-full h-auto max-h-screen mobile-full-video">
+            <video controls autoplay class="w-full h-auto max-h-screen">
                 <source src="${url}" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
@@ -1106,11 +795,6 @@ function openMediaModal(url, type) {
 
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
-
-    // Prevent scrolling on mobile
-    if (isMobile()) {
-        document.querySelector('html').style.overflow = 'hidden';
-    }
 }
 
 function closeMediaModal() {
@@ -1121,17 +805,10 @@ function closeMediaModal() {
     const video = content.querySelector('video');
     if (video) {
         video.pause();
-        video.currentTime = 0;
     }
 
     modal.classList.add('hidden');
     document.body.style.overflow = 'auto';
-
-    // Restore scrolling on mobile
-    if (isMobile()) {
-        document.querySelector('html').style.overflow = 'auto';
-    }
-
     content.innerHTML = '';
 }
 
@@ -1145,15 +822,7 @@ document.getElementById('mediaModal').addEventListener('click', function(e) {
 // Close modal with Escape key
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
-        const mediaModal = document.getElementById('mediaModal');
-        if (!mediaModal.classList.contains('hidden')) {
-            closeMediaModal();
-        }
-
-        const editModal = document.getElementById('editModal');
-        if (!editModal.classList.contains('hidden')) {
-            closeEditModal();
-        }
+        closeMediaModal();
     }
 });
 
@@ -1167,11 +836,6 @@ function editMessage(messageId) {
     document.getElementById('editMessageContent').value = contentElement.textContent;
     document.getElementById('editModal').classList.remove('hidden');
     currentEditingMessageId = messageId;
-
-    // Focus on textarea
-    setTimeout(() => {
-        document.getElementById('editMessageContent').focus();
-    }, 100);
 }
 
 function closeEditModal() {
@@ -1185,22 +849,12 @@ function saveEditedMessage() {
     const newContent = document.getElementById('editMessageContent').value.trim();
     if (!newContent) return;
 
-    // Show loading on mobile
-    if (isMobile()) {
-        const saveBtn = document.querySelector('.mobile-save-btn');
-        if (saveBtn) {
-            const originalHTML = saveBtn.innerHTML;
-            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            saveBtn.disabled = true;
-        }
-    }
-
     fetch(`/chat/message/${currentEditingMessageId}/edit/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': getCSRFToken()
+            'X-CSRFToken': getCookie('csrftoken')
         },
         body: JSON.stringify({ content: newContent })
     })
@@ -1221,31 +875,13 @@ function saveEditedMessage() {
             }
 
             closeEditModal();
-
-            if (isMobile()) {
-                showMobileToast('Message edited', 'success');
-            }
         } else {
-            throw new Error(data.error || 'Failed to edit message');
+            alert('Error: ' + data.error);
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        if (isMobile()) {
-            showMobileToast('Error editing message', 'error');
-        } else {
-            alert('Error: ' + error.message);
-        }
-    })
-    .finally(() => {
-        // Reset button
-        if (isMobile()) {
-            const saveBtn = document.querySelector('.mobile-save-btn');
-            if (saveBtn) {
-                saveBtn.innerHTML = 'Save Changes';
-                saveBtn.disabled = false;
-            }
-        }
+        alert('Error editing message');
     });
 }
 
@@ -1259,7 +895,7 @@ function unsendMessage(messageId) {
         headers: {
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': getCSRFToken()
+            'X-CSRFToken': getCookie('csrftoken')
         }
     })
     .then(response => response.json())
@@ -1267,9 +903,7 @@ function unsendMessage(messageId) {
         if (data.success) {
             const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
             const contentElement = messageElement.querySelector('.message-content');
-            if (contentElement) {
-                contentElement.innerHTML = '<p class="text-sm italic opacity-70">This message was unsent</p>';
-            }
+            contentElement.innerHTML = '<p class="text-sm italic opacity-70">This message was unsent</p>';
 
             // Hide message actions
             const actionsElement = messageElement.querySelector('.message-actions');
@@ -1282,28 +916,18 @@ function unsendMessage(messageId) {
             if (reactionsElement) {
                 reactionsElement.innerHTML = '';
             }
-
-            if (isMobile()) {
-                showMobileToast('Message unsent', 'success');
-            }
         } else {
-            throw new Error(data.error || 'Failed to unsend message');
+            alert('Error: ' + data.error);
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        if (isMobile()) {
-            showMobileToast('Error unsending message', 'error');
-        } else {
-            alert('Error: ' + error.message);
-        }
+        alert('Error unsending message');
     });
 }
 
 function toggleReactions(messageId) {
     const reactionsPicker = document.getElementById(`reactions-${messageId}`);
-    if (!reactionsPicker) return;
-
     reactionsPicker.classList.toggle('hidden');
 
     // Close other reaction pickers
@@ -1320,7 +944,7 @@ function addReaction(messageId, emoji) {
         headers: {
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': getCSRFToken()
+            'X-CSRFToken': getCookie('csrftoken')
         },
         body: JSON.stringify({ reaction: emoji })
     })
@@ -1330,14 +954,12 @@ function addReaction(messageId, emoji) {
             updateReactionsDisplay(messageId, data.reactions);
             toggleReactions(messageId); // Close picker
         } else {
-            throw new Error(data.error || 'Failed to add reaction');
+            alert('Error: ' + data.error);
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        if (isMobile()) {
-            showMobileToast('Error adding reaction', 'error');
-        }
+        alert('Error adding reaction');
     });
 }
 
@@ -1355,7 +977,7 @@ function updateReactionsDisplay(messageId, reactions) {
 
     let html = '';
     for (const [emoji, count] of Object.entries(reactions)) {
-        html += `<span class="text-xs ${isOwn ? 'bg-white bg-opacity-20' : 'bg-gray-100'} rounded-full px-1 mobile-reaction-badge">${emoji} ${count}</span>`;
+        html += `<span class="text-xs ${isOwn ? 'bg-white bg-opacity-20' : 'bg-gray-100'} rounded-full px-1">${emoji} ${count}</span>`;
     }
 
     reactionsContainer.innerHTML = html;
@@ -1371,6 +993,13 @@ document.addEventListener('click', function(event) {
 });
 
 // File upload functionality
+document.getElementById('file-input').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        showFilePreview(file);
+    }
+});
+
 function showFilePreview(file) {
     const filePreview = document.getElementById('file-preview');
     const fileName = document.getElementById('file-name');
@@ -1412,8 +1041,7 @@ function checkForUpdates() {
                     }
                 });
             }
-        })
-        .catch(error => console.error('Error checking for updates:', error));
+        });
 
     // Check typing status
     fetch(`/chat/${conversationId}/typing-status/`)
@@ -1424,13 +1052,35 @@ function checkForUpdates() {
             } else {
                 hideTypingIndicator();
             }
-        })
-        .catch(error => console.error('Error checking typing status:', error));
+        });
+
+    // Update message status and reactions
+    fetch(`/chat/${conversationId}/get-messages/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.messages) {
+                data.messages.forEach(message => {
+                    const existingMessage = document.querySelector(`[data-message-id="${message.id}"]`);
+                    if (existingMessage) {
+                        // Update reactions
+                        updateReactionsDisplay(message.id, message.reactions);
+
+                        // Update read status
+                        if (message.is_own && message.is_read) {
+                            const checkIcon = existingMessage.querySelector('.fa-check');
+                            if (checkIcon) {
+                                checkIcon.className = 'fas fa-check-double text-xs opacity-70 text-blue-100';
+                            }
+                        }
+                    }
+                });
+            }
+        });
 }
 
 function addReceivedMessage(message) {
     const messageDiv = document.createElement('div');
-    messageDiv.className = 'message-group flex justify-start message-fade-in';
+    messageDiv.className = 'message-group flex justify-start';
     messageDiv.id = `message-${message.id}`;
     messageDiv.setAttribute('data-message-id', message.id);
 
@@ -1442,34 +1092,6 @@ function addReceivedMessage(message) {
     const emptyState = document.getElementById('empty-state');
     if (emptyState) {
         emptyState.remove();
-    }
-
-    // Play notification sound on mobile if not focused
-    if (isMobile() && document.visibilityState !== 'visible') {
-        playNotificationSound();
-    }
-}
-
-function playNotificationSound() {
-    // Simple notification sound using Web Audio API
-    try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-
-        oscillator.frequency.value = 800;
-        oscillator.type = 'sine';
-
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.1);
-    } catch (e) {
-        console.log('Audio not supported');
     }
 }
 
@@ -1502,7 +1124,7 @@ function createMessageHTML(message, isOwn) {
             messageHTML += `
                 <div class="mb-2">
                     <img src="${message.file_url}" alt="Shared image"
-                         class="max-w-full h-auto rounded-lg cursor-pointer mobile-media"
+                         class="max-w-full h-auto rounded-lg cursor-pointer"
                          onclick="openMediaModal('${message.file_url}', 'image')">
                 </div>
             `;
@@ -1512,7 +1134,7 @@ function createMessageHTML(message, isOwn) {
         } else if (message.message_type === 'video') {
             messageHTML += `
                 <div class="mb-2">
-                    <video controls class="max-w-full h-auto rounded-lg cursor-pointer mobile-media"
+                    <video controls class="max-w-full h-auto rounded-lg cursor-pointer"
                            onclick="openMediaModal('${message.file_url}', 'video')">
                         <source src="${message.file_url}" type="video/mp4">
                         Your browser does not support the video tag.
@@ -1525,7 +1147,7 @@ function createMessageHTML(message, isOwn) {
         } else if (message.message_type === 'audio') {
             messageHTML += `
                 <div class="mb-2">
-                    <audio controls class="w-full mobile-audio">
+                    <audio controls class="w-full">
                         <source src="${message.file_url}" type="audio/mpeg">
                         Your browser does not support the audio element.
                     </audio>
@@ -1575,11 +1197,7 @@ function createMessageHTML(message, isOwn) {
     }
 
     if (isOwn && !isUnsent) {
-        if (message.is_read) {
-            messageHTML += `<i class="fas fa-check-double text-xs opacity-70 ${isOwn ? 'text-blue-100' : 'text-gray-500'}"></i>`;
-        } else {
-            messageHTML += `<i class="fas fa-check text-xs opacity-70 ${isOwn ? 'text-blue-100' : 'text-gray-500'}"></i>`;
-        }
+        messageHTML += `<i class="fas fa-check text-xs opacity-70 ${isOwn ? 'text-blue-100' : 'text-gray-500'}"></i>`;
     }
 
     messageHTML += `</div>`;
@@ -1588,7 +1206,7 @@ function createMessageHTML(message, isOwn) {
     if (!isUnsent && message.reactions && Object.keys(message.reactions).length > 0) {
         messageHTML += `<div class="message-reactions flex space-x-1">`;
         for (const [emoji, count] of Object.entries(message.reactions)) {
-            messageHTML += `<span class="text-xs ${isOwn ? 'bg-white bg-opacity-20' : 'bg-gray-100'} rounded-full px-1 mobile-reaction-badge">${emoji} ${count}</span>`;
+            messageHTML += `<span class="text-xs ${isOwn ? 'bg-white bg-opacity-20' : 'bg-gray-100'} rounded-full px-1">${emoji} ${count}</span>`;
         }
         messageHTML += `</div>`;
     }
@@ -1646,7 +1264,7 @@ function createMessageHTML(message, isOwn) {
 function createReactionButtons(messageId) {
     const emojis = ['👍', '❤️', '😂', '😮', '😢', '😡'];
     return emojis.map(emoji =>
-        `<button onclick="addReaction('${messageId}', '${emoji}')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200 mobile-reaction-btn">${emoji}</button>`
+        `<button onclick="addReaction('${messageId}', '${emoji}')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">${emoji}</button>`
     ).join('');
 }
 
@@ -1675,12 +1293,12 @@ function startTyping() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
+            'X-CSRFToken': getCookie('csrftoken')
         },
         body: JSON.stringify({
             is_typing: true
         })
-    }).catch(error => console.error('Error sending typing indicator:', error));
+    });
 
     // Set new timer to stop typing
     typingTimer = setTimeout(stopTyping, TYPING_TIMEOUT);
@@ -1691,43 +1309,32 @@ function stopTyping() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
+            'X-CSRFToken': getCookie('csrftoken')
         },
         body: JSON.stringify({
             is_typing: false
         })
-    }).catch(error => console.error('Error stopping typing indicator:', error));
+    });
 }
 
-function addMessageToUI(messageData, isOwn) {
-    const messagesList = document.getElementById('messages-list');
-    if (!messagesList) return;
-
-    // Create message element
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message-group flex ${isOwn ? 'justify-end' : 'justify-start'} message-fade-in`;
-    messageDiv.setAttribute('data-message-id', messageData.message_id);
-
-    messageDiv.innerHTML = createMessageHTML(messageData, isOwn);
-    messagesList.appendChild(messageDiv);
-
-    // Remove empty state
-    const emptyState = document.getElementById('empty-state');
-    if (emptyState) {
-        emptyState.remove();
-    }
-
-    // Scroll to bottom
-    scrollToBottom();
+function updateOnlineStatus(online) {
+    fetch('/chat/update-online-status/', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: new URLSearchParams({
+            'online': online.toString()
+        })
+    });
 }
 
 // Set up periodic updates
 setInterval(checkForUpdates, 2000);
 
 // Update online status when page loads and when user becomes active
-setTimeout(() => {
-    updateOnlineStatus(true);
-}, 1000);
+updateOnlineStatus(true);
 
 window.addEventListener('focus', function() {
     updateOnlineStatus(true);
@@ -1737,38 +1344,72 @@ window.addEventListener('blur', function() {
     updateOnlineStatus(false);
 });
 
-// Block user function
-function blockUser() {
-    const userId = '{{ other_user.id }}';
-    if (!userId) return;
+// Message form submission
+document.getElementById('message-form').addEventListener('submit', function(e) {
+    e.preventDefault();
 
-    if (confirm('Are you sure you want to block this user?')) {
-        fetch(`/chat/block/${userId}/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                window.location.href = '{% url "chat_home" %}';
-            } else {
-                alert(data.error);
-            }
-        })
-        .catch(error => {
-            console.error('Error blocking user:', error);
-            alert('Error blocking user');
-        });
+    const content = document.getElementById('message-input').value.trim();
+    const fileInput = document.getElementById('file-input');
+    const file = fileInput.files[0];
+
+    if (!content && !file) return;
+
+    const formData = new FormData();
+    formData.append('content', content);
+    if (file) {
+        formData.append('file', file);
     }
+
+    // Send message via AJAX
+    fetch(`/chat/${conversationId}/send-message/`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('message-input').value = '';
+            clearFilePreview();
+            autoResize(document.getElementById('message-input'));
+
+            // Remove empty state
+            const emptyState = document.getElementById('empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            // Stop typing indicator
+            stopTyping();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => console.error('Error sending message:', error));
+});
+
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 
-// Mobile detection
+// Enhanced mobile detection
 function isMobile() {
-    return window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    return window.innerWidth <= 768;
 }
 
 // Initialize on load
@@ -1782,55 +1423,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <style>
 /* Mobile-specific styles */
 @media (max-width: 768px) {
-    .mobile-chat-container {
-        height: 100vh !important;
-        max-height: -webkit-fill-available !important;
-    }
-
-    .mobile-chat-header {
-        padding: 12px 16px;
-    }
-
-    .mobile-back-btn {
-        font-size: 18px;
-    }
-
-    .mobile-messages-area {
-        padding: 12px;
-        padding-bottom: 80px;
-    }
-
     .message-bubble {
         max-width: 85% !important;
-    }
-
-    .mobile-input-container {
-        padding: 12px;
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: white;
-        border-top: 1px solid #e5e7eb;
-    }
-
-    .mobile-input-row {
-        flex-wrap: nowrap;
-    }
-
-    .mobile-message-input {
-        min-height: 44px;
-        font-size: 16px; /* Prevent iOS zoom */
-    }
-
-    .mobile-send-btn {
-        min-width: 44px;
-        min-height: 44px;
-    }
-
-    .mobile-emoji-btn, .mobile-attach-btn {
-        min-width: 44px;
-        min-height: 44px;
     }
 
     #emoji-picker {
@@ -1839,77 +1433,14 @@ document.addEventListener('DOMContentLoaded', function() {
         left: 10px !important;
         right: 10px !important;
         width: auto !important;
-        max-height: 50vh;
     }
 
     .emoji-grid {
         grid-template-columns: repeat(6, 1fr) !important;
-        gap: 4px !important;
     }
 
-    .mobile-emoji-option {
-        padding: 8px !important;
-        font-size: 24px !important;
-    }
-
-    .mobile-category-btn {
-        padding: 8px 12px !important;
-    }
-
-    .mobile-media {
-        max-width: 100% !important;
-        border-radius: 12px !important;
-    }
-
-    .mobile-audio {
-        width: 100% !important;
-    }
-
-    .mobile-edit-modal {
-        width: 90% !important;
-        max-width: 400px !important;
-        margin: 20px !important;
-    }
-
-    .mobile-edit-textarea {
-        font-size: 16px !important;
-        min-height: 100px !important;
-    }
-
-    .mobile-cancel-btn, .mobile-save-btn {
-        min-height: 44px !important;
-        padding: 12px 24px !important;
-    }
-
-    .mobile-modal-close {
-        top: 10px !important;
-        right: 10px !important;
-        font-size: 24px !important;
-    }
-
-    .mobile-full-image, .mobile-full-video {
-        max-height: 80vh !important;
-        object-fit: contain !important;
-    }
-
-    .mobile-reaction-btn {
-        min-width: 44px;
-        min-height: 44px;
-    }
-
-    .mobile-reaction-badge {
-        padding: 2px 6px !important;
-        font-size: 11px !important;
-    }
-
-    .mobile-reaction-option {
-        font-size: 28px !important;
-        padding: 12px !important;
-    }
-
-    .mobile-file-input {
-        position: fixed;
-        top: -1000px;
+    #messages-container {
+        padding-bottom: 100px;
     }
 }
 
@@ -1917,16 +1448,6 @@ document.addEventListener('DOMContentLoaded', function() {
 .emoji-message {
     font-size: 2.5rem !important;
     line-height: 1.2;
-}
-
-/* Message animations */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.message-fade-in {
-    animation: fadeIn 0.3s ease-out;
 }
 
 /* Better touch targets */
@@ -1939,65 +1460,6 @@ a {
 /* Smooth transitions */
 * {
     -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-}
-
-/* Prevent text selection on mobile */
-@media (max-width: 768px) {
-    * {
-        -webkit-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-        user-select: none;
-    }
-
-    input, textarea {
-        -webkit-user-select: text;
-        -moz-user-select: text;
-        -ms-user-select: text;
-        user-select: text;
-    }
-}
-
-/* Mobile toast */
-.mobile-toast {
-    animation: slideUp 0.3s ease;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-@keyframes slideUp {
-    from {
-        transform: translate(-50%, 100%);
-        opacity: 0;
-    }
-    to {
-        transform: translate(-50%, 0);
-        opacity: 1;
-    }
-}
-
-/* Typing indicator animation */
-.typing-dot {
-    animation: typingBounce 1.4s infinite ease-in-out;
-}
-
-.typing-dot:nth-child(1) {
-    animation-delay: -0.32s;
-}
-
-.typing-dot:nth-child(2) {
-    animation-delay: -0.16s;
-}
-
-@keyframes typingBounce {
-    0%, 80%, 100% {
-        transform: scale(0);
-    }
-    40% {
-        transform: scale(1);
-    }
 }
 </style>
 {% endblock %}
