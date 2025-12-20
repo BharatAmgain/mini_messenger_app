@@ -1,4 +1,4 @@
-# messenger/settings.py - COMPLETE FIXED VERSION
+# messenger/settings.py - COMPLETE WITH SENDGRID FIX
 import os
 import sys
 from pathlib import Path
@@ -207,22 +207,39 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'chat_home'
 LOGOUT_REDIRECT_URL = 'login'
 
-# ========== FIXED EMAIL CONFIGURATION ==========
-# Read email configuration from environment
+# ========== SENDGRID EMAIL CONFIGURATION ==========
 EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
-EMAIL_HOST = config('EMAIL_HOST', default='localhost')
-EMAIL_PORT = config('EMAIL_PORT', default=25, cast=int)
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=False, cast=bool)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST = config('EMAIL_HOST', default='smtp.sendgrid.net')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='apikey')  # LITERAL 'apikey'
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@connect.io')
 EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=30, cast=int)
 EMAIL_SUBJECT_PREFIX = config('EMAIL_SUBJECT_PREFIX', default='[Connect.io] ')
 
-print(f"\n📧 Email Configuration:")
+print(f"\n📧 EMAIL CONFIGURATION:")
 print(f"   Backend: {EMAIL_BACKEND}")
 print(f"   Host: {EMAIL_HOST}")
-print(f"   User: {'✅ Set' if EMAIL_HOST_USER else '❌ Not set'}")
+print(f"   User: {EMAIL_HOST_USER}")
+
+# Check SendGrid configuration
+if 'sendgrid' in EMAIL_HOST:
+    if EMAIL_HOST_PASSWORD and EMAIL_HOST_PASSWORD.startswith('SG.'):
+        print("✅ SendGrid API Key configured")
+        print(f"   Password: {'*' * 20}...{EMAIL_HOST_PASSWORD[-4:]}")
+    else:
+        print("❌ SENDGRID ERROR: Invalid API Key!")
+        print("💡 Your API key should start with 'SG.'")
+        if not EMAIL_HOST_PASSWORD:
+            print("💡 EMAIL_HOST_PASSWORD is empty!")
+        elif EMAIL_HOST_USER != 'apikey':
+            print("💡 EMAIL_HOST_USER must be 'apikey' (literal)")
+elif DEBUG and 'console' in EMAIL_BACKEND:
+    print("✅ Development: Using console backend")
+    print("   Emails will print to terminal")
+else:
+    print("⚠️  Unknown email configuration")
 
 # Site Information
 SITE_NAME = config('SITE_NAME', default='Connect.io')
@@ -561,31 +578,25 @@ if 'RENDER' in os.environ:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SOCIAL_AUTH_REDIRECT_IS_HTTPS = True
 
-    # CRITICAL FIX: Check email configuration for Render
-    print("\n📧 Checking email configuration for Render...")
+    # CRITICAL: Check SendGrid configuration for Render
+    print("\n📧 Checking SendGrid configuration for Render...")
 
-    # If using console backend on Render, force SMTP
-    if 'console' in EMAIL_BACKEND:
-        print("⚠️  WARNING: Console email backend detected on Render!")
-        print("⚠️  Password reset will cause 500 errors!")
-        print("💡 Add these to Render Environment Variables:")
-        print("   EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend")
-        print("   EMAIL_HOST=smtp.gmail.com")
-        print("   EMAIL_HOST_USER=amgaibharat46@gmail.com")
-        print("   EMAIL_HOST_PASSWORD=your_gmail_app_password")
-
-        # Try to use SMTP if credentials are available
-        if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
-            EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-            print("✅ Auto-switched to SMTP backend")
+    if 'sendgrid' in EMAIL_HOST:
+        if EMAIL_HOST_PASSWORD and EMAIL_HOST_PASSWORD.startswith('SG.'):
+            print("✅ SendGrid properly configured for Render")
+            print("✅ Password reset emails will work!")
         else:
-            print("❌ Email credentials missing - password reset disabled")
-            # Temporarily disable password reset
-            from django.conf import settings
-
-            settings.ENABLE_PASSWORD_RESET = False
-
-    print(f"✅ Production Email Backend: {EMAIL_BACKEND}")
+            print("❌ SENDGRID CONFIGURATION ERROR!")
+            print("💡 Add these to Render Environment Variables:")
+            print("   EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend")
+            print("   EMAIL_HOST=smtp.sendgrid.net")
+            print("   EMAIL_PORT=587")
+            print("   EMAIL_USE_TLS=True")
+            print("   EMAIL_HOST_USER=apikey")
+            print("   EMAIL_HOST_PASSWORD=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")
+            print("   DEFAULT_FROM_EMAIL=noreply@connect.io")
+    else:
+        print("⚠️  Not using SendGrid - password reset may fail")
 
 # Local development
 else:
@@ -605,15 +616,14 @@ SECURE_HSTS_SECONDS = 0 if DEBUG else 31536000
 print(f"\n✅ Settings loaded: DEBUG={DEBUG}, DATABASE={DATABASES['default']['ENGINE']}")
 print(f"✅ Email Backend: {EMAIL_BACKEND}")
 
-# Final check for password reset
+# Final password reset status
 if 'RENDER' in os.environ:
-    if 'console' in EMAIL_BACKEND:
-        print("❌ PASSWORD RESET: WILL FAIL (console backend on production)")
-        print("💡 Fix: Add email credentials to Render Environment Variables")
-    elif not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD:
-        print("⚠️  PASSWORD RESET: MAY FAIL (email credentials missing)")
+    if 'sendgrid' in EMAIL_HOST and EMAIL_HOST_PASSWORD and EMAIL_HOST_PASSWORD.startswith('SG.'):
+        print("✅ PASSWORD RESET: Will work on production with SendGrid!")
     else:
-        print("✅ PASSWORD RESET: Should work on production")
+        print("❌ PASSWORD RESET: Will fail - SendGrid not configured")
 else:
     if 'console' in EMAIL_BACKEND:
         print("✅ PASSWORD RESET: Will work locally (emails to console)")
+    elif 'sendgrid' in EMAIL_HOST:
+        print("✅ PASSWORD RESET: Using SendGrid for local testing")
