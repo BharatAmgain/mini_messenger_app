@@ -208,15 +208,8 @@ LOGIN_REDIRECT_URL = 'chat_home'
 LOGOUT_REDIRECT_URL = 'login'
 
 # ========== FIXED EMAIL CONFIGURATION ==========
-# Critical Fix: Always use console backend for password reset in development
-if DEBUG and 'RENDER' not in os.environ:
-    # FORCE console email backend for local development
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    print("📧 DEVELOPMENT: Forcing console email backend for password reset")
-    print("   Password reset emails will print to terminal")
-else:
-    EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
-
+# Read email configuration from environment
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = config('EMAIL_HOST', default='localhost')
 EMAIL_PORT = config('EMAIL_PORT', default=25, cast=int)
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=False, cast=bool)
@@ -225,6 +218,11 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@connect.io')
 EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=30, cast=int)
 EMAIL_SUBJECT_PREFIX = config('EMAIL_SUBJECT_PREFIX', default='[Connect.io] ')
+
+print(f"\n📧 Email Configuration:")
+print(f"   Backend: {EMAIL_BACKEND}")
+print(f"   Host: {EMAIL_HOST}")
+print(f"   User: {'✅ Set' if EMAIL_HOST_USER else '❌ Not set'}")
 
 # Site Information
 SITE_NAME = config('SITE_NAME', default='Connect.io')
@@ -239,11 +237,11 @@ CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS',
                               )
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = config('CORS_ALLOW_METHODS',
-                           default='DELETE,GET,OPTIONS,PATCH,POST,PUT',
-                           cast=Csv())
+                            default='DELETE,GET,OPTIONS,PATCH,POST,PUT',
+                            cast=Csv())
 CORS_ALLOW_HEADERS = config('CORS_ALLOW_HEADERS',
-                           default='accept,accept-encoding,authorization,content-type,dnt,origin,user-agent,x-csrftoken,x-requested-with',
-                           cast=Csv())
+                            default='accept,accept-encoding,authorization,content-type,dnt,origin,user-agent,x-csrftoken,x-requested-with',
+                            cast=Csv())
 
 # CSRF Configuration
 CSRF_COOKIE_HTTPONLY = config('CSRF_COOKIE_HTTPONLY', default=False, cast=bool)
@@ -335,9 +333,9 @@ OTP_TWILIO_AUTH = TWILIO_AUTH_TOKEN
 OTP_TWILIO_TOKEN_VALIDITY = config('OTP_TWILIO_TOKEN_VALIDITY', default=300, cast=int)
 OTP_TOTP_ISSUER = SITE_NAME
 
-print("\n" + "="*60)
+print("\n" + "=" * 60)
 print("TWILIO CONFIGURATION STATUS")
-print("="*60)
+print("=" * 60)
 print(f"Account SID: {TWILIO_ACCOUNT_SID}")
 print(f"Auth Token: {'✅ SET' if TWILIO_AUTH_TOKEN else '❌ MISSING - SMS verification disabled'}")
 print(f"Verify Service SID: {TWILIO_VERIFY_SERVICE_SID}")
@@ -349,7 +347,7 @@ if not TWILIO_AUTH_TOKEN:
     print("✅ OTP_TWILIO_NO_DELIVERY set to True")
 else:
     print("✅ Twilio credentials configured")
-print("="*60 + "\n")
+print("=" * 60 + "\n")
 
 # File Upload Limits
 DATA_UPLOAD_MAX_MEMORY_SIZE = config('DATA_UPLOAD_MAX_MEMORY_SIZE', default=2621440, cast=int)
@@ -473,6 +471,7 @@ ENABLE_GROUP_CHATS = config('ENABLE_GROUP_CHATS', default=True, cast=bool)
 ENABLE_PUSH_NOTIFICATIONS = config('ENABLE_PUSH_NOTIFICATIONS', default=False, cast=bool)
 ENABLE_EMAIL_NOTIFICATIONS = config('ENABLE_EMAIL_NOTIFICATIONS', default=True, cast=bool)
 
+
 # ========== DATABASE SETUP FUNCTION ==========
 def ensure_migrations_and_user():
     """Run migrations and create test user automatically"""
@@ -534,6 +533,7 @@ def ensure_migrations_and_user():
     except Exception as e:
         print(f"❌ Database setup error: {e}")
 
+
 # ========== RENDER-SPECIFIC CONFIGURATION ==========
 if 'RENDER' in os.environ:
     print("🌐 Running on Render - Applying production settings...")
@@ -561,9 +561,31 @@ if 'RENDER' in os.environ:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SOCIAL_AUTH_REDIRECT_IS_HTTPS = True
 
-    # Use SMTP for production
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    print("📧 Production: Using SMTP email backend")
+    # CRITICAL FIX: Check email configuration for Render
+    print("\n📧 Checking email configuration for Render...")
+
+    # If using console backend on Render, force SMTP
+    if 'console' in EMAIL_BACKEND:
+        print("⚠️  WARNING: Console email backend detected on Render!")
+        print("⚠️  Password reset will cause 500 errors!")
+        print("💡 Add these to Render Environment Variables:")
+        print("   EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend")
+        print("   EMAIL_HOST=smtp.gmail.com")
+        print("   EMAIL_HOST_USER=amgaibharat46@gmail.com")
+        print("   EMAIL_HOST_PASSWORD=your_gmail_app_password")
+
+        # Try to use SMTP if credentials are available
+        if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+            EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+            print("✅ Auto-switched to SMTP backend")
+        else:
+            print("❌ Email credentials missing - password reset disabled")
+            # Temporarily disable password reset
+            from django.conf import settings
+
+            settings.ENABLE_PASSWORD_RESET = False
+
+    print(f"✅ Production Email Backend: {EMAIL_BACKEND}")
 
 # Local development
 else:
@@ -572,12 +594,26 @@ else:
     # Development settings
     if DEBUG:
         print("🔧 DEBUG mode enabled - showing detailed errors")
+        if 'console' in EMAIL_BACKEND:
+            print("📧 Development: Using console backend - emails print to terminal")
         CORS_ALLOW_ALL_ORIGINS = True
 
 # Security settings
 SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
 SECURE_HSTS_SECONDS = 0 if DEBUG else 31536000
 
-print(f"✅ Settings loaded: DEBUG={DEBUG}, DATABASE={DATABASES['default']['ENGINE']}")
+print(f"\n✅ Settings loaded: DEBUG={DEBUG}, DATABASE={DATABASES['default']['ENGINE']}")
 print(f"✅ Email Backend: {EMAIL_BACKEND}")
-print(f"✅ Password Reset: {'✅ WORKING (emails to console)' if 'console' in EMAIL_BACKEND else '⚠️ Requires SMTP config'}")
+
+# Final check for password reset
+if 'RENDER' in os.environ:
+    if 'console' in EMAIL_BACKEND:
+        print("❌ PASSWORD RESET: WILL FAIL (console backend on production)")
+        print("💡 Fix: Add email credentials to Render Environment Variables")
+    elif not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD:
+        print("⚠️  PASSWORD RESET: MAY FAIL (email credentials missing)")
+    else:
+        print("✅ PASSWORD RESET: Should work on production")
+else:
+    if 'console' in EMAIL_BACKEND:
+        print("✅ PASSWORD RESET: Will work locally (emails to console)")
