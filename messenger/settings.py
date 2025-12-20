@@ -155,21 +155,21 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Internationalization
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = config('LANGUAGE_CODE', default='en-us')
 TIME_ZONE = config('TIME_ZONE', default='Asia/Kathmandu')
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
 # Static files
-STATIC_URL = '/static/'
+STATIC_URL = config('STATIC_URL', default='/static/')
 STATICFILES_DIRS = [BASE_DIR / 'static'] if os.path.exists(BASE_DIR / 'static') else []
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = BASE_DIR / config('STATIC_ROOT', default='staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = config('MEDIA_URL', default='/media/')
+MEDIA_ROOT = BASE_DIR / config('MEDIA_ROOT', default='media')
 
 # Default primary key
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -207,11 +207,19 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'chat_home'
 LOGOUT_REDIRECT_URL = 'login'
 
-# Email Configuration
-EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
-EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
-EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+# ========== FIXED EMAIL CONFIGURATION ==========
+# Critical Fix: Always use console backend for password reset in development
+if DEBUG and 'RENDER' not in os.environ:
+    # FORCE console email backend for local development
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    print("📧 DEVELOPMENT: Forcing console email backend for password reset")
+    print("   Password reset emails will print to terminal")
+else:
+    EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+
+EMAIL_HOST = config('EMAIL_HOST', default='localhost')
+EMAIL_PORT = config('EMAIL_PORT', default=25, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=False, cast=bool)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@connect.io')
@@ -230,29 +238,16 @@ CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS',
                               cast=Csv()
                               )
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
-]
-CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-]
+CORS_ALLOW_METHODS = config('CORS_ALLOW_METHODS',
+                           default='DELETE,GET,OPTIONS,PATCH,POST,PUT',
+                           cast=Csv())
+CORS_ALLOW_HEADERS = config('CORS_ALLOW_HEADERS',
+                           default='accept,accept-encoding,authorization,content-type,dnt,origin,user-agent,x-csrftoken,x-requested-with',
+                           cast=Csv())
 
-# CSRF Configuration - FIXED FOR AJAX
-CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read the CSRF token
-CSRF_COOKIE_SAMESITE = 'Lax'
+# CSRF Configuration
+CSRF_COOKIE_HTTPONLY = config('CSRF_COOKIE_HTTPONLY', default=False, cast=bool)
+CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='Lax')
 CSRF_USE_SESSIONS = False
 CSRF_FAILURE_VIEW = 'messenger.views.csrf_failure'
 CSRF_COOKIE_NAME = 'csrftoken'
@@ -282,10 +277,9 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
     'prompt': 'select_account',
 }
 
-# Facebook OAuth2 - FIXED FOR LIVE APP
+# Facebook OAuth2
 SOCIAL_AUTH_FACEBOOK_KEY = config('FACEBOOK_APP_ID', default='')
 SOCIAL_AUTH_FACEBOOK_SECRET = config('FACEBOOK_APP_SECRET', default='')
-# For Live App with email permission approved
 SOCIAL_AUTH_FACEBOOK_SCOPE = ['email', 'public_profile']
 SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {
     'fields': 'id,name,email,picture.type(large),first_name,last_name',
@@ -298,7 +292,7 @@ SOCIAL_AUTH_FACEBOOK_EXTRA_DATA = [
     ('first_name', 'first_name'),
     ('last_name', 'last_name'),
 ]
-SOCIAL_AUTH_FACEBOOK_API_VERSION = 'v19.0'  # Latest API version
+SOCIAL_AUTH_FACEBOOK_API_VERSION = 'v19.0'
 
 # Social Auth Pipeline
 SOCIAL_AUTH_PIPELINE = (
@@ -325,50 +319,41 @@ SOCIAL_AUTH_PROTECTED_USER_FIELDS = ['email', 'username']
 SOCIAL_AUTH_RAISE_EXCEPTIONS = DEBUG
 SOCIAL_AUTH_REDIRECT_IS_HTTPS = not DEBUG
 
+# ========== TWILIO CONFIGURATION ==========
+TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID', default='')
+TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN', default='')
+TWILIO_VERIFY_SERVICE_SID = config('TWILIO_VERIFY_SERVICE_SID', default='')
+TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER', default='+15005550006')
+TWILIO_TEST_PHONE_NUMBER = config('TWILIO_TEST_PHONE_NUMBER', default='+9779866399895')
+
 # OTP Configuration
 OTP_TWILIO_NO_DELIVERY = config('OTP_TWILIO_NO_DELIVERY', default=True, cast=bool)
 OTP_TWILIO_CHALLENGE_MESSAGE = config('OTP_TWILIO_CHALLENGE_MESSAGE', default='Your verification code is {token}')
-OTP_TWILIO_FROM = config('TWILIO_PHONE_NUMBER', default='')
-OTP_TWILIO_ACCOUNT = config('TWILIO_ACCOUNT_SID', default='')
-OTP_TWILIO_AUTH = config('TWILIO_AUTH_TOKEN', default='')
+OTP_TWILIO_FROM = TWILIO_PHONE_NUMBER
+OTP_TWILIO_ACCOUNT = TWILIO_ACCOUNT_SID
+OTP_TWILIO_AUTH = TWILIO_AUTH_TOKEN
 OTP_TWILIO_TOKEN_VALIDITY = config('OTP_TWILIO_TOKEN_VALIDITY', default=300, cast=int)
 OTP_TOTP_ISSUER = SITE_NAME
 
-# ========== TWILIO CONFIGURATION - FIXED ==========
-# Your Twilio Account SID
-TWILIO_ACCOUNT_SID = 'ACb1f4d1fb64cf30a79a7ccfb504584f4b'
-
-# Your Twilio Auth Token (replace with your actual token from Twilio console)
-TWILIO_AUTH_TOKEN = '4f58b38ba1fd76b326e2a7efa02af7d4'  # ⚠️ Replace with your actual token!
-
-# Your Twilio Verify Service SID
-TWILIO_VERIFY_SERVICE_SID = 'VA87fd0e149dd0297b83d48740df293f3e'
-
-# Your Twilio Phone Number (optional for SMS sending)
-TWILIO_PHONE_NUMBER = '+15005550006'  # Twilio test number
-
-# Debug Twilio settings
 print("\n" + "="*60)
 print("TWILIO CONFIGURATION STATUS")
 print("="*60)
 print(f"Account SID: {TWILIO_ACCOUNT_SID}")
-print(f"Auth Token: {'SET' if TWILIO_AUTH_TOKEN else 'NOT SET'}")
+print(f"Auth Token: {'✅ SET' if TWILIO_AUTH_TOKEN else '❌ MISSING - SMS verification disabled'}")
 print(f"Verify Service SID: {TWILIO_VERIFY_SERVICE_SID}")
 print(f"Phone Number: {TWILIO_PHONE_NUMBER}")
 
-# Check if Twilio credentials are valid
-if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
-    if not TWILIO_AUTH_TOKEN.startswith('your_'):
-        print("✅ Twilio credentials configured")
-    else:
-        print("⚠️  WARNING: Using placeholder Auth Token. Replace with your actual Twilio Auth Token!")
+if not TWILIO_AUTH_TOKEN:
+    print("⚠️  SMS verification disabled (no auth token)")
+    OTP_TWILIO_NO_DELIVERY = True
+    print("✅ OTP_TWILIO_NO_DELIVERY set to True")
 else:
-    print("❌ Twilio credentials missing")
+    print("✅ Twilio credentials configured")
 print("="*60 + "\n")
 
 # File Upload Limits
-DATA_UPLOAD_MAX_MEMORY_SIZE = config('MAX_UPLOAD_SIZE', default=52428800, cast=int)
-FILE_UPLOAD_MAX_MEMORY_SIZE = config('MAX_UPLOAD_SIZE', default=52428800, cast=int)
+DATA_UPLOAD_MAX_MEMORY_SIZE = config('DATA_UPLOAD_MAX_MEMORY_SIZE', default=2621440, cast=int)
+FILE_UPLOAD_MAX_MEMORY_SIZE = config('FILE_UPLOAD_MAX_MEMORY_SIZE', default=2621440, cast=int)
 FILE_UPLOAD_PERMISSIONS = 0o644
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
 
@@ -376,16 +361,16 @@ FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
 SESSION_COOKIE_AGE = config('SESSION_COOKIE_AGE', default=1209600, cast=int)
 SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=False, cast=bool)
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = config('SESSION_COOKIE_SAMESITE', default='Lax')
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
-SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_EXPIRE_AT_BROWSER_CLOSE = config('SESSION_EXPIRE_AT_BROWSER_CLOSE', default=False, cast=bool)
 SESSION_SAVE_EVERY_REQUEST = True
 
-# CSRF Configuration - Additional settings
-CSRF_COOKIE_AGE = 31449600  # 1 year
+# CSRF Configuration
+CSRF_COOKIE_AGE = config('CSRF_COOKIE_AGE', default=31449600, cast=int)
 CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
-CSRF_COOKIE_HTTPONLY = False  # Must be False for JavaScript access
-CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_HTTPONLY = config('CSRF_COOKIE_HTTPONLY', default=False, cast=bool)
+CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='Lax')
 CSRF_FAILURE_VIEW = 'messenger.views.csrf_failure'
 
 # Cache Configuration
@@ -486,8 +471,7 @@ ENABLE_SOCIAL_AUTH = config('ENABLE_SOCIAL_AUTH', default=True, cast=bool)
 ENABLE_FILE_UPLOADS = config('ENABLE_FILE_UPLOADS', default=True, cast=bool)
 ENABLE_GROUP_CHATS = config('ENABLE_GROUP_CHATS', default=True, cast=bool)
 ENABLE_PUSH_NOTIFICATIONS = config('ENABLE_PUSH_NOTIFICATIONS', default=False, cast=bool)
-ENABLE_EMAIL_NOTIFICATIONS = config('ENABLE_EMAIL_NOTIFICATIONS', default=False, cast=bool)
-
+ENABLE_EMAIL_NOTIFICATIONS = config('ENABLE_EMAIL_NOTIFICATIONS', default=True, cast=bool)
 
 # ========== DATABASE SETUP FUNCTION ==========
 def ensure_migrations_and_user():
@@ -530,7 +514,7 @@ def ensure_migrations_and_user():
                     username='testuser',
                     email='test@example.com',
                     password='TestPass123!',
-                    phone_number='+9779866399895',  # Your phone number
+                    phone_number='+9779866399895',
                     is_verified=True
                 )
                 print("✅ Created test user: test@example.com / TestPass123!")
@@ -549,7 +533,6 @@ def ensure_migrations_and_user():
         print("⚠️  Django might not be properly installed")
     except Exception as e:
         print(f"❌ Database setup error: {e}")
-
 
 # ========== RENDER-SPECIFIC CONFIGURATION ==========
 if 'RENDER' in os.environ:
@@ -574,17 +557,13 @@ if 'RENDER' in os.environ:
         DATABASE_URL = os.environ['DATABASE_URL']
         print("✅ Using Render PostgreSQL database from environment")
 
-    # 👉 CRITICAL: Force HTTPS for OAuth redirects on Render
+    # Force HTTPS for OAuth redirects on Render
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SOCIAL_AUTH_REDIRECT_IS_HTTPS = True
 
-    # Run migrations
-    ensure_migrations_and_user()
-
-# For local development with DATABASE_URL in environment
-elif os.environ.get('DATABASE_URL') and not os.environ.get('DATABASE_URL').startswith('sqlite:///'):
-    print("🌐 Using external database from environment...")
-    ensure_migrations_and_user()
+    # Use SMTP for production
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    print("📧 Production: Using SMTP email backend")
 
 # Local development
 else:
@@ -600,4 +579,5 @@ SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
 SECURE_HSTS_SECONDS = 0 if DEBUG else 31536000
 
 print(f"✅ Settings loaded: DEBUG={DEBUG}, DATABASE={DATABASES['default']['ENGINE']}")
-print(f"✅ Twilio Verify Service: {TWILIO_VERIFY_SERVICE_SID}")
+print(f"✅ Email Backend: {EMAIL_BACKEND}")
+print(f"✅ Password Reset: {'✅ WORKING (emails to console)' if 'console' in EMAIL_BACKEND else '⚠️ Requires SMTP config'}")
