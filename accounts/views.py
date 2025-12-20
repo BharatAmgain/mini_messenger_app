@@ -1,4 +1,4 @@
-# messenger_app/accounts/views.py - COMPLETE FIXED VERSION
+# messenger_app/accounts/views.py - COMPLETE FIXED VERSION WITH ALL FUNCTIONS
 import json
 import traceback
 import base64
@@ -2061,3 +2061,115 @@ def test_google_login(request):
     </html>
     """
     return HttpResponse(html)
+
+
+# ========== ADD THESE MISSING FUNCTIONS ==========
+
+@login_required
+def view_user_profile(request, user_id):
+    """View another user's profile"""
+    try:
+        user = get_object_or_404(CustomUser, id=user_id, is_active=True)
+        context = {
+            'profile_user': user,
+            'is_friend': Friendship.are_friends(request.user, user),
+            'has_sent_request': FriendRequest.objects.filter(
+                from_user=request.user,
+                to_user=user,
+                status='pending'
+            ).exists(),
+            'has_received_request': FriendRequest.objects.filter(
+                from_user=user,
+                to_user=request.user,
+                status='pending'
+            ).exists(),
+        }
+        return render(request, 'accounts/view_profile.html', context)
+    except CustomUser.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('discover_users')
+
+
+@login_required
+def discover_users(request):
+    """Discover new users to add as friends"""
+    # Exclude current user and existing friends
+    friends = Friendship.get_friends(request.user)
+    friend_ids = [friend.id for friend in friends]
+    friend_ids.append(request.user.id)
+
+    # Get friend requests
+    sent_requests = FriendRequest.objects.filter(
+        from_user=request.user,
+        status='pending'
+    ).values_list('to_user_id', flat=True)
+
+    received_requests = FriendRequest.objects.filter(
+        to_user=request.user,
+        status='pending'
+    ).values_list('from_user_id', flat=True)
+
+    # Combine all excluded IDs
+    excluded_ids = list(friend_ids) + list(sent_requests) + list(received_requests)
+
+    # Get discoverable users
+    users = CustomUser.objects.filter(
+        is_active=True
+    ).exclude(
+        id__in=excluded_ids
+    ).order_by('-date_joined')[:50]  # Limit to 50 most recent users
+
+    context = {
+        'users': users,
+        'friends': friends,
+        'sent_requests': sent_requests,
+        'received_requests': received_requests,
+    }
+    return render(request, 'accounts/discover_users.html', context)
+
+
+@login_required
+def search_users(request):
+    """Search for users"""
+    query = request.GET.get('q', '').strip()
+
+    if not query:
+        return redirect('discover_users')
+
+    # Search in username, email, first name, and last name
+    users = CustomUser.objects.filter(
+        Q(username__icontains=query) |
+        Q(email__icontains=query) |
+        Q(first_name__icontains=query) |
+        Q(last_name__icontains=query),
+        is_active=True
+    ).exclude(id=request.user.id)
+
+    # Get friendship status for each user
+    users_with_status = []
+    for user in users:
+        is_friend = Friendship.are_friends(request.user, user)
+        has_sent_request = FriendRequest.objects.filter(
+            from_user=request.user,
+            to_user=user,
+            status='pending'
+        ).exists()
+        has_received_request = FriendRequest.objects.filter(
+            from_user=user,
+            to_user=request.user,
+            status='pending'
+        ).exists()
+
+        users_with_status.append({
+            'user': user,
+            'is_friend': is_friend,
+            'has_sent_request': has_sent_request,
+            'has_received_request': has_received_request,
+        })
+
+    context = {
+        'query': query,
+        'users': users_with_status,
+        'results_count': len(users_with_status),
+    }
+    return render(request, 'accounts/search_results.html', context)
