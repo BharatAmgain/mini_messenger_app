@@ -1,4 +1,4 @@
-# messenger/settings.py - COMPLETE FIXED VERSION
+# messenger/settings.py - COMPLETE FIXED VERSION FOR GOOGLE OAUTH
 import os
 import sys
 from pathlib import Path
@@ -279,10 +279,20 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
 )
 
-# Google OAuth2 - FIXED WITH CORRECT PATH
+# ========== GOOGLE OAUTH2 FIXED CONFIGURATION ==========
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config('GOOGLE_OAUTH2_KEY', default='')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config('GOOGLE_OAUTH2_SECRET', default='')
-SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI = config('SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI', default='')
+
+# CRITICAL FIX: FORCE CORRECT REDIRECT URI
+if 'RENDER' in os.environ or not DEBUG:
+    # Production - ALWAYS use https://connect-io-0cql.onrender.com/complete/google-oauth2/
+    SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI = 'https://connect-io-0cql.onrender.com/complete/google-oauth2/'
+    print(f"🚨 GOOGLE OAUTH: Using HARDCODED production redirect URI: {SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}")
+else:
+    # Development
+    SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI = 'http://127.0.0.1:8000/complete/google-oauth2/'
+    print(f"🚨 GOOGLE OAUTH: Using HARDCODED local redirect URI: {SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}")
+
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'https://www.googleapis.com/auth/userinfo.email',
     'https://www.googleapis.com/auth/userinfo.profile',
@@ -292,17 +302,6 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
     'access_type': 'online',
     'prompt': 'select_account',
 }
-
-# Set default redirect URI based on environment - FIXED WITH /accounts/ PATH
-if not SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI:
-    if 'RENDER' in os.environ or not DEBUG:
-        # Production on Render - USING /accounts/ PATH
-        SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI = 'https://connect-io-0cql.onrender.com/accounts/complete/google-oauth2/'
-        print(f"✅ Using production Google OAuth2 redirect URI: {SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}")
-    else:
-        # Local development - USING /accounts/ PATH
-        SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI = 'http://127.0.0.1:8000/accounts/complete/google-oauth2/'
-        print(f"✅ Using local Google OAuth2 redirect URI: {SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}")
 
 # Facebook OAuth2
 SOCIAL_AUTH_FACEBOOK_KEY = config('FACEBOOK_APP_ID', default='')
@@ -652,14 +651,15 @@ else:
         print("✅ PASSWORD RESET: Using SendGrid for local testing")
 
 # ========== DEBUG OUTPUT FOR GOOGLE OAUTH ==========
-print("\n" + "=" * 60)
-print("GOOGLE OAUTH CONFIGURATION STATUS")
-print("=" * 60)
-print(f"Client ID: {'✅ SET' if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY else '❌ MISSING'}")
-print(f"Client Secret: {'✅ SET' if SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET else '❌ MISSING'}")
-print(f"Redirect URI: {SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}")
-print(f"Environment: {'Render (Production)' if 'RENDER' in os.environ else 'Local (Development)'}")
-print("=" * 60)
+print("\n" + "=" * 80)
+print("GOOGLE OAUTH CONFIGURATION STATUS - FIXED VERSION")
+print("=" * 80)
+print(f"🎯 Client ID: {'✅ SET' if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY else '❌ MISSING'}")
+print(f"🔑 Client Secret: {'✅ SET' if SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET else '❌ MISSING'}")
+print(f"🔄 Redirect URI: {SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}")
+print(f"🌍 Environment: {'Render (Production)' if 'RENDER' in os.environ else 'Local (Development)'}")
+print(f"🔗 Expected Google Console URI: https://connect-io-0cql.onrender.com/complete/google-oauth2/")
+print("=" * 80)
 
 # ========== SOCIAL AUTH DEBUGGING ==========
 if DEBUG:

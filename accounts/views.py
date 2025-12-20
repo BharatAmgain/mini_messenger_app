@@ -4,19 +4,22 @@ import traceback
 import base64
 import requests
 from datetime import timedelta
+import urllib.parse
 
 from django.core.exceptions import ValidationError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.db.models import Q
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
+from django.conf import settings
+from social_core.backends.google import GoogleOAuth2
 
 from .forms import (
     CustomUserCreationForm,
@@ -28,7 +31,6 @@ from .forms import (
     SendOTPForm
 )
 from .models import CustomUser, Notification, FriendRequest, Friendship, OTPVerification, PasswordResetOTP
-from django.conf import settings
 
 
 def send_twilio_verification(phone_number):
@@ -1923,3 +1925,139 @@ def refresh_profile(request):
             'verified': fresh_user.is_verified
         }
     })
+
+
+def debug_google_oauth(request):
+    """Debug view to see the exact Google OAuth redirect URI"""
+    try:
+        # Create Google OAuth2 backend
+        backend = GoogleOAuth2()
+
+        # Force use the correct redirect URI
+        backend.redirect_uri = settings.SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI
+
+        # Get the auth URL with all parameters
+        auth_url = backend.auth_url()
+
+        # Parse the URL to see the redirect_uri parameter
+        parsed = urllib.parse.urlparse(auth_url)
+        query_params = urllib.parse.parse_qs(parsed.query)
+
+        # Get the redirect_uri from the URL
+        redirect_uri_from_url = query_params.get('redirect_uri', ['NOT FOUND'])[0]
+
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Google OAuth Debug</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 40px; }}
+                h1 {{ color: #333; }}
+                h2 {{ color: #666; margin-top: 30px; }}
+                pre {{ background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }}
+                .match {{ color: green; font-weight: bold; }}
+                .mismatch {{ color: red; font-weight: bold; }}
+                .box {{ border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 5px; }}
+                .success {{ background: #e8f5e8; border-color: #4CAF50; }}
+                .error {{ background: #ffebee; border-color: #f44336; }}
+            </style>
+        </head>
+        <body>
+            <h1>🔍 Google OAuth Debug Information</h1>
+
+            <div class="box {'success' if redirect_uri_from_url == settings.SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI else 'error'}">
+                <h2>Redirect URI Status</h2>
+                <p>
+                    URL Match: 
+                    <span class="{'match' if redirect_uri_from_url == settings.SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI else 'mismatch'}">
+                        {redirect_uri_from_url == settings.SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}
+                    </span>
+                </p>
+            </div>
+
+            <div class="box">
+                <h2>🔗 Full Auth URL Generated:</h2>
+                <pre>{auth_url}</pre>
+            </div>
+
+            <div class="box">
+                <h2>🔄 Redirect URI from Generated URL:</h2>
+                <pre>{redirect_uri_from_url}</pre>
+            </div>
+
+            <div class="box">
+                <h2>⚙️ Settings.py Redirect URI:</h2>
+                <pre>{settings.SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}</pre>
+            </div>
+
+            <div class="box">
+                <h2>📋 What to add to Google Cloud Console:</h2>
+                <pre>{settings.SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}</pre>
+                <p>Copy this EXACT URL and add it to Google Cloud Console > Credentials > OAuth 2.0 Client IDs > Authorized redirect URIs</p>
+            </div>
+
+            <div class="box">
+                <h2>🔑 Current Configuration:</h2>
+                <ul>
+                    <li>Client ID: {'✅ SET' if settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY else '❌ MISSING'}</li>
+                    <li>Client Secret: {'✅ SET' if settings.SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET else '❌ MISSING'}</li>
+                    <li>Environment: {'Production (Render)' if 'RENDER' in os.environ else 'Development (Local)'}</li>
+                    <li>DEBUG Mode: {settings.DEBUG}</li>
+                </ul>
+            </div>
+
+            <div class="box">
+                <h2>🚨 Action Required:</h2>
+                <ol>
+                    <li>Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a></li>
+                    <li>Select your project</li>
+                    <li>Go to APIs & Services → Credentials</li>
+                    <li>Click on your OAuth 2.0 Client ID</li>
+                    <li>In "Authorized redirect URIs", add:</li>
+                    <pre>{settings.SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}</pre>
+                    <li>Remove any other redirect URIs</li>
+                    <li>Click SAVE</li>
+                </ol>
+            </div>
+        </body>
+        </html>
+        """
+        return HttpResponse(html)
+    except Exception as e:
+        return HttpResponse(f"<h1>Error</h1><p>{str(e)}</p><pre>{traceback.format_exc()}</pre>")
+
+
+def test_google_login(request):
+    """Test Google login button"""
+    html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Test Google Login</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; text-align: center; }
+            .button { 
+                background: #4285F4; 
+                color: white; 
+                padding: 15px 30px; 
+                border: none; 
+                border-radius: 4px; 
+                font-size: 16px; 
+                cursor: pointer;
+                text-decoration: none;
+                display: inline-block;
+                margin: 20px;
+            }
+            .button:hover { background: #357ae8; }
+        </style>
+    </head>
+    <body>
+        <h1>Test Google Login</h1>
+        <p>Click the button below to test Google OAuth:</p>
+        <a href="/accounts/login/google-oauth2/" class="button">Sign in with Google</a>
+        <p><a href="/accounts/debug-google-oauth/">View Debug Information</a></p>
+    </body>
+    </html>
+    """
+    return HttpResponse(html)
