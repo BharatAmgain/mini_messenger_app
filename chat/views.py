@@ -770,6 +770,8 @@ def get_emoji_categories(request):
         })
 
     return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+
 @login_required
 def get_messages_ajax(request, conversation_id):
     """Get messages via AJAX"""
@@ -809,22 +811,28 @@ def get_messages_ajax(request, conversation_id):
 
     return JsonResponse({'error': 'Invalid request'})
 
+
 @csrf_exempt
 @login_required
 def update_online_status(request):
-    """Update user's online status"""
+    """Update user's online status - FIXED: Only one function"""
     if request.method == 'POST':
-        online = request.POST.get('online', 'false') == 'true'
+        try:
+            data = json.loads(request.body)
+            is_online = data.get('online', True)
 
-        # Update or create user status
-        user_status, created = UserStatus.objects.get_or_create(user=request.user)
-        user_status.online = online
-        user_status.last_seen = timezone.now()
-        user_status.save()
+            # Update user's online status
+            request.user.is_online = is_online
+            request.user.last_seen = timezone.now()
+            request.user.save()
 
-        return JsonResponse({'success': True})
+            # Broadcast to friends/channels if needed
+            # ... rest of your code ...
 
-    return JsonResponse({'success': False})
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
 
 @login_required
@@ -1164,25 +1172,3 @@ def quick_chat(request, user_id):
     except CustomUser.DoesNotExist:
         messages.error(request, 'User not found.')
         return redirect('discover_users')
-
-    @csrf_exempt
-    @login_required
-    def update_online_status(request):
-        """Update user's online status - exempt from CSRF for WebSocket compatibility"""
-        if request.method == 'POST':
-            try:
-                data = json.loads(request.body)
-                is_online = data.get('online', True)
-
-                # Update user's online status
-                request.user.is_online = is_online
-                request.user.last_seen = timezone.now()
-                request.user.save()
-
-                # Broadcast to friends/channels if needed
-                # ... rest of your code ...
-
-                return JsonResponse({'status': 'success'})
-            except Exception as e:
-                return JsonResponse({'status': 'error', 'message': str(e)})
-        return JsonResponse({'status': 'error', 'message': 'Invalid request method'})

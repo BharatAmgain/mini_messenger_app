@@ -1,5 +1,6 @@
 # messenger_app/accounts/views.py - COMPLETE FIXED VERSION
 import json
+import traceback
 
 from django.core.exceptions import ValidationError
 from django.shortcuts import render, redirect, get_object_or_404
@@ -14,7 +15,6 @@ import random
 import string
 import requests
 import base64
-import traceback
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.core.files.storage import default_storage
@@ -178,15 +178,14 @@ def profile(request):
     return render(request, 'accounts/profile.html', {'user': request.user})
 
 
-# accounts/views.py - SAFE profile_edit FUNCTION
 @login_required
 def profile_edit(request):
-    """Edit user's own profile - ULTRA SAFE VERSION"""
+    """Edit user's own profile - FIXED VERSION"""
     user = request.user
 
     if request.method == 'POST':
         try:
-            # Handle profile picture upload
+            # Handle profile picture separately
             if 'profile_picture' in request.FILES and request.FILES['profile_picture']:
                 profile_picture = request.FILES['profile_picture']
                 if profile_picture.content_type.startswith('image/'):
@@ -197,52 +196,70 @@ def profile_edit(request):
                 else:
                     messages.error(request, 'Please select a valid image file.')
 
-            # ✅ WHITELIST APPROACH: Only update explicitly allowed fields
-            allowed_fields = {
-                'first_name': str,
-                'last_name': str,
-                'email': str,
-                'phone_number': str,
-                'bio': str,
-                'location': str,
-                'website': str,
-                'gender': str,
-            }
+            # Update ONLY safe fields - whitelist approach
+            safe_fields = ['first_name', 'last_name', 'email', 'phone_number',
+                           'bio', 'location', 'website', 'gender']
 
-            for field, field_type in allowed_fields.items():
+            for field in safe_fields:
                 if field in request.POST:
                     value = request.POST.get(field, '').strip()
-                    if value or field_type != str:
-                        if field == 'date_of_birth':
-                            if value:
-                                try:
-                                    from datetime import datetime
-                                    user.date_of_birth = datetime.strptime(value, '%Y-%m-%d').date()
-                                except ValueError:
-                                    messages.error(request, 'Invalid date format. Use YYYY-MM-DD')
-                        else:
-                            setattr(user, field, value)
+                    if field == 'email':
+                        # Special handling for email - must be unique
+                        if value and value != user.email:
+                            # Check if email already exists
+                            from .models import CustomUser
+                            if CustomUser.objects.filter(email=value).exclude(id=user.id).exists():
+                                messages.error(request, 'This email is already in use.')
+                                continue
+                    setattr(user, field, value)
 
-            # ✅ CRITICAL: NEVER update is_verified from form input
-            # Remove any POST data that might try to set is_verified
-            if hasattr(request.POST, '_mutable'):
-                request.POST._mutable = True
+            # Handle date_of_birth separately
+            if 'date_of_birth' in request.POST and request.POST['date_of_birth']:
+                try:
+                    from datetime import datetime
+                    dob_str = request.POST['date_of_birth']
+                    user.date_of_birth = datetime.strptime(dob_str, '%Y-%m-%d').date()
+                except ValueError:
+                    messages.error(request, 'Invalid date format. Use YYYY-MM-DD')
+
+            # CRITICAL FIX: Ensure is_verified is always a boolean and not touched by form
+            # Remove is_verified if it exists in POST data
             if 'is_verified' in request.POST:
                 del request.POST['is_verified']
 
+            # Ensure is_verified is explicitly set to current value (boolean)
+            user.is_verified = bool(user.is_verified)
+
             # Save user
             user.save()
+
             messages.success(request, 'Profile updated successfully!')
             return redirect('profile')
 
         except ValidationError as e:
-            for field, errors in e.message_dict.items():
-                for error in errors:
-                    messages.error(request, f'{field}: {error}')
+            # Handle validation errors properly
+            error_messages = []
+            if hasattr(e, 'error_dict'):
+                for field, errors in e.error_dict.items():
+                    for error in errors:
+                        error_messages.append(f"{field}: {error}")
+            else:
+                error_messages = e.messages if hasattr(e, 'messages') else [str(e)]
+
+            for error_msg in error_messages:
+                messages.error(request, error_msg)
+
         except Exception as e:
             messages.error(request, f'Error updating profile: {str(e)}')
 
-    return render(request, 'accounts/profile_edit.html', {'user': user})
+    # Get context for template
+    context = {
+        'user': user,
+        'date_of_birth': user.date_of_birth.strftime('%Y-%m-%d') if user.date_of_birth else '',
+    }
+
+    return render(request, 'accounts/profile_edit.html', context)
+
 
 @login_required
 def settings_main(request):

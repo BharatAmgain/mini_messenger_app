@@ -21,7 +21,6 @@ def user_profile_picture_path(instance, filename):
     if instance.id:
         filename = f"profile_picture_{instance.id}.{ext}"
     else:
-        # Fallback to username if no ID yet (during creation)
         filename = f"profile_picture_{instance.username}.{ext}"
     return os.path.join('profile_pictures', f'user_{instance.id if instance.id else instance.username}', filename)
 
@@ -40,7 +39,7 @@ class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
     bio = models.TextField(max_length=500, blank=True)
 
-    # ✅ FIXED: is_verified as BooleanField with verbose name
+    # ✅ FIXED: is_verified as BooleanField ONLY
     is_verified = models.BooleanField(default=False, verbose_name="Email Verified")
 
     # PROFILE FIELDS
@@ -136,7 +135,7 @@ class CustomUser(AbstractUser):
         if self.date_of_birth:
             today = timezone.now().date()
             return today.year - self.date_of_birth.year - (
-                (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day)
+                    (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day)
             )
         return None
 
@@ -144,8 +143,6 @@ class CustomUser(AbstractUser):
         """Get friendship status between this user and another user"""
         if self == other_user:
             return 'self'
-
-        from .models import Friendship, FriendRequest
 
         if Friendship.are_friends(self, other_user):
             return 'friends'
@@ -168,7 +165,14 @@ class CustomUser(AbstractUser):
 
         return 'not_friends'
 
-    # ✅ NO is_verified property or method here - only the BooleanField above
+    def save(self, *args, **kwargs):
+        """Override save to ensure is_verified is always a boolean"""
+        # Ensure is_verified is a boolean
+        if not isinstance(self.is_verified, bool):
+            self.is_verified = bool(self.is_verified)
+
+        # Save the model
+        super().save(*args, **kwargs)
 
 
 class SocialAccount(models.Model):
@@ -453,6 +457,9 @@ class OTPVerification(models.Model):
             self.is_verified = True
             self.verified_at = timezone.now()
             self.save()
+            # Update user's is_verified status
+            self.user.is_verified = True
+            self.user.save()
             return True, "OTP verified successfully"
 
         return False, "Invalid OTP code"
