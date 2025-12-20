@@ -1641,7 +1641,7 @@ def send_verification_otp(request):
 
 @login_required
 def verify_account_otp(request):
-    """Verify account with OTP"""
+    """Verify account with OTP - FIXED: Ensure is_verified is properly updated"""
     otp_id = request.session.get('verification_otp_id')
     verification_method = request.session.get('verification_method')
     twilio_sid = request.session.get('verification_twilio_sid')
@@ -1677,10 +1677,13 @@ def verify_account_otp(request):
                 success, message = otp.verify_otp(otp_code)
 
             if success:
-                # Mark user as verified
+                # CRITICAL FIX: Mark user as verified
                 user = request.user
-                user.is_verified = True  # CRITICAL: This sets the BooleanField to True
-                user.save()
+                user.is_verified = True  # Set to True
+                user.save(update_fields=['is_verified'])  # Force update only is_verified field
+
+                print(f"DEBUG: User {user.username} is_verified set to: {user.is_verified}")
+                print(f"DEBUG: User {user.username} is_verified type: {type(user.is_verified)}")
 
                 # Mark OTP as verified
                 otp.is_verified = True

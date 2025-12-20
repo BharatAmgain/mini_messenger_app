@@ -446,7 +446,7 @@ class OTPVerification(models.Model):
         return otp
 
     def verify_otp(self, otp_code):
-        """Verify OTP code"""
+        """Verify OTP code - FIXED: Properly update user's is_verified"""
         if self.is_expired():
             return False, "OTP has expired"
 
@@ -457,9 +457,12 @@ class OTPVerification(models.Model):
             self.is_verified = True
             self.verified_at = timezone.now()
             self.save()
-            # Update user's is_verified status
+
+            # CRITICAL FIX: Update user's is_verified status
             self.user.is_verified = True
-            self.user.save()
+            # Use update_fields to force save only is_verified
+            self.user.save(update_fields=['is_verified'])
+
             return True, "OTP verified successfully"
 
         return False, "Invalid OTP code"

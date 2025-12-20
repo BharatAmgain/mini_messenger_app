@@ -18,9 +18,11 @@
 
         <!-- Success Messages -->
         {% if messages %}
-        <div class="mb-6 rounded-md bg-green-50 p-4">
+        <div class="mb-6">
             {% for message in messages %}
-            <div class="text-sm text-green-700">{{ message }}</div>
+            <div class="rounded-md p-4 {% if message.tags == 'success' %}bg-green-50 text-green-800{% elif message.tags == 'error' %}bg-red-50 text-red-800{% else %}bg-blue-50 text-blue-800{% endif %}">
+                <div class="text-sm">{{ message }}</div>
+            </div>
             {% endfor %}
         </div>
         {% endif %}
@@ -327,6 +329,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return cookieValue;
     }
+
+    // Check for verification success message and refresh verification status
+    const successMessages = document.querySelectorAll('.bg-green-50');
+    successMessages.forEach(message => {
+        if (message.textContent.includes('verified successfully') ||
+            message.textContent.includes('verified successfully!')) {
+            // Refresh the page after 2 seconds to show updated verification status
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        }
+    });
 });
 </script>
 {% endblock %}

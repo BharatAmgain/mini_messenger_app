@@ -1,106 +1,190 @@
-<!-- templates/accounts/verify_account_otp.html -->
+<!-- messenger_app/templates/accounts/verify_account_otp.html -->
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Verify Account - Messenger{% endblock %}
+{% block title %}Verify Account - Connect.io{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50 py-8">
-    <div class="max-w-md mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div class="px-6 py-4 border-b border-gray-200">
-                <h1 class="text-2xl font-bold text-gray-900">Verify Account</h1>
-                <p class="text-sm text-gray-600 mt-1">
-                    Enter the verification code sent to your {% if verification_method == 'email' %}email{% else %}phone{% endif %}
-                </p>
-                {% if contact_info %}
-                <p class="text-sm font-medium text-gray-700 mt-2">
-                    Code sent to: {{ contact_info }}
-                </p>
-                {% endif %}
+<div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Verify Your Account</h1>
+            <p class="mt-2 text-gray-600">Enter the verification code sent to your {{ verification_method }}</p>
+            {% if contact_info %}
+            <p class="mt-1 text-sm text-gray-500">Sent to: {{ contact_info }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Success/Error Messages -->
+        {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+            <div class="p-4 rounded-md {% if message.tags == 'success' %}bg-green-50 text-green-800{% else %}bg-red-50 text-red-800{% endif %}">
+                {{ message }}
             </div>
+            {% endfor %}
+        </div>
+        {% endif %}
 
-            <div class="p-6">
-                {% if messages %}
-                <div class="mb-4">
-                    {% for message in messages %}
-                    <div class="p-3 rounded {% if message.tags == 'success' %}bg-green-50 text-green-700{% else %}bg-red-50 text-red-700{% endif %}">
-                        {{ message }}
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-
-                <form method="POST" class="space-y-4">
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+            <div class="px-6 py-8 sm:p-10">
+                <form method="POST" class="space-y-6">
                     {% csrf_token %}
 
-                    {% if form.errors %}
-                    <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
-                        Please correct the errors below.
-                    </div>
-                    {% endif %}
-
+                    <!-- OTP Input -->
                     <div>
-                        <label for="otp_code" class="block text-sm font-medium text-gray-700">
-                            6-Digit Verification Code
+                        <label for="otp_code" class="block text-sm font-medium text-gray-700 mb-2">
+                            Verification Code
                         </label>
-                        <input type="text" name="otp_code" id="otp_code" required maxlength="6" minlength="6"
-                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-center text-2xl tracking-widest"
-                            placeholder="000000"
-                            inputmode="numeric"
-                            pattern="[0-9]*">
+                        <div class="mt-1">
+                            {{ form.otp_code }}
+                        </div>
                         {% if form.otp_code.errors %}
-                        <p class="text-red-500 text-xs mt-1">{{ form.otp_code.errors.0 }}</p>
+                        <div class="mt-1 text-sm text-red-600">
+                            {% for error in form.otp_code.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
                         {% endif %}
+                        <p class="mt-2 text-sm text-gray-500">
+                            Enter the 6-digit code sent to your {{ verification_method }}.
+                        </p>
                     </div>
 
-                    <div class="flex justify-between items-center">
-                        <div class="text-sm">
-                            <a href="{% url 'send_verification_otp' %}"
-                               class="text-blue-600 hover:text-blue-500">
-                                Didn't receive code? Resend
+                    <!-- Form Actions -->
+                    <div class="flex flex-col space-y-4">
+                        <button type="submit"
+                                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Verify Account
+                        </button>
+
+                        {% if can_resend %}
+                        <div class="text-center">
+                            <p class="text-sm text-gray-600">Didn't receive the code?</p>
+                            <a href="{% url 'resend_otp' 'verification' %}"
+                               class="text-sm font-medium text-blue-600 hover:text-blue-500">
+                                Resend Verification Code
                             </a>
                         </div>
-                        <div class="flex space-x-3">
+                        {% endif %}
+
+                        <div class="text-center">
                             <a href="{% url 'send_verification_otp' %}"
-                                class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-200">
-                                Back
+                               class="text-sm font-medium text-gray-600 hover:text-gray-500">
+                                Change Verification Method
                             </a>
-                            <button type="submit"
-                                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200">
-                                Verify Account
-                            </button>
                         </div>
                     </div>
                 </form>
-
-                <div class="mt-6 pt-6 border-t border-gray-200">
-                    <p class="text-sm text-gray-600">
-                        <i class="fas fa-clock text-gray-400 mr-1"></i>
-                        Code expires in 5 minutes
-                    </p>
-                </div>
             </div>
+        </div>
+
+        <!-- Help Section -->
+        <div class="mt-6 text-center">
+            <p class="text-sm text-gray-600">
+                Having trouble? <a href="{% url 'profile' %}" class="font-medium text-blue-600 hover:text-blue-500">Return to profile</a>
+            </p>
         </div>
     </div>
 </div>
 
+<!-- JavaScript for auto-submit and input focus -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const otpInput = document.getElementById('otp_code');
+    const otpInput = document.getElementById('id_otp_code');
 
-    // Auto-tab between digits
-    otpInput.addEventListener('input', function(e) {
-        if (this.value.length === 6) {
-            this.blur();
-        }
-    });
+    // Focus on OTP input
+    if (otpInput) {
+        otpInput.focus();
 
-    // Only allow numbers
-    otpInput.addEventListener('keypress', function(e) {
-        if (!/^\d$/.test(e.key)) {
+        // Auto-submit when 6 digits are entered
+        otpInput.addEventListener('input', function() {
+            if (this.value.length === 6) {
+                this.form.submit();
+            }
+        });
+    }
+
+    // Format OTP input
+    function formatOTPInput() {
+        const value = otpInput.value.replace(/\D/g, '');
+        otpInput.value = value.slice(0, 6);
+    }
+
+    if (otpInput) {
+        otpInput.addEventListener('input', formatOTPInput);
+        otpInput.addEventListener('paste', function(e) {
             e.preventDefault();
+            const pasteData = e.clipboardData.getData('text').replace(/\D/g, '');
+            otpInput.value = pasteData.slice(0, 6);
+
+            // Auto-submit if 6 digits are pasted
+            if (otpInput.value.length === 6) {
+                otpInput.form.submit();
+            }
+        });
+    }
+
+    // Countdown timer for resend
+    let resendTimer = 60;
+    const resendLink = document.querySelector('a[href*="resend_otp"]');
+    const resendText = document.querySelector('.text-center p.text-sm.text-gray-600');
+
+    if (resendLink && resendText) {
+        resendLink.style.display = 'none';
+
+        const timerElement = document.createElement('span');
+        timerElement.id = 'resend-timer';
+        timerElement.className = 'text-sm text-gray-600';
+        resendText.parentNode.insertBefore(timerElement, resendText.nextSibling);
+
+        function updateTimer() {
+            if (resendTimer > 0) {
+                timerElement.textContent = `Resend available in ${resendTimer} seconds`;
+                resendTimer--;
+                setTimeout(updateTimer, 1000);
+            } else {
+                timerElement.style.display = 'none';
+                resendLink.style.display = 'inline';
+            }
         }
-    });
+
+        updateTimer();
+    }
 });
 </script>
+
+<style>
+/* Custom styles for OTP input */
+#id_otp_code {
+    letter-spacing: 0.5em;
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+/* Animation for success */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.bg-green-50, .bg-red-50 {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+    .min-h-screen {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+
+    #id_otp_code {
+        font-size: 1.25rem;
+        letter-spacing: 0.3em;
+    }
+}
+</style>
 {% endblock %}
