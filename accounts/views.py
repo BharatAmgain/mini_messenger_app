@@ -265,8 +265,21 @@ def get_profile(request):
 
 @login_required
 def profile(request):
-    """View user's own profile"""
-    return render(request, 'accounts/profile.html', {'user': request.user})
+    """View user's own profile - FIXED: Always get fresh user data"""
+    # CRITICAL FIX: Always get fresh user data from database, not cached request.user
+    try:
+        # Get fresh user instance from database
+        user = CustomUser.objects.select_related().get(id=request.user.id)
+        print(f"PROFILE VIEW: Loading fresh user data for {user.username}")
+        print(f"  First Name: '{user.first_name}'")
+        print(f"  Last Name: '{user.last_name}'")
+        print(f"  Email: {user.email}")
+        print(f"  Phone: {user.phone_number}")
+        print(f"  Verified: {user.is_verified}")
+    except CustomUser.DoesNotExist:
+        user = request.user
+
+    return render(request, 'accounts/profile.html', {'user': user})
 
 
 @login_required
@@ -287,6 +300,9 @@ def profile_edit(request):
                 else:
                     messages.error(request, 'Please select a valid image file.')
 
+            # Track which fields were updated
+            updated_fields = []
+
             # Update ONLY safe fields - whitelist approach
             safe_fields = ['first_name', 'last_name', 'email', 'phone_number',
                            'bio', 'location', 'website', 'gender']
@@ -294,22 +310,38 @@ def profile_edit(request):
             for field in safe_fields:
                 if field in request.POST:
                     value = request.POST.get(field, '').strip()
+                    old_value = getattr(user, field)
+
                     if field == 'email':
                         # Special handling for email - must be unique
                         if value and value != user.email:
                             # Check if email already exists
-                            from .models import CustomUser
                             if CustomUser.objects.filter(email=value).exclude(id=user.id).exists():
                                 messages.error(request, 'This email is already in use.')
                                 continue
-                    setattr(user, field, value)
+                            else:
+                                user.email = value
+                                updated_fields.append(field)
+                    elif field == 'phone_number':
+                        # Special handling for phone number
+                        if value != str(old_value):
+                            user.phone_number = value
+                            updated_fields.append(field)
+                    else:
+                        # For other fields
+                        if value != str(old_value):
+                            setattr(user, field, value)
+                            updated_fields.append(field)
 
             # Handle date_of_birth separately
             if 'date_of_birth' in request.POST and request.POST['date_of_birth']:
                 try:
                     from datetime import datetime
                     dob_str = request.POST['date_of_birth']
-                    user.date_of_birth = datetime.strptime(dob_str, '%Y-%m-%d').date()
+                    new_dob = datetime.strptime(dob_str, '%Y-%m-%d').date()
+                    if new_dob != user.date_of_birth:
+                        user.date_of_birth = new_dob
+                        updated_fields.append('date_of_birth')
                 except ValueError:
                     messages.error(request, 'Invalid date format. Use YYYY-MM-DD')
 
@@ -321,10 +353,25 @@ def profile_edit(request):
             # Ensure is_verified is explicitly set to current value (boolean)
             user.is_verified = bool(user.is_verified)
 
-            # Save user
-            user.save()
+            # Only save if there are changes
+            if updated_fields:
+                # Force save with specific fields to ensure database update
+                user.save(update_fields=updated_fields)
 
-            messages.success(request, 'Profile updated successfully!')
+                # CRITICAL: Get fresh user instance from database to ensure data is updated
+                fresh_user = CustomUser.objects.get(id=user.id)
+
+                # Debug output
+                print(f"PROFILE EDIT: Updated fields: {updated_fields}")
+                print(f"  New First Name: '{fresh_user.first_name}'")
+                print(f"  New Last Name: '{fresh_user.last_name}'")
+                print(f"  New Email: {fresh_user.email}")
+                print(f"  New Phone: {fresh_user.phone_number}")
+
+                messages.success(request, 'Profile updated successfully!')
+            else:
+                messages.info(request, 'No changes were made to your profile.')
+
             return redirect('profile')
 
         except ValidationError as e:
@@ -341,6 +388,7 @@ def profile_edit(request):
                 messages.error(request, error_msg)
 
         except Exception as e:
+            print(f"ERROR in profile_edit: {str(e)}")
             messages.error(request, f'Error updating profile: {str(e)}')
 
     # Get context for template
@@ -1822,4 +1870,53 @@ def debug_session(request):
         'session': session_data,
         'user_is_verified': request.user.is_verified,
         'username': request.user.username
+    })
+
+
+# Add this function to test profile update
+@login_required
+def test_profile_update(request):
+    """Test profile update - TEMPORARY"""
+    user = request.user
+
+    # Test update
+    user.first_name = "TestFirstName"
+    user.last_name = "TestLastName"
+    user.save(update_fields=['first_name', 'last_name'])
+
+    # Refresh from database
+    user.refresh_from_db()
+
+    return JsonResponse({
+        'success': True,
+        'message': 'Test update applied',
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+            'is_verified': user.is_verified
+        }
+    })
+
+
+# Add this function to force refresh profile
+@login_required
+def refresh_profile(request):
+    """Force refresh profile data"""
+    # Get fresh user instance
+    fresh_user = CustomUser.objects.get(id=request.user.id)
+
+    return JsonResponse({
+        'success': True,
+        'user': {
+            'id': fresh_user.id,
+            'username': fresh_user.username,
+            'first_name': fresh_user.first_name,
+            'last_name': fresh_user.last_name,
+            'email': fresh_user.email,
+            'phone': fresh_user.phone_number,
+            'verified': fresh_user.is_verified
+        }
     })
