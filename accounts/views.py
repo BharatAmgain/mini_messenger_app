@@ -1183,6 +1183,9 @@ def password_reset_verify_otp(request):
     if request.user.is_authenticated:
         return redirect('chat_home')
 
+    # ✅ FIX: Initialize form at the beginning to prevent UnboundLocalError
+    form = OTPVerificationForm()
+
     # Get session data
     user_id = request.session.get('password_reset_user_id')
     otp_id = request.session.get('password_reset_otp_id')
@@ -1207,7 +1210,7 @@ def password_reset_verify_otp(request):
         return redirect('password_reset_request')
 
     if request.method == 'POST':
-        form = OTPVerificationForm(request.POST)
+        form = OTPVerificationForm(request.POST)  # Re-initialize with POST data
         if form.is_valid():
             otp_code = form.cleaned_data['otp_code']
 
@@ -1263,7 +1266,7 @@ def password_reset_verify_otp(request):
         contact_info = masked_phone
 
     context = {
-        'form': form,
+        'form': form,  # This variable is now guaranteed to be defined
         'contact_info': contact_info,
         'reset_method': reset_method,
         'can_resend': True,
