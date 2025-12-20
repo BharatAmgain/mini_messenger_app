@@ -111,6 +111,11 @@ urlpatterns = [
     path('send-verification-otp/', views.send_verification_otp, name='send_verification_otp'),
     path('verify-account-otp/', views.verify_account_otp, name='verify_account_otp'),
 
+    # Debug URLs
+    path('debug-verification/', views.debug_verification_status, name='debug_verification'),
+    path('debug-session/', views.debug_session, name='debug_session'),
+    path('force-verify/', views.force_verify_user, name='force_verify'),  # TEMPORARY - REMOVE AFTER USE
+
     # Resend OTP
     path('resend-otp/<str:otp_type>/', views.resend_otp, name='resend_otp'),
 

@@ -1755,3 +1755,71 @@ def verify_account_otp(request):
         'can_resend': True,
     }
     return render(request, 'accounts/verify_account_otp.html', context)
+
+
+def debug_verification_status(request):
+    """Debug endpoint to check verification status"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+    user = request.user
+
+    data = {
+        'username': user.username,
+        'email': user.email,
+        'is_verified': user.is_verified,
+        'phone_number': user.phone_number,
+        'user_id': user.id,
+    }
+
+    # Check OTP verifications
+    from accounts.models import OTPVerification
+    otps = OTPVerification.objects.filter(user=user, verification_type='account_verification')
+    data['otp_count'] = otps.count()
+    data['verified_otps'] = otps.filter(is_verified=True).count()
+
+    # List OTPs
+    otp_list = []
+    for otp in otps:
+        otp_list.append({
+            'id': otp.id,
+            'otp_code': otp.otp_code,
+            'is_verified': otp.is_verified,
+            'verified_at': otp.verified_at,
+            'created_at': otp.created_at,
+            'expired': otp.is_expired()
+        })
+    data['otps'] = otp_list
+
+    return JsonResponse(data)
+
+
+# Add this temporary function to manually fix verification - REMOVE AFTER USE
+@login_required
+def force_verify_user(request):
+    """Force verify current user - TEMPORARY - REMOVE AFTER USE"""
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Admin only'}, status=403)
+
+    user = request.user
+    user.is_verified = True
+    user.save()
+
+    return JsonResponse({
+        'success': True,
+        'username': user.username,
+        'is_verified': user.is_verified,
+        'message': 'User manually verified'
+    })
+
+
+# Add this to debug session
+@login_required
+def debug_session(request):
+    """Debug session data"""
+    session_data = dict(request.session.items())
+    return JsonResponse({
+        'session': session_data,
+        'user_is_verified': request.user.is_verified,
+        'username': request.user.username
+    })

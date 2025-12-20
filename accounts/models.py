@@ -446,6 +446,7 @@ class OTPVerification(models.Model):
 
         return otp
 
+    # In accounts/models.py - OTPVerification model
     def verify_otp(self, otp_code):
         """Verify OTP code - FIXED: Properly update user's is_verified"""
         if self.is_expired():
@@ -461,9 +462,11 @@ class OTPVerification(models.Model):
 
             # CRITICAL FIX: Update user's is_verified status for account verification
             if self.verification_type == 'account_verification':
-                self.user.is_verified = True
-                # Use update_fields to force save only is_verified
-                self.user.save(update_fields=['is_verified'])
+                # Refresh user object from database to ensure we have latest
+                user = CustomUser.objects.get(id=self.user.id)
+                user.is_verified = True
+                user.save(update_fields=['is_verified'])
+                print(f"DEBUG: User {user.username} is_verified updated to True")
 
             return True, "OTP verified successfully"
 
