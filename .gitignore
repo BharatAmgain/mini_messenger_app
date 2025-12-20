@@ -1,4 +1,6 @@
-# Python
+# .gitignore - COMPLETE SECURE VERSION
+
+# ========== PYTHON ==========
 __pycache__/
 *.py[cod]
 *$py.class
@@ -11,28 +13,89 @@ ENV/
 env.bak/
 venv.bak/
 .venv.bak/
+pip-delete-this-directory.txt
+pip-selfcheck.json
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
 
-# Django
+# ========== DJANGO ==========
 *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+db.sqlite3-shm
+db.sqlite3-wal
+instance/
+.webassets-cache
 
-# Environment variables
+# ========== ENVIRONMENT VARIABLES ==========
 .env
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+.env.*
+!*.env.example  # Keep example files
+.envrc
 
-# Static files
+# ========== STATIC & MEDIA FILES ==========
 /staticfiles/
 /media/
+/static/
+!static/  # Keep static source directory
+uploads/
+user_uploads/
+*.sqlite3
+*.db
 
-# IDE
+# ========== SECURITY FILES TO IGNORE ==========
+# Twilio test files
+test_twilio_api.py
+fix_twilio_import.py
+fix_is_verified.py
+twilio_config_template.py
+twilio_config.py
+
+# Sensitive Python files
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+
+# ========== IDE & EDITOR ==========
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+.project
+.classpath
+*.launch
+.settings/
+.history/
+.session
+*.sublime-*
 
-# OS
+# JetBrains IDEs
+.idea_modules/
+*.iml
+*.ipr
+*.iws
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/
+
+# ========== OPERATING SYSTEM ==========
 .DS_Store
 .DS_Store?
 ._*
@@ -40,7 +103,211 @@ db.sqlite3-journal
 .Trashes
 ehthumbs.db
 Thumbs.db
+desktop.ini
 
-# Logs
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+
+# Linux/Unix
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# macOS
+.AppleDouble
+.LSOverride
+Icon
+.Spotlight-V100
+.Trashes
+
+# ========== LOGS & TEMP FILES ==========
 logs/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+*.pid
+*.seed
+*.pid.lock
+*.tgz
+*.tar.gz
+*.zip
+*.rar
+*.7z
+
+# ========== TESTING & COVERAGE ==========
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+.mypy_cache/
+test-results/
+*.xml
+*.xunit
+htmlcov/
+
+# ========== PACKAGE MANAGERS ==========
+node_modules/
+npm-debug.log
+yarn-error.log
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bower_components/
+jspm_packages/
+
+# ========== BUILD & DEPLOY ==========
+build/
+dist/
+*.egg-info/
+.eggs/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg
+MANIFEST
+.tox/
+.dist/
+.cache/
+.vagrant/
+.terraform/
+.docker/
+docker-compose.override.yml
+
+# ========== DOCUMENTATION ==========
+docs/_build/
+doc/_build/
+site/
+
+# ========== MISCELLANEOUS ==========
+.ssh/
+.cert/
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+*.bak
+*.backup
+*.old
+*.orig
+*.rej
+*.tmp
+*.temp
+*.swp
+*.swo
+*.swn
+*.swo
+*.swn
+
+# ========== RENDER SPECIFIC ==========
+.render.yaml
+render.yaml
+.render/
+.render-*
+
+# ========== CHAT & MESSAGE TEMP FILES ==========
+temp/
+tmp/
+cache/
+.cache/
+
+# ========== PYTHON PACKAGES ==========
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# Mr Developer
+.mr.developer.cfg
+.project
+.pydevproject
+
+# ========== DATABASE BACKUPS ==========
+*.sql
+*.sql.gz
+*.backup.sql
+dump.rdb
+redis_dump.rdb
+
+# ========== SENSITIVE PROJECT FILES ==========
+# Remove any files that might contain your secrets
+secrets.py
+config_secret.py
+settings_secret.py
+local_settings.py
+prod_settings.py
+staging_settings.py
+
+# ========== CUSTOM EXCEPTIONS ==========
+# Keep migration files (Django needs these)
+!*/migrations/
+!*/migrations/*.py
+!*/migrations/__init__.py
+
+# Keep these important files
+!.gitkeep
+!.gitignore
+!README.md
+!LICENSE
+!requirements.txt
+!manage.py
+!pyproject.toml
+!setup.py
+!setup.cfg
+
+# ========== TEMPLATE FILES ==========
+# Keep template files but ignore filled ones
+!*.env.example
+!*.env.template
+*.env.filled
+*.env.prod
+
+# ========== ADDITIONAL PROTECTION ==========
+# Add specific file patterns for your project
+messenger_app/secrets/
+messenger_app/private/
+messenger_app/config/private/
+messenger_app/data/private/
+
+# API Keys and credentials
+*_key.txt
+*_token.txt
+*_secret.txt
+*_password.txt
+*_credential*
+*_api_*
+api_keys.json
+credentials.json
+service-account.json
+firebase.json

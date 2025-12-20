@@ -1,4 +1,4 @@
-# messenger/settings.py
+# messenger/settings.py - COMPLETE FIXED VERSION
 import os
 import sys
 from pathlib import Path
@@ -300,9 +300,6 @@ SOCIAL_AUTH_FACEBOOK_EXTRA_DATA = [
 ]
 SOCIAL_AUTH_FACEBOOK_API_VERSION = 'v19.0'  # Latest API version
 
-# IMPORTANT: Remove custom redirect URI - let social-auth handle it
-# SOCIAL_AUTH_FACEBOOK_REDIRECT_URI = 'https://connect-io-0cql.onrender.com/complete/facebook/'
-
 # Social Auth Pipeline
 SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_details',
@@ -337,11 +334,37 @@ OTP_TWILIO_AUTH = config('TWILIO_AUTH_TOKEN', default='')
 OTP_TWILIO_TOKEN_VALIDITY = config('OTP_TWILIO_TOKEN_VALIDITY', default=300, cast=int)
 OTP_TOTP_ISSUER = SITE_NAME
 
-# Twilio Configuration
-TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID', default='')
-TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN', default='')
-TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER', default='')
-TWILIO_VERIFY_SERVICE_SID = config('TWILIO_VERIFY_SERVICE_SID', default='')
+# ========== TWILIO CONFIGURATION - FIXED ==========
+# Your Twilio Account SID
+TWILIO_ACCOUNT_SID = 'ACb1f4d1fb64cf30a79a7ccfb504584f4b'
+
+# Your Twilio Auth Token (replace with your actual token from Twilio console)
+TWILIO_AUTH_TOKEN = '4f58b38ba1fd76b326e2a7efa02af7d4'  # ⚠️ Replace with your actual token!
+
+# Your Twilio Verify Service SID
+TWILIO_VERIFY_SERVICE_SID = 'VA87fd0e149dd0297b83d48740df293f3e'
+
+# Your Twilio Phone Number (optional for SMS sending)
+TWILIO_PHONE_NUMBER = '+15005550006'  # Twilio test number
+
+# Debug Twilio settings
+print("\n" + "="*60)
+print("TWILIO CONFIGURATION STATUS")
+print("="*60)
+print(f"Account SID: {TWILIO_ACCOUNT_SID}")
+print(f"Auth Token: {'SET' if TWILIO_AUTH_TOKEN else 'NOT SET'}")
+print(f"Verify Service SID: {TWILIO_VERIFY_SERVICE_SID}")
+print(f"Phone Number: {TWILIO_PHONE_NUMBER}")
+
+# Check if Twilio credentials are valid
+if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
+    if not TWILIO_AUTH_TOKEN.startswith('your_'):
+        print("✅ Twilio credentials configured")
+    else:
+        print("⚠️  WARNING: Using placeholder Auth Token. Replace with your actual Twilio Auth Token!")
+else:
+    print("❌ Twilio credentials missing")
+print("="*60 + "\n")
 
 # File Upload Limits
 DATA_UPLOAD_MAX_MEMORY_SIZE = config('MAX_UPLOAD_SIZE', default=52428800, cast=int)
@@ -507,10 +530,11 @@ def ensure_migrations_and_user():
                     username='testuser',
                     email='test@example.com',
                     password='TestPass123!',
-                    phone_number='+9779800000000',
+                    phone_number='+9779866399895',  # Your phone number
                     is_verified=True
                 )
                 print("✅ Created test user: test@example.com / TestPass123!")
+                print("✅ Phone number set: +9779866399895")
             else:
                 print("✅ Test user already exists")
         except Exception as e:
@@ -576,3 +600,4 @@ SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
 SECURE_HSTS_SECONDS = 0 if DEBUG else 31536000
 
 print(f"✅ Settings loaded: DEBUG={DEBUG}, DATABASE={DATABASES['default']['ENGINE']}")
+print(f"✅ Twilio Verify Service: {TWILIO_VERIFY_SERVICE_SID}")

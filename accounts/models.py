@@ -384,6 +384,7 @@ class OTPVerification(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
     verified_at = models.DateTimeField(blank=True, null=True)
+    verification_sid = models.CharField(max_length=100, blank=True, null=True)  # ADDED FOR TWILIO SUPPORT
 
     class Meta:
         ordering = ['-created_at']
@@ -458,10 +459,11 @@ class OTPVerification(models.Model):
             self.verified_at = timezone.now()
             self.save()
 
-            # CRITICAL FIX: Update user's is_verified status
-            self.user.is_verified = True
-            # Use update_fields to force save only is_verified
-            self.user.save(update_fields=['is_verified'])
+            # CRITICAL FIX: Update user's is_verified status for account verification
+            if self.verification_type == 'account_verification':
+                self.user.is_verified = True
+                # Use update_fields to force save only is_verified
+                self.user.save(update_fields=['is_verified'])
 
             return True, "OTP verified successfully"
 
