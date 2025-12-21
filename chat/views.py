@@ -1,4 +1,3 @@
-# messenger_app/chat/views.py
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -15,7 +14,7 @@ import os
 from django.conf import settings
 from .utils import EmojiManager
 import emoji
-from django.views.decorators.csrf import csrf_exempt
+
 
 @login_required
 def chat_home(request):
@@ -770,6 +769,8 @@ def get_emoji_categories(request):
         })
 
     return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+
 @login_required
 def get_messages_ajax(request, conversation_id):
     """Get messages via AJAX"""
@@ -809,22 +810,26 @@ def get_messages_ajax(request, conversation_id):
 
     return JsonResponse({'error': 'Invalid request'})
 
+
 @csrf_exempt
 @login_required
 def update_online_status(request):
     """Update user's online status"""
     if request.method == 'POST':
-        online = request.POST.get('online', 'false') == 'true'
+        try:
+            data = json.loads(request.body)
+            is_online = data.get('online', True)
 
-        # Update or create user status
-        user_status, created = UserStatus.objects.get_or_create(user=request.user)
-        user_status.online = online
-        user_status.last_seen = timezone.now()
-        user_status.save()
+            # Update user's online status
+            user = request.user
+            user.is_online = is_online
+            user.last_seen = timezone.now()
+            user.save()
 
-        return JsonResponse({'success': True})
-
-    return JsonResponse({'success': False})
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
 
 @login_required
@@ -1164,25 +1169,3 @@ def quick_chat(request, user_id):
     except CustomUser.DoesNotExist:
         messages.error(request, 'User not found.')
         return redirect('discover_users')
-
-    @csrf_exempt
-    @login_required
-    def update_online_status(request):
-        """Update user's online status - exempt from CSRF for WebSocket compatibility"""
-        if request.method == 'POST':
-            try:
-                data = json.loads(request.body)
-                is_online = data.get('online', True)
-
-                # Update user's online status
-                request.user.is_online = is_online
-                request.user.last_seen = timezone.now()
-                request.user.save()
-
-                # Broadcast to friends/channels if needed
-                # ... rest of your code ...
-
-                return JsonResponse({'status': 'success'})
-            except Exception as e:
-                return JsonResponse({'status': 'error', 'message': str(e)})
-        return JsonResponse({'status': 'error', 'message': 'Invalid request method'})

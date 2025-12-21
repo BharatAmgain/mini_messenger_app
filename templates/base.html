@@ -643,35 +643,39 @@
         }
 
         // Function to handle online status updates with CSRF protection
-        function updateOnlineStatus(isOnline) {
-            const csrfToken = getCSRFToken();
+function updateOnlineStatus(isOnline) {
+    // Only update if user is authenticated
+    if (!document.body.classList.contains('user-authenticated')) {
+        console.log('User not authenticated, skipping online status update');
+        return;
+    }
 
-            if (!csrfToken) {
-                console.warn('CSRF token not found, skipping online status update');
-                return;
-            }
+    const csrfToken = getCSRFToken();
 
-            fetch('/chat/update-online-status/', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    'online': isOnline.toString(),
-                    'csrfmiddlewaretoken': csrfToken
-                }),
-                credentials: 'same-origin'
-            }).then(response => {
-                if (!response.ok) {
-                    console.log('Online status update failed:', response.status);
-                }
-            }).catch(error => {
-                console.log('Error updating online status:', error);
-            });
+    if (!csrfToken) {
+        console.warn('CSRF token not found, skipping online status update');
+        return;
+    }
+
+    fetch('/chat/update-online-status/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            'online': isOnline,
+        }),
+        credentials: 'same-origin'
+    }).then(response => {
+        if (!response.ok) {
+            console.log('Online status update failed:', response.status);
         }
-
+    }).catch(error => {
+        console.log('Error updating online status:', error);
+    });
+}
         // Function to send beacons when page is closing
         function sendBeforeUnloadBeacon() {
             const csrfToken = getCSRFToken();

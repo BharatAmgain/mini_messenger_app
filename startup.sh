@@ -1,5 +1,4 @@
 #!/bin/bash
-# startup.sh - Startup script for Render
 
 echo "=== Starting Messenger App ==="
 
@@ -13,10 +12,10 @@ python manage.py collectstatic --no-input --clear
 
 # Start Gunicorn server
 echo "3. Starting Gunicorn server..."
-exec gunicorn messenger.wsgi:application \
+exec gunicorn messenger_app.asgi:application \
     --bind 0.0.0.0:10000 \
     --workers 2 \
+    --worker-class gthread \
     --threads 4 \
-    --access-logfile - \
-    --error-logfile - \
-    --timeout 120
+    --timeout 120 \
+    --access-logfile -

@@ -1,39 +1,49 @@
-# messenger_app/chat/urls.py
 from django.urls import path
 from . import views
 
-app_name = 'chat'  # ADD THIS LINE
-
 urlpatterns = [
+    # Chat home
     path('', views.chat_home, name='chat_home'),
+
+    # Conversations
+    path('conversation/<uuid:conversation_id>/', views.conversation, name='conversation'),
     path('start-chat/', views.start_chat, name='start_chat'),
+    path('quick-chat/<int:user_id>/', views.quick_chat, name='quick_chat'),
+
+    # Groups
     path('create-group/', views.create_group, name='create_group'),
-    path('search-users/', views.search_users, name='search_users'),
-    path('<uuid:conversation_id>/', views.conversation, name='conversation'),
-    path('<uuid:conversation_id>/settings/', views.group_settings, name='group_settings'),
-    path('<uuid:conversation_id>/invite/', views.invite_to_group, name='invite_to_group'),
-    path('<uuid:conversation_id>/leave/', views.leave_group, name='leave_group'),
+    path('group/<uuid:conversation_id>/settings/', views.group_settings, name='group_settings'),
+    path('group/<uuid:conversation_id>/leave/', views.leave_group, name='leave_group'),
+    path('group/<uuid:conversation_id>/invite/', views.invite_to_group, name='invite_to_group'),
 
-    # AJAX endpoints
-    path('<uuid:conversation_id>/typing/', views.typing_indicator, name='typing_indicator'),
-    path('<uuid:conversation_id>/typing-status/', views.get_typing_status, name='get_typing_status'),
-    path('<uuid:conversation_id>/new-messages/', views.get_new_messages, name='get_new_messages'),
-    path('<uuid:conversation_id>/send-message/', views.send_message_ajax, name='send_message_ajax'),
-    path('<uuid:conversation_id>/get-messages/', views.get_messages_ajax, name='get_messages_ajax'),
-    path('get-notifications/', views.get_notifications, name='get_notifications'),
+    # Messages
+    path('send-message/<uuid:conversation_id>/', views.send_message_ajax, name='send_message_ajax'),
+    path('get-messages/<uuid:conversation_id>/', views.get_messages_ajax, name='get_messages_ajax'),
+    path('get-new-messages/<uuid:conversation_id>/', views.get_new_messages, name='get_new_messages'),
+    path('edit-message/<uuid:message_id>/', views.edit_message, name='edit_message'),
+    path('unsend-message/<uuid:message_id>/', views.unsend_message, name='unsend_message'),
+    path('react-to-message/<uuid:message_id>/', views.react_to_message, name='react_to_message'),
 
-    # User discovery and blocking URLs
-    path('discover-users/', views.discover_users, name='discover_users'),
+    # Typing indicators
+    path('typing/<uuid:conversation_id>/', views.typing_indicator, name='typing_indicator'),
+    path('typing-status/<uuid:conversation_id>/', views.get_typing_status, name='get_typing_status'),
+
+    # Online status
+    path('update-online-status/', views.update_online_status, name='update_online_status'),
+
+    # Discover users (moved here to avoid conflicts)
+    path('discover/', views.discover_users, name='discover_users_chat'),
+    path('search/', views.search_users, name='search_users_chat'),
+
+    # Block users
     path('block-user/<int:user_id>/', views.block_user, name='block_user'),
     path('unblock-user/<int:user_id>/', views.unblock_user, name='unblock_user'),
     path('blocked-users/', views.blocked_users, name='blocked_users'),
-    path('quick-chat/<int:user_id>/', views.quick_chat, name='quick_chat'),
 
-    # Message action URLs
-    path('message/<uuid:message_id>/edit/', views.edit_message, name='edit_message'),
-    path('message/<uuid:message_id>/unsend/', views.unsend_message, name='unsend_message'),
-    path('message/<uuid:message_id>/react/', views.react_to_message, name='react_to_message'),
-    path('update-online-status/', views.update_online_status, name='update_online_status'),
+    # Notifications
+    path('notifications/', views.get_notifications, name='get_notifications_chat'),
+
+    # Emojis
     path('search-emojis/', views.search_emojis, name='search_emojis'),
-    path('get-emoji-categories/', views.get_emoji_categories, name='get_emoji_categories'),
+    path('emoji-categories/', views.get_emoji_categories, name='get_emoji_categories'),
 ]

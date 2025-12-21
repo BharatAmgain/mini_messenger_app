@@ -1,4 +1,3 @@
-# messenger_app/accounts/views.py - COMPLETE FIXED VERSION WITH ALL FUNCTIONS
 import json
 import traceback
 import base64
@@ -151,7 +150,7 @@ def register(request):
                 login(request, user)
 
                 messages.success(request, 'Registration successful! Welcome to Messenger!')
-                return redirect('chat:chat_home')
+                return redirect('chat_home')
 
             except Exception as e:
                 messages.error(request, f'Registration error: {str(e)}')
@@ -400,6 +399,14 @@ def profile_edit(request):
     }
 
     return render(request, 'accounts/profile_edit.html', context)
+
+
+def root_redirect(request):
+    """Redirect root URL based on authentication status"""
+    if request.user.is_authenticated:
+        return redirect('chat_home')
+    else:
+        return redirect('login')
 
 
 @login_required
@@ -705,7 +712,7 @@ def get_unread_count(request):
 
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect('chat:chat_home')
+        return redirect('chat_home')
 
     if request.method == 'POST':
         username = request.POST['username']
