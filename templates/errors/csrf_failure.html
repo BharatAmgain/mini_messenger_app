@@ -1,11 +1,68 @@
-<!-- templates/errors/csrf_failure.html -->
-{% extends 'base.html' %}
-{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Error - Connect.io</title>
+    <!-- Load external resources directly -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-{% block title %}Security Error - {{ SITE_NAME }}{% endblock %}
+    <!-- Custom CSS -->
+    <style>
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
 
-{% block content %}
-<div class="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        .error-icon {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        /* Custom scrollbar for technical details */
+        .tech-details::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+
+        .tech-details::-webkit-scrollbar-track {
+            background: #1f2937;
+            border-radius: 4px;
+        }
+
+        .tech-details::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+
+        .tech-details::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+
+        /* Button hover effects */
+        button, a {
+            transition: all 0.2s ease;
+        }
+
+        button:hover, a:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Gradient animation for Quick Fix button */
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .quick-fix-btn {
+            background-size: 200% 200%;
+            animation: gradientShift 3s ease infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-lg w-full">
         <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
             <!-- Error Header -->
@@ -29,7 +86,7 @@
                     </div>
                     <h2 class="text-xl font-bold text-gray-900 mb-2">CSRF Verification Failed</h2>
                     <p class="text-gray-600 mb-6">
-                        {{ message|default:"The request could not be processed because a security token was invalid or missing." }}
+                        The request could not be processed because a security token was invalid or missing.
                     </p>
                 </div>
 
@@ -93,31 +150,10 @@
                     </ol>
                 </div>
 
-                <!-- Technical Details (only in DEBUG mode) -->
-                {% if DEBUG %}
-                <div class="bg-gray-900 rounded-xl p-6 mb-8 tech-details">
-                    <h3 class="font-semibold text-white mb-4 flex items-center">
-                        <i class="fas fa-code text-green-400 mr-2"></i>
-                        Technical Details (Debug Mode):
-                    </h3>
-                    <div class="text-gray-300 text-sm font-mono">
-                        <div class="space-y-1">
-                            <p><span class="text-green-400">Reason:</span> {{ reason|default:"CSRF token missing or incorrect" }}</p>
-                            <p><span class="text-green-400">Path:</span> {{ request.path }}</p>
-                            <p><span class="text-green-400">Method:</span> {{ request.method }}</p>
-                            <p><span class="text-green-400">User:</span> {% if user.is_authenticated %}{{ user.username }}{% else %}Anonymous{% endif %}</p>
-                            <p><span class="text-green-400">CSRF Token:</span> {% if csrf_token %}Present{% else %}Missing{% endif %}</p>
-                            <p><span class="text-green-400">User Agent:</span> {{ request.META.HTTP_USER_AGENT|truncatechars:50 }}</p>
-                            <p><span class="text-green-400">Time:</span> {% now "Y-m-d H:i:s" %}</p>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-
                 <!-- Quick Fix Button -->
                 <div class="mb-8">
                     <button onclick="fixCSRFIssue()"
-                            class="w-full inline-flex justify-center items-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-200 transform hover:scale-105">
+                            class="quick-fix-btn w-full inline-flex justify-center items-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-200 transform hover:scale-105">
                         <i class="fas fa-magic mr-3"></i>
                         Quick Fix: Reload & Restore Session
                     </button>
@@ -134,13 +170,13 @@
                         Go Back
                     </button>
 
-                    <a href="{% url 'login' %}"
+                    <a href="/accounts/login/"
                        class="w-full inline-flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-200">
                         <i class="fas fa-sign-in-alt mr-2"></i>
                         Login Again
                     </a>
 
-                    <a href="{% url 'chat_home' %}"
+                    <a href="/"
                        class="w-full sm:col-span-2 inline-flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition duration-200">
                         <i class="fas fa-home mr-2"></i>
                         Go to Homepage
@@ -151,8 +187,8 @@
                 <div class="mt-8 pt-6 border-t border-gray-200 text-center">
                     <p class="text-sm text-gray-600">
                         If this error persists, please contact support:
-                        <a href="mailto:{{ SUPPORT_EMAIL }}" class="font-medium text-blue-600 hover:text-blue-500 ml-1">
-                            {{ SUPPORT_EMAIL }}
+                        <a href="mailto:support@connect.io" class="font-medium text-blue-600 hover:text-blue-500 ml-1">
+                            support@connect.io
                         </a>
                     </p>
                     <p class="text-xs text-gray-500 mt-2">
@@ -187,61 +223,7 @@
             </div>
         </div>
     </div>
-</div>
-
-<style>
-    /* Animation for error icon */
-    @keyframes pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-    }
-
-    .error-icon {
-        animation: pulse 2s ease-in-out infinite;
-    }
-
-    /* Custom scrollbar for technical details */
-    .tech-details::-webkit-scrollbar {
-        height: 8px;
-        width: 8px;
-    }
-
-    .tech-details::-webkit-scrollbar-track {
-        background: #1f2937;
-        border-radius: 4px;
-    }
-
-    .tech-details::-webkit-scrollbar-thumb {
-        background: #4b5563;
-        border-radius: 4px;
-    }
-
-    .tech-details::-webkit-scrollbar-thumb:hover {
-        background: #6b7280;
-    }
-
-    /* Button hover effects */
-    button, a {
-        transition: all 0.2s ease;
-    }
-
-    button:hover, a:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Gradient animation for Quick Fix button */
-    @keyframes gradientShift {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-
-    button[onclick="fixCSRFIssue()"] {
-        background-size: 200% 200%;
-        animation: gradientShift 3s ease infinite;
-    }
-</style>
+</body>
 
 <script>
     // Add interactive elements
@@ -256,15 +238,14 @@
             }
             if (seconds <= 0) {
                 clearInterval(countdownInterval);
-                window.location.href = "{% url 'login' %}";
+                window.location.href = "/accounts/login/";
             }
         }, 1000);
 
         // Log error for debugging
         console.warn('CSRF Verification Failed:', {
-            reason: "{{ reason|default:'Unknown' }}",
+            reason: "Security token missing or invalid",
             path: window.location.pathname,
-            user: "{% if user.is_authenticated %}{{ user.username }}{% else %}Anonymous{% endif %}",
             timestamp: new Date().toISOString()
         });
 
@@ -295,7 +276,7 @@
     // Quick fix function
     function fixCSRFIssue() {
         // Show loading state
-        const quickFixBtn = document.querySelector('button[onclick="fixCSRFIssue()"]');
+        const quickFixBtn = document.querySelector('.quick-fix-btn');
         const originalText = quickFixBtn.innerHTML;
         quickFixBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-3"></i>Fixing...';
         quickFixBtn.disabled = true;
@@ -353,4 +334,4 @@
         window.history.replaceState(null, null, window.location.href);
     }
 </script>
-{% endblock %}
+</html>

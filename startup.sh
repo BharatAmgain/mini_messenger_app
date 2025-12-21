@@ -1,40 +1,54 @@
 #!/bin/bash
-echo "=== Starting Messenger App ==="
 
-# 1. Check project structure
-echo "1. Checking project structure..."
-ls -la
+echo "🚀 Starting Connect.io Messenger App..."
 
-# 2. Set Python path
-echo "2. Setting up Python paths..."
+# Set Python path
 export PYTHONPATH="/opt/render/project/src:$PYTHONPATH"
-echo "PYTHONPATH: $PYTHONPATH"
 
-# 3. Check for manage.py
-echo "3. Checking for manage.py..."
-if [ -f "manage.py" ]; then
-    echo "✓ Found manage.py"
-else
-    echo "✗ manage.py not found!"
-    echo "Current directory: $(pwd)"
-    ls -la
+# Check if manage.py exists
+if [ ! -f "manage.py" ]; then
+    echo "❌ Error: manage.py not found!"
     exit 1
 fi
 
-# 4. Apply migrations
-echo "4. Applying database migrations..."
+echo "✅ Found manage.py"
+
+# Apply database migrations
+echo "📦 Applying database migrations..."
 python manage.py migrate --no-input
 
-# 5. Collect static files
-echo "5. Collecting static files..."
-python manage.py collectstatic --no-input
+# Create static files
+echo "📁 Collecting static files..."
+python manage.py collectstatic --no-input --clear
 
-# 6. Start server
-echo "6. Starting Gunicorn server..."
+# Create test user
+echo "👤 Creating test user..."
+python -c "
+import os
+import django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'messenger.settings')
+django.setup()
+from accounts.models import CustomUser
+if not CustomUser.objects.filter(email='test@example.com').exists():
+    user = CustomUser.objects.create_user(
+        username='testuser',
+        email='test@example.com',
+        password='TestPass123!',
+        phone_number='+9779866399895',
+        is_verified=True
+    )
+    print('✅ Created test user: test@example.com / TestPass123!')
+else:
+    print('✅ Test user already exists')
+"
+
+# Start Gunicorn server
+echo "🌐 Starting Gunicorn server..."
 exec gunicorn messenger.wsgi:application \
-    --bind 0.0.0.0:$PORT \
+    --bind 0.0.0.0:10000 \
     --workers 2 \
-    --worker-class gthread \
     --threads 4 \
+    --worker-class gthread \
     --timeout 120 \
-    --access-logfile -
+    --access-logfile - \
+    --error-logfile -

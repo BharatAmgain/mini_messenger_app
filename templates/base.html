@@ -1,5 +1,4 @@
-<!-- templates/base.html - COMPLETE FIXED VERSION -->
-{% load static %
+{% load static %}
 
 <!DOCTYPE html>
 <html lang="en" class="h-full">
@@ -362,35 +361,30 @@
         {% endif %}
 
         <div class="space-y-1">
-            <!-- Chat link -->
-            <a href="{% url 'chat:chat_home' %}"
+            <a href="{% url 'chat_home' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}bg-blue-50 text-blue-700 border-l-4 border-blue-500{% endif %}">
                 <i class="fas fa-comments w-6 text-blue-600"></i>
                 <span class="ml-3">Chats</span>
             </a>
 
-            <!-- Discover link -->
-            <a href="{% url 'chat:discover_users_chat' %}"
-               class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'discover_users_chat' %}bg-green-50 text-green-700 border-l-4 border-green-500{% endif %}">
+            <a href="{% url 'discover_users' %}"
+               class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'discover_users' %}bg-green-50 text-green-700 border-l-4 border-green-500{% endif %}">
                 <i class="fas fa-search w-6 text-green-600"></i>
                 <span class="ml-3">Discover</span>
             </a>
 
-            <!-- Friend requests link -->
             <a href="{% url 'friend_requests' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'friend_requests' %}bg-purple-50 text-purple-700 border-l-4 border-purple-500{% endif %}">
                 <i class="fas fa-user-friends w-6 text-purple-600"></i>
                 <span class="ml-3">Friends</span>
             </a>
 
-            <!-- Profile link -->
             <a href="{% url 'profile' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}bg-yellow-50 text-yellow-700 border-l-4 border-yellow-500{% endif %}">
                 <i class="fas fa-user w-6 text-yellow-600"></i>
                 <span class="ml-3">Profile</span>
             </a>
 
-            <!-- Notifications link -->
             <a href="{% url 'notifications' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'notifications' %}bg-red-50 text-red-700 border-l-4 border-red-500{% endif %}">
                 <i class="fas fa-bell w-6 text-red-600"></i>
@@ -402,7 +396,6 @@
                 {% endif %}
             </a>
 
-            <!-- Settings link -->
             <a href="{% url 'settings_main' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'settings_main' %}bg-gray-100 text-gray-900 border-l-4 border-gray-500{% endif %}">
                 <i class="fas fa-cog w-6 text-gray-600"></i>
@@ -412,7 +405,6 @@
             <hr class="my-4">
 
             {% if user.is_authenticated %}
-            <!-- Logout form -->
             <form method="POST" action="{% url 'logout' %}">
                 {% csrf_token %}
                 <button type="submit" class="flex items-center w-full p-3 rounded-lg hover:bg-red-50 transition duration-200 text-red-600">
@@ -421,7 +413,6 @@
                 </button>
             </form>
             {% else %}
-            <!-- Login link -->
             <a href="{% url 'login' %}" class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200">
                 <i class="fas fa-sign-in-alt w-6 text-blue-600"></i>
                 <span class="ml-3">Login</span>
@@ -433,36 +424,31 @@
     <!-- Mobile Bottom Navigation -->
     {% if user.is_authenticated %}
     <div class="desktop-hidden bottom-nav">
-        <!-- Chats link -->
-        <a href="{% url 'chat:chat_home' %}"
+        <a href="{% url 'chat_home' %}"
            class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}text-blue-600{% endif %}">
             <i class="fas fa-comments text-xl mb-1"></i>
             <span class="text-xs">Chats</span>
         </a>
 
-        <!-- Discover link -->
-        <a href="{% url 'chat:discover_users_chat' %}"
-           class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'discover_users_chat' %}text-blue-600{% endif %}">
+        <a href="{% url 'discover_users' %}"
+           class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'discover_users' %}text-blue-600{% endif %}">
             <i class="fas fa-search text-xl mb-1"></i>
             <span class="text-xs">Discover</span>
         </a>
 
-        <!-- Start Chat link -->
-        <a href="{% url 'chat:start_chat' %}"
+        <a href="{% url 'start_chat' %}"
            class="flex flex-col items-center justify-center p-2">
             <div class="w-12 h-12 -mt-6 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
                 <i class="fas fa-edit text-white text-lg"></i>
             </div>
         </a>
 
-        <!-- Friends link -->
         <a href="{% url 'friend_requests' %}"
            class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'friend_requests' %}text-blue-600{% endif %}">
             <i class="fas fa-user-friends text-xl mb-1"></i>
             <span class="text-xs">Friends</span>
         </a>
 
-        <!-- Profile link -->
         <a href="{% url 'profile' %}"
            class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}text-blue-600{% endif %}">
             <i class="fas fa-user text-xl mb-1"></i>
@@ -485,35 +471,30 @@
 
             <!-- Navigation -->
             <nav class="flex-1 p-4 space-y-1">
-                <!-- Chats link -->
-                <a href="{% url 'chat:chat_home' %}"
+                <a href="{% url 'chat_home' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-blue-50 transition duration-200 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}bg-blue-50 text-blue-600 border-l-4 border-blue-500{% endif %}">
                     <i class="fas fa-comments w-6"></i>
                     <span class="ml-3">Chats</span>
                 </a>
 
-                <!-- Discover link -->
-                <a href="{% url 'chat:discover_users_chat' %}"
-                   class="flex items-center p-3 rounded-lg hover:bg-green-50 transition duration-200 {% if request.resolver_match.url_name == 'discover_users_chat' %}bg-green-50 text-green-600 border-l-4 border-green-500{% endif %}">
+                <a href="{% url 'discover_users' %}"
+                   class="flex items-center p-3 rounded-lg hover:bg-green-50 transition duration-200 {% if request.resolver_match.url_name == 'discover_users' %}bg-green-50 text-green-600 border-l-4 border-green-500{% endif %}">
                     <i class="fas fa-search w-6"></i>
                     <span class="ml-3">Discover</span>
                 </a>
 
-                <!-- Friends link -->
                 <a href="{% url 'friend_requests' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-purple-50 transition duration-200 {% if request.resolver_match.url_name == 'friend_requests' %}bg-purple-50 text-purple-600 border-l-4 border-purple-500{% endif %}">
                     <i class="fas fa-user-friends w-6"></i>
                     <span class="ml-3">Friends</span>
                 </a>
 
-                <!-- Profile link -->
                 <a href="{% url 'profile' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-yellow-50 transition duration-200 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}bg-yellow-50 text-yellow-600 border-l-4 border-yellow-500{% endif %}">
                     <i class="fas fa-user w-6"></i>
                     <span class="ml-3">Profile</span>
                 </a>
 
-                <!-- Notifications link -->
                 <a href="{% url 'notifications' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-red-50 transition duration-200 {% if request.resolver_match.url_name == 'notifications' %}bg-red-50 text-red-600 border-l-4 border-red-500{% endif %}">
                     <i class="fas fa-bell w-6"></i>
@@ -525,7 +506,6 @@
                     {% endif %}
                 </a>
 
-                <!-- Settings link -->
                 <a href="{% url 'settings_main' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'settings_main' %}bg-gray-100 text-gray-900 border-l-4 border-gray-500{% endif %}">
                     <i class="fas fa-cog w-6"></i>
@@ -608,7 +588,7 @@
                     </div>
                 </div>
                 {% endfor %}
-            </div>
+                </div>
             {% endif %}
 
             <!-- Page Content -->
@@ -619,7 +599,7 @@
         </div>
     </div>
 
-    <!-- JavaScript - FIXED VERSION -->
+    <!-- JavaScript -->
     <script>
         // Function to get CSRF token from cookies
         function getCSRFToken() {
@@ -655,8 +635,14 @@
             return cookieValue;
         }
 
-        // Function to handle online status updates with CSRF protection - FIXED
+        // Function to handle online status updates with CSRF protection
         function updateOnlineStatus(isOnline) {
+            // Only update if user is authenticated
+            if (!document.body.classList.contains('user-authenticated')) {
+                console.log('User not authenticated, skipping online status update');
+                return;
+            }
+
             const csrfToken = getCSRFToken();
 
             if (!csrfToken) {
@@ -675,28 +661,16 @@
                     'online': isOnline,
                 }),
                 credentials: 'same-origin'
-            })
-            .then(response => {
-                if (response.status === 401) {
-                    // User is not authenticated, this is normal for non-logged in users
-                    console.log('User not authenticated, skipping online status update');
-                    return response.json();
+            }).then(response => {
+                if (!response.ok) {
+                    console.log('Online status update failed:', response.status);
                 }
-                return response.json();
-            })
-            .then(data => {
-                if (data.status === 'success') {
-                    console.log('Online status updated successfully:', data);
-                } else {
-                    console.log('Online status update failed:', data);
-                }
-            })
-            .catch(error => {
+            }).catch(error => {
                 console.log('Error updating online status:', error);
             });
         }
 
-        // Function to send beacons when page is closing - FIXED
+        // Function to send beacons when page is closing
         function sendBeforeUnloadBeacon() {
             const csrfToken = getCSRFToken();
             if (csrfToken && navigator.sendBeacon) {
@@ -827,7 +801,6 @@
 
             // Check if user is authenticated
             const userAuthenticated = document.body.classList.contains('user-authenticated');
-
             if (userAuthenticated) {
                 // Fetch notification count on page load
                 fetchNotificationCount();
@@ -839,34 +812,32 @@
                 setTimeout(() => {
                     updateOnlineStatus(true);
                 }, 1000);
-
-                // Update status when user leaves (using sendBeacon for reliability)
-                window.addEventListener('beforeunload', function() {
-                    sendBeforeUnloadBeacon();
-                });
-
-                // Also update on page hide (for mobile)
-                document.addEventListener('visibilitychange', function() {
-                    if (document.visibilityState === 'hidden') {
-                        sendBeforeUnloadBeacon();
-                    } else if (document.visibilityState === 'visible') {
-                        updateOnlineStatus(true);
-                    }
-                });
-
-                // Add focus/blur handlers
-                window.addEventListener('focus', function() {
-                    updateOnlineStatus(true);
-                });
-
-                window.addEventListener('blur', function() {
-                    updateOnlineStatus(false);
-                });
-            } else {
-                // For non-authenticated users, remove the online status handlers
-                // This prevents the 500 errors
-                console.log('User not authenticated, skipping online status setup');
             }
+
+            // Update status when user leaves (using sendBeacon for reliability)
+            window.addEventListener('beforeunload', sendBeforeUnloadBeacon);
+
+            // Also update on page hide (for mobile)
+            document.addEventListener('visibilitychange', function() {
+                if (document.visibilityState === 'hidden') {
+                    sendBeforeUnloadBeacon();
+                } else if (document.visibilityState === 'visible') {
+                    updateOnlineStatus(true);
+                }
+            });
+
+            // Add focus/blur handlers
+            window.addEventListener('focus', function() {
+                if (userAuthenticated) {
+                    updateOnlineStatus(true);
+                }
+            });
+
+            window.addEventListener('blur', function() {
+                if (userAuthenticated) {
+                    updateOnlineStatus(false);
+                }
+            });
         });
 
         // Prevent zoom on double-tap for mobile

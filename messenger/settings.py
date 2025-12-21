@@ -1,4 +1,4 @@
-# messenger/settings.py - COMPLETE FIXED VERSION FOR GOOGLE OAUTH
+# messenger/settings.py - COMPLETE FIXED VERSION WITH ERROR HANDLERS
 import os
 import sys
 from pathlib import Path
@@ -666,6 +666,24 @@ if DEBUG:
     SOCIAL_AUTH_LOG_LEVEL = 'DEBUG'
     print("\n🔧 Social Auth debugging enabled")
 
+# ========== ERROR HANDLERS CONFIGURATION ==========
+# Add these error handlers (CRITICAL FIX for your current issue)
+handler404 = 'messenger.views.page_not_found'
+handler500 = 'messenger.views.server_error'
+handler403 = 'messenger.views.permission_denied'
+handler400 = 'messenger.views.bad_request'
+
+print("\n" + "=" * 60)
+print("ERROR HANDLERS CONFIGURED")
+print("=" * 60)
+print("✅ 404 Handler: messenger.views.page_not_found")
+print("✅ 500 Handler: messenger.views.server_error")
+print("✅ 403 Handler: messenger.views.permission_denied")
+print("✅ 400 Handler: messenger.views.bad_request")
+print("✅ CSRF Failure: messenger.views.csrf_failure")
+print("=" * 60)
+
+# ========== RUN DATABASE SETUP ==========
 # Run database setup on startup
 if __name__ == 'messenger.settings':
     ensure_migrations_and_user()

@@ -7,6 +7,7 @@ from django.views.generic import TemplateView
 from django.conf import settings
 from django.conf.urls.static import static
 from django.shortcuts import render
+from . import views
 
 # Custom home view that checks authentication
 def home_view(request):
@@ -28,7 +29,6 @@ urlpatterns = [
 
     # Chat app
     path('chat/', include('chat.urls')),
-
     # Home page
     path('', home_view, name='home'),
 
@@ -38,9 +38,6 @@ urlpatterns = [
 
     # Debug page (for development only)
     path('debug/', TemplateView.as_view(template_name='debug.html'), name='debug'),
-
-    # REMOVED: Django's built-in auth to avoid conflicts
-    # path('auth/', include('django.contrib.auth.urls')),
 ]
 
 # Error handlers
