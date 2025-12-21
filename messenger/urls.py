@@ -6,7 +6,7 @@ from django.urls import path, include
 from django.views.generic import TemplateView
 from django.conf import settings
 from django.conf.urls.static import static
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from . import views
 
 # Custom home view that checks authentication
@@ -29,8 +29,14 @@ urlpatterns = [
 
     # Chat app
     path('chat/', include('chat.urls')),
+
     # Home page
     path('', home_view, name='home'),
+
+    # Authentication views (directly from messenger.views)
+    path('login/', views.login_view, name='login'),
+    path('register/', views.register_view, name='register'),
+    path('logout/', views.logout_view, name='logout'),
 
     # Legal pages
     path('terms/', TemplateView.as_view(template_name='terms.html'), name='terms'),
@@ -40,7 +46,7 @@ urlpatterns = [
     path('debug/', TemplateView.as_view(template_name='debug.html'), name='debug'),
 ]
 
-# Error handlers
+# Error handlers - ADD THESE
 handler400 = 'messenger.views.bad_request'
 handler403 = 'messenger.views.permission_denied'
 handler404 = 'messenger.views.page_not_found'
