@@ -151,7 +151,7 @@ def register(request):
                 login(request, user)
 
                 messages.success(request, 'Registration successful! Welcome to Messenger!')
-                return redirect('chat_home')
+                return redirect('chat:chat_home')
 
             except Exception as e:
                 messages.error(request, f'Registration error: {str(e)}')

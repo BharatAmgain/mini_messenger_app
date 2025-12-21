@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Debug Information{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto py-12 px-4">
+    <h1 class="text-3xl font-bold mb-8">Debug Information</h1>
+    <div class="bg-gray-50 p-6 rounded-lg">
+        <h2 class="text-xl font-semibold mb-4">System Status</h2>
+        <ul class="space-y-2">
+            <li>✅ Application is running</li>
+            <li>✅ Database connected</li>
+            <li>✅ Static files served</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

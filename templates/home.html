@@ -1,0 +1,143 @@
+<!-- templates/home.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Welcome to Connect.io{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl w-full space-y-8">
+        <!-- Hero Section -->
+        <div class="text-center">
+            <div class="flex justify-center mb-6">
+                <div class="floating">
+                    <div class="relative">
+                        <div class="w-24 h-24 rounded-3xl bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center shadow-2xl">
+                            <i class="fas fa-comments text-white text-4xl"></i>
+                        </div>
+                        <div class="absolute -top-3 -right-3 w-12 h-12 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center">
+                            <i class="fas fa-bolt text-white text-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight mb-4">
+                Welcome to <span class="text-blue-600">Connect</span><span class="text-purple-600">.io</span>
+            </h1>
+
+            <p class="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+                The modern messaging platform that connects you with friends, family, and colleagues seamlessly.
+            </p>
+
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="{% url 'register' %}"
+                   class="inline-flex items-center justify-center px-8 py-4 border border-transparent rounded-xl text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
+                    <i class="fas fa-user-plus mr-3"></i>
+                    Get Started Free
+                </a>
+
+                <a href="{% url 'login' %}"
+                   class="inline-flex items-center justify-center px-8 py-4 border border-gray-300 rounded-xl text-lg font-semibold text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
+                    <i class="fas fa-sign-in-alt mr-3"></i>
+                    Sign In
+                </a>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="mt-16">
+            <h2 class="text-3xl font-bold text-center text-gray-900 mb-12">Why Choose Connect.io?</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+                    <div class="w-16 h-16 rounded-xl bg-blue-100 flex items-center justify-center mb-4">
+                        <i class="fas fa-shield-alt text-blue-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Secure & Private</h3>
+                    <p class="text-gray-600">End-to-end encryption keeps your conversations private. Your data is yours alone.</p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+                    <div class="w-16 h-16 rounded-xl bg-green-100 flex items-center justify-center mb-4">
+                        <i class="fas fa-bolt text-green-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Lightning Fast</h3>
+                    <p class="text-gray-600">Real-time messaging with instant delivery. No delays, just seamless communication.</p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+                    <div class="w-16 h-16 rounded-xl bg-purple-100 flex items-center justify-center mb-4">
+                        <i class="fas fa-users text-purple-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Group Chats</h3>
+                    <p class="text-gray-600">Create groups for family, friends, or work teams. Share moments together.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="mt-16 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-blue-600">24/7</div>
+                    <div class="text-gray-600">Uptime</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-green-600">99.9%</div>
+                    <div class="text-gray-600">Reliability</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-purple-600">100%</div>
+                    <div class="text-gray-600">Encrypted</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-orange-600">∞</div>
+                    <div class="text-gray-600">Messages</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA Section -->
+        <div class="mt-16 text-center">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6">Ready to Connect?</h2>
+            <p class="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+                Join thousands of users who trust Connect.io for their daily communication needs.
+            </p>
+            <a href="{% url 'register' %}"
+               class="inline-flex items-center justify-center px-10 py-5 border border-transparent rounded-xl text-xl font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300 transform hover:scale-105 hover:shadow-xl shadow-lg">
+                <i class="fas fa-rocket mr-3"></i>
+                Start Your Journey Today
+            </a>
+
+            <div class="mt-8 text-sm text-gray-500">
+                <i class="fas fa-lock mr-2"></i>
+                No credit card required • Free forever plan • 30-day premium trial
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+    }
+
+    .floating {
+        animation: float 4s ease-in-out infinite;
+    }
+
+    /* Feature card hover effects */
+    .feature-card {
+        transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-5px);
+    }
+</style>
+{% endblock %}
