@@ -1,5 +1,8 @@
+# chat/urls.py
 from django.urls import path
 from . import views
+
+app_name = 'chat'  # Add this line
 
 urlpatterns = [
     # Chat home
@@ -31,9 +34,9 @@ urlpatterns = [
     # Online status
     path('update-online-status/', views.update_online_status, name='update_online_status'),
 
-    # Discover users (moved here to avoid conflicts)
-    path('discover/', views.discover_users, name='discover_users_chat'),
-    path('search/', views.search_users, name='search_users_chat'),
+    # Discover users - FIXED: Removed _chat suffix to match template
+    path('discover/', views.discover_users, name='discover_users'),
+    path('search/', views.search_users, name='search_users'),
 
     # Block users
     path('block-user/<int:user_id>/', views.block_user, name='block_user'),
