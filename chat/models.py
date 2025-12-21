@@ -1,6 +1,6 @@
 # messenger_app/chat/models.py
 from django.db import models
-from django.contrib.auth import get_user_model
+from django.conf import settings  # Use settings.AUTH_USER_MODEL instead
 import uuid
 import emoji
 from django.utils import timezone
@@ -8,23 +8,29 @@ import json
 from django.db.models import Q
 import os
 
-User = get_user_model()
+
+def get_user_model_class():
+    """Lazy loading of user model to avoid import issues"""
+    from django.contrib.auth import get_user_model
+    return get_user_model()
 
 
 class Conversation(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    participants = models.ManyToManyField(User, related_name='conversations')
+    participants = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='conversations')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_group = models.BooleanField(default=False)
     group_name = models.CharField(max_length=255, blank=True, null=True)
     group_description = models.TextField(blank=True, null=True)
     group_photo = models.ImageField(upload_to='group_photos/', blank=True, null=True)
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_groups', null=True, blank=True)
-    admins = models.ManyToManyField(User, related_name='admin_groups', blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                   related_name='created_groups', null=True, blank=True)
+    admins = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='admin_groups', blank=True)
 
     # Typing indicators
-    typing_users = models.ManyToManyField(User, related_name='typing_in_conversations', blank=True)
+    typing_users = models.ManyToManyField(settings.AUTH_USER_MODEL,
+                                          related_name='typing_in_conversations', blank=True)
 
     class Meta:
         ordering = ['-updated_at']
@@ -33,6 +39,7 @@ class Conversation(models.Model):
         if self.is_group:
             return f"Group: {self.group_name}"
         else:
+            User = get_user_model_class()
             participants = self.participants.all()
             return f"Chat between {', '.join([user.username for user in participants])}"
 
@@ -50,7 +57,7 @@ class Conversation(models.Model):
             return None
         else:
             other_user = self.participants.exclude(id=current_user.id).first()
-            if other_user and other_user.profile_picture:
+            if other_user and hasattr(other_user, 'profile_picture') and other_user.profile_picture:
                 return other_user.profile_picture.url
             return None
 
@@ -69,8 +76,8 @@ class Message(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
-    sender = models.ForeignKey(User, on_delete=models.CASCADE)
+    conversation = models.ForeignKey('Conversation', on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     content = models.TextField()
     message_type = models.CharField(max_length=10, choices=MESSAGE_TYPES, default='text')
     file = models.FileField(upload_to='message_files/', blank=True, null=True)
@@ -79,7 +86,7 @@ class Message(models.Model):
     thumbnail = models.ImageField(upload_to='message_thumbnails/', blank=True, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
-    read_by = models.ManyToManyField(User, related_name='read_messages', blank=True)
+    read_by = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='read_messages', blank=True)
 
     # New fields for editing, deleting, and reactions
     is_edited = models.BooleanField(default=False)
@@ -185,7 +192,7 @@ class Message(models.Model):
 
 
 class UserStatus(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='status')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='status')
     online = models.BooleanField(default=False)
     last_seen = models.DateTimeField(auto_now=True)
 
@@ -201,7 +208,8 @@ class ChatNotification(models.Model):
         ('group_invite', 'Group Invitation'),
     )
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_notifications')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                             related_name='chat_notifications')
     notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, null=True, blank=True,
                                      related_name='chat_notifications')
@@ -224,8 +232,10 @@ class ChatNotification(models.Model):
 
 class GroupInvitation(models.Model):
     group = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='invitations')
-    invited_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='group_sent_invitations')
-    invited_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_invitations')
+    invited_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                   related_name='group_sent_invitations')
+    invited_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                     related_name='received_invitations')
     status = models.CharField(max_length=20, choices=(
         ('pending', 'Pending'),
         ('accepted', 'Accepted'),
@@ -241,8 +251,10 @@ class GroupInvitation(models.Model):
 
 
 class BlockedUser(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='blocked_users')
-    blocked_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='blocked_by')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                             related_name='blocked_users')
+    blocked_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                     related_name='blocked_by')
     created_at = models.DateTimeField(auto_now_add=True)
     reason = models.TextField(blank=True, null=True)
 

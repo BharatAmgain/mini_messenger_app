@@ -63,24 +63,29 @@ fi
 echo "8. Checking Gunicorn..."
 python -c "import gunicorn; print(f'Gunicorn available')"
 
-# Start Gunicorn server with explicit module path
-echo "9. Starting Gunicorn server..."
-echo "Starting command: gunicorn messenger.asgi:application --bind 0.0.0.0:10000 --workers 2 --worker-class gthread --threads 4 --timeout 120 --access-logfile -"
+# Use PORT from environment (Render provides this)
+PORT=${PORT:-10000}
+echo "9. Starting server on port: $PORT"
+
+# TEMPORARY FIX: Use WSGI instead of ASGI to avoid import issues
+# Once ASGI issues are fixed, you can switch back to ASGI for WebSocket support
+echo "⚠️  Using WSGI temporarily (ASGI has import issues)"
+echo "Starting command: gunicorn messenger.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --worker-class gthread --threads 4 --timeout 120 --access-logfile -"
 
 # Try different module paths if needed
 if python -c "import messenger" 2>/dev/null; then
-    echo "✓ 'messenger' module found, starting server..."
-    exec gunicorn messenger.asgi:application \
-        --bind 0.0.0.0:10000 \
+    echo "✓ 'messenger' module found, starting server with WSGI..."
+    exec gunicorn messenger.wsgi:application \
+        --bind 0.0.0.0:$PORT \
         --workers 2 \
         --worker-class gthread \
         --threads 4 \
         --timeout 120 \
         --access-logfile -
 elif python -c "import messenger_app" 2>/dev/null; then
-    echo "✓ 'messenger_app' module found, trying alternative path..."
-    exec gunicorn messenger_app.messenger.asgi:application \
-        --bind 0.0.0.0:10000 \
+    echo "✓ 'messenger_app' module found, trying alternative path with WSGI..."
+    exec gunicorn messenger_app.messenger.wsgi:application \
+        --bind 0.0.0.0:$PORT \
         --workers 2 \
         --worker-class gthread \
         --threads 4 \
