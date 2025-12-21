@@ -400,11 +400,10 @@ def profile_edit(request):
 
     return render(request, 'accounts/profile_edit.html', context)
 
-
 def root_redirect(request):
     """Redirect root URL based on authentication status"""
     if request.user.is_authenticated:
-        return redirect('chat_home')
+        return redirect('chat:chat_home')  # Use chat namespace
     else:
         return redirect('login')
 

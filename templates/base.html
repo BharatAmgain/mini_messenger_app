@@ -1,3 +1,4 @@
+<!-- templates/base.html - COMPLETE FIXED VERSION -->
 {% load static %}
 
 <!DOCTYPE html>
@@ -361,32 +362,35 @@
         {% endif %}
 
         <div class="space-y-1">
-            <!-- FIXED: Updated to remove chat namespace since it's not registered -->
-            <a href="{% url 'chat_home' %}"
+            <!-- Chat link -->
+            <a href="{% url 'chat:chat_home' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}bg-blue-50 text-blue-700 border-l-4 border-blue-500{% endif %}">
                 <i class="fas fa-comments w-6 text-blue-600"></i>
                 <span class="ml-3">Chats</span>
             </a>
 
-            <!-- FIXED: Updated to remove chat namespace since it's not registered -->
-            <a href="{% url 'discover_users_chat' %}"
-               class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'discover_users' %}bg-green-50 text-green-700 border-l-4 border-green-500{% endif %}">
+            <!-- Discover link -->
+            <a href="{% url 'chat:discover_users_chat' %}"
+               class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'discover_users_chat' %}bg-green-50 text-green-700 border-l-4 border-green-500{% endif %}">
                 <i class="fas fa-search w-6 text-green-600"></i>
                 <span class="ml-3">Discover</span>
             </a>
 
+            <!-- Friend requests link -->
             <a href="{% url 'friend_requests' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'friend_requests' %}bg-purple-50 text-purple-700 border-l-4 border-purple-500{% endif %}">
                 <i class="fas fa-user-friends w-6 text-purple-600"></i>
                 <span class="ml-3">Friends</span>
             </a>
 
+            <!-- Profile link -->
             <a href="{% url 'profile' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}bg-yellow-50 text-yellow-700 border-l-4 border-yellow-500{% endif %}">
                 <i class="fas fa-user w-6 text-yellow-600"></i>
                 <span class="ml-3">Profile</span>
             </a>
 
+            <!-- Notifications link -->
             <a href="{% url 'notifications' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'notifications' %}bg-red-50 text-red-700 border-l-4 border-red-500{% endif %}">
                 <i class="fas fa-bell w-6 text-red-600"></i>
@@ -398,6 +402,7 @@
                 {% endif %}
             </a>
 
+            <!-- Settings link -->
             <a href="{% url 'settings_main' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'settings_main' %}bg-gray-100 text-gray-900 border-l-4 border-gray-500{% endif %}">
                 <i class="fas fa-cog w-6 text-gray-600"></i>
@@ -407,6 +412,7 @@
             <hr class="my-4">
 
             {% if user.is_authenticated %}
+            <!-- Logout form -->
             <form method="POST" action="{% url 'logout' %}">
                 {% csrf_token %}
                 <button type="submit" class="flex items-center w-full p-3 rounded-lg hover:bg-red-50 transition duration-200 text-red-600">
@@ -415,6 +421,7 @@
                 </button>
             </form>
             {% else %}
+            <!-- Login link -->
             <a href="{% url 'login' %}" class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200">
                 <i class="fas fa-sign-in-alt w-6 text-blue-600"></i>
                 <span class="ml-3">Login</span>
@@ -426,34 +433,36 @@
     <!-- Mobile Bottom Navigation -->
     {% if user.is_authenticated %}
     <div class="desktop-hidden bottom-nav">
-        <!-- FIXED: Updated to remove chat namespace since it's not registered -->
-        <a href="{% url 'chat_home' %}"
+        <!-- Chats link -->
+        <a href="{% url 'chat:chat_home' %}"
            class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}text-blue-600{% endif %}">
             <i class="fas fa-comments text-xl mb-1"></i>
             <span class="text-xs">Chats</span>
         </a>
 
-        <!-- FIXED: Updated to remove chat namespace since it's not registered -->
-        <a href="{% url 'discover_users_chat' %}"
-           class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'discover_users' %}text-blue-600{% endif %}">
+        <!-- Discover link -->
+        <a href="{% url 'chat:discover_users_chat' %}"
+           class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'discover_users_chat' %}text-blue-600{% endif %}">
             <i class="fas fa-search text-xl mb-1"></i>
             <span class="text-xs">Discover</span>
         </a>
 
-        <!-- FIXED: Updated to remove chat namespace since it's not registered -->
-        <a href="{% url 'start_chat' %}"
+        <!-- Start Chat link -->
+        <a href="{% url 'chat:start_chat' %}"
            class="flex flex-col items-center justify-center p-2">
             <div class="w-12 h-12 -mt-6 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
                 <i class="fas fa-edit text-white text-lg"></i>
             </div>
         </a>
 
+        <!-- Friends link -->
         <a href="{% url 'friend_requests' %}"
            class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'friend_requests' %}text-blue-600{% endif %}">
             <i class="fas fa-user-friends text-xl mb-1"></i>
             <span class="text-xs">Friends</span>
         </a>
 
+        <!-- Profile link -->
         <a href="{% url 'profile' %}"
            class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}text-blue-600{% endif %}">
             <i class="fas fa-user text-xl mb-1"></i>
@@ -476,32 +485,35 @@
 
             <!-- Navigation -->
             <nav class="flex-1 p-4 space-y-1">
-                <!-- FIXED: Updated to remove chat namespace since it's not registered -->
-                <a href="{% url 'chat_home' %}"
+                <!-- Chats link -->
+                <a href="{% url 'chat:chat_home' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-blue-50 transition duration-200 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}bg-blue-50 text-blue-600 border-l-4 border-blue-500{% endif %}">
                     <i class="fas fa-comments w-6"></i>
                     <span class="ml-3">Chats</span>
                 </a>
 
-                <!-- FIXED: Updated to remove chat namespace since it's not registered -->
-                <a href="{% url 'discover_users_chat' %}"
-                   class="flex items-center p-3 rounded-lg hover:bg-green-50 transition duration-200 {% if request.resolver_match.url_name == 'discover_users' %}bg-green-50 text-green-600 border-l-4 border-green-500{% endif %}">
+                <!-- Discover link -->
+                <a href="{% url 'chat:discover_users_chat' %}"
+                   class="flex items-center p-3 rounded-lg hover:bg-green-50 transition duration-200 {% if request.resolver_match.url_name == 'discover_users_chat' %}bg-green-50 text-green-600 border-l-4 border-green-500{% endif %}">
                     <i class="fas fa-search w-6"></i>
                     <span class="ml-3">Discover</span>
                 </a>
 
+                <!-- Friends link -->
                 <a href="{% url 'friend_requests' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-purple-50 transition duration-200 {% if request.resolver_match.url_name == 'friend_requests' %}bg-purple-50 text-purple-600 border-l-4 border-purple-500{% endif %}">
                     <i class="fas fa-user-friends w-6"></i>
                     <span class="ml-3">Friends</span>
                 </a>
 
+                <!-- Profile link -->
                 <a href="{% url 'profile' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-yellow-50 transition duration-200 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}bg-yellow-50 text-yellow-600 border-l-4 border-yellow-500{% endif %}">
                     <i class="fas fa-user w-6"></i>
                     <span class="ml-3">Profile</span>
                 </a>
 
+                <!-- Notifications link -->
                 <a href="{% url 'notifications' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-red-50 transition duration-200 {% if request.resolver_match.url_name == 'notifications' %}bg-red-50 text-red-600 border-l-4 border-red-500{% endif %}">
                     <i class="fas fa-bell w-6"></i>
@@ -513,6 +525,7 @@
                     {% endif %}
                 </a>
 
+                <!-- Settings link -->
                 <a href="{% url 'settings_main' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'settings_main' %}bg-gray-100 text-gray-900 border-l-4 border-gray-500{% endif %}">
                     <i class="fas fa-cog w-6"></i>
@@ -595,7 +608,7 @@
                     </div>
                 </div>
                 {% endfor %}
-                </div>
+            </div>
             {% endif %}
 
             <!-- Page Content -->
