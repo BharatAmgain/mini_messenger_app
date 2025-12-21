@@ -54,7 +54,6 @@ INSTALLED_APPS = [
     'accounts',
     'chat',
 ]
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -67,7 +66,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'social_django.middleware.SocialAuthExceptionMiddleware',
     'django_otp.middleware.OTPMiddleware',
-    'accounts.middleware.AuthRedirectMiddleware',  # Add this line
+    # REMOVED: 'accounts.middleware.AuthRedirectMiddleware', # Remove this line
 ]
 
 # URL Configuration

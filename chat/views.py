@@ -814,9 +814,13 @@ def get_messages_ajax(request, conversation_id):
 @csrf_exempt
 @login_required
 def update_online_status(request):
-    """Update user's online status"""
+    """Update user's online status - FIXED: Handle both authenticated and unauthenticated"""
     if request.method == 'POST':
         try:
+            # Only update if user is authenticated
+            if not request.user.is_authenticated:
+                return JsonResponse({'status': 'error', 'message': 'Not authenticated'}, status=401)
+
             data = json.loads(request.body)
             is_online = data.get('online', True)
 

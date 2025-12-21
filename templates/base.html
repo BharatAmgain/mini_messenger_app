@@ -1,5 +1,5 @@
 <!-- templates/base.html - COMPLETE FIXED VERSION -->
-{% load static %}
+{% load static %
 
 <!DOCTYPE html>
 <html lang="en" class="h-full">
@@ -619,7 +619,7 @@
         </div>
     </div>
 
-    <!-- JavaScript -->
+    <!-- JavaScript - FIXED VERSION -->
     <script>
         // Function to get CSRF token from cookies
         function getCSRFToken() {
@@ -655,14 +655,8 @@
             return cookieValue;
         }
 
-        // Function to handle online status updates with CSRF protection
+        // Function to handle online status updates with CSRF protection - FIXED
         function updateOnlineStatus(isOnline) {
-            // Only update if user is authenticated
-            if (!document.body.classList.contains('user-authenticated')) {
-                console.log('User not authenticated, skipping online status update');
-                return;
-            }
-
             const csrfToken = getCSRFToken();
 
             if (!csrfToken) {
@@ -681,16 +675,28 @@
                     'online': isOnline,
                 }),
                 credentials: 'same-origin'
-            }).then(response => {
-                if (!response.ok) {
-                    console.log('Online status update failed:', response.status);
+            })
+            .then(response => {
+                if (response.status === 401) {
+                    // User is not authenticated, this is normal for non-logged in users
+                    console.log('User not authenticated, skipping online status update');
+                    return response.json();
                 }
-            }).catch(error => {
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    console.log('Online status updated successfully:', data);
+                } else {
+                    console.log('Online status update failed:', data);
+                }
+            })
+            .catch(error => {
                 console.log('Error updating online status:', error);
             });
         }
 
-        // Function to send beacons when page is closing
+        // Function to send beacons when page is closing - FIXED
         function sendBeforeUnloadBeacon() {
             const csrfToken = getCSRFToken();
             if (csrfToken && navigator.sendBeacon) {
@@ -821,6 +827,7 @@
 
             // Check if user is authenticated
             const userAuthenticated = document.body.classList.contains('user-authenticated');
+
             if (userAuthenticated) {
                 // Fetch notification count on page load
                 fetchNotificationCount();
@@ -832,32 +839,34 @@
                 setTimeout(() => {
                     updateOnlineStatus(true);
                 }, 1000);
-            }
 
-            // Update status when user leaves (using sendBeacon for reliability)
-            window.addEventListener('beforeunload', sendBeforeUnloadBeacon);
-
-            // Also update on page hide (for mobile)
-            document.addEventListener('visibilitychange', function() {
-                if (document.visibilityState === 'hidden') {
+                // Update status when user leaves (using sendBeacon for reliability)
+                window.addEventListener('beforeunload', function() {
                     sendBeforeUnloadBeacon();
-                } else if (document.visibilityState === 'visible') {
-                    updateOnlineStatus(true);
-                }
-            });
+                });
 
-            // Add focus/blur handlers
-            window.addEventListener('focus', function() {
-                if (userAuthenticated) {
-                    updateOnlineStatus(true);
-                }
-            });
+                // Also update on page hide (for mobile)
+                document.addEventListener('visibilitychange', function() {
+                    if (document.visibilityState === 'hidden') {
+                        sendBeforeUnloadBeacon();
+                    } else if (document.visibilityState === 'visible') {
+                        updateOnlineStatus(true);
+                    }
+                });
 
-            window.addEventListener('blur', function() {
-                if (userAuthenticated) {
+                // Add focus/blur handlers
+                window.addEventListener('focus', function() {
+                    updateOnlineStatus(true);
+                });
+
+                window.addEventListener('blur', function() {
                     updateOnlineStatus(false);
-                }
-            });
+                });
+            } else {
+                // For non-authenticated users, remove the online status handlers
+                // This prevents the 500 errors
+                console.log('User not authenticated, skipping online status setup');
+            }
         });
 
         // Prevent zoom on double-tap for mobile

@@ -2,15 +2,18 @@ services:
   - type: web
     name: messenger-app
     env: python
-    buildCommand: |
-      pip install psycopg2-binary
-      pip install -r requirements.txt
-      python manage.py migrate
-    startCommand: gunicorn messenger.wsgi:application
+    buildCommand: pip install -r requirements.txt && python manage.py migrate --no-input
+    startCommand: chmod +x startup.sh && ./startup.sh
     envVars:
       - key: DATABASE_URL
-        value: postgresql://messenger_db_qgbv_user:sqo0VNUxDOIH5GI5hKUx8sqj1f9qeItT@dpg-d524vbali9vc73evrbfg-a/messenger_db_qgbv
+        fromDatabase:
+          name: messenger-db
+          property: connectionString
       - key: SECRET_KEY
-        value: django-insecure-79_MPQq2_F4ryVm17Fm81fJnzhI2uSxMlgyUKq0hAyaZTrhIJBl
-      - key: DEBUG
-        value: true
+        generateValue: true
+      - key: WEB_CONCURRENCY
+        value: 4
+
+databases:
+  - name: messenger-db
+    plan: free
