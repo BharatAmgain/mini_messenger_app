@@ -705,7 +705,7 @@ def get_unread_count(request):
 
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect('chat_home')
+        return redirect('chat:chat_home')
 
     if request.method == 'POST':
         username = request.POST['username']
