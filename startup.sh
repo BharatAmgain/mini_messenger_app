@@ -13,6 +13,10 @@ fi
 
 echo "✅ Found manage.py"
 
+# First install any missing packages
+echo "📦 Checking for missing packages..."
+pip install qrcode pyotp --no-cache-dir
+
 # Run makemigrations for all apps
 echo "🔧 Running makemigrations..."
 python manage.py makemigrations accounts chat --no-input

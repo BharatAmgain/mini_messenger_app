@@ -4,9 +4,16 @@ import base64
 import requests
 from datetime import timedelta
 import urllib.parse
-import qrcode
+
 import io
-import pyotp
+# In accounts/views.py, at the top where imports are:
+try:
+    import qrcode
+    import pyotp
+    QRCODE_AVAILABLE = True
+except ImportError:
+    QRCODE_AVAILABLE = False
+    print("⚠️ QRcode and/or pyotp not installed. OTP functionality will be limited.")
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django_otp import devices_for_user
 from django.core.exceptions import ValidationError
@@ -2185,11 +2192,15 @@ def search_users(request):
     return render(request, 'accounts/search_results.html', context)
 
 
-# Add these views to accounts/views.py
 @login_required
 def setup_otp(request):
     """Setup Two-Factor Authentication for user"""
     user = request.user
+
+    # Check if QRcode is available
+    if not QRCODE_AVAILABLE:
+        messages.error(request, 'QR code generation is not available. Please install qrcode and pyotp packages.')
+        return redirect('otp_status')
 
     # Check if user already has OTP device
     existing_devices = devices_for_user(user)
@@ -2228,7 +2239,6 @@ def setup_otp(request):
     }
 
     return render(request, 'accounts/otp_setup.html', context)
-
 
 @login_required
 def verify_otp_setup(request):
