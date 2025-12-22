@@ -1123,44 +1123,50 @@ def block_user(request, user_id):
                 'blocked_users': blocked_users
             })
 
+        # Add this function to your existing chat/views.py file
+        # Make sure to add it at the end of the file, before any imports
+
         @login_required
         def quick_chat(request, user_id):
+            """Start a quick chat with any user - Updated with friendship check"""
             try:
                 target_user = CustomUser.objects.get(id=user_id)
 
-                # Check if either user blocked the other
+                # Check if user is blocked in either direction
                 is_blocked = BlockedUser.objects.filter(
                     Q(user=request.user, blocked_user=target_user) |
                     Q(user=target_user, blocked_user=request.user)
                 ).exists()
 
                 if is_blocked:
-                    messages.error(request, 'You cannot chat with this user.')
+                    messages.error(request, 'You cannot start a chat with this user due to blocking.')
                     return redirect('discover_users')
 
-                # Check friendship
+                # Check if friends
                 if not Friendship.are_friends(request.user, target_user):
-                    messages.error(request, 'You must be friends to chat.')
+                    messages.error(request, 'You need to be friends to chat with this user.')
                     return redirect('discover_users')
 
-                # Existing conversation
-                conversation = Conversation.objects.filter(
-                    participants=request.user,
-                    is_group=False
+                # Check if conversation already exists
+                existing_conversation = Conversation.objects.filter(
+                    participants=request.user
                 ).filter(
                     participants=target_user
+                ).filter(
+                    is_group=False
                 ).first()
 
-                if conversation:
-                    return redirect('conversation', conversation.id)
+                if existing_conversation:
+                    return redirect('conversation', conversation_id=existing_conversation.id)
 
                 # Create new conversation
-                conversation = Conversation.objects.create(is_group=False)
+                conversation = Conversation.objects.create()
                 conversation.participants.add(request.user, target_user)
 
-                return redirect('conversation', conversation.id)
+                messages.success(request, f'Started chat with {target_user.username}')
+                return redirect('conversation', conversation_id=conversation.id)
 
             except CustomUser.DoesNotExist:
-                messages.error(request, 'User not found')
+                messages.error(request, 'User not found.')
                 return redirect('discover_users')
 
