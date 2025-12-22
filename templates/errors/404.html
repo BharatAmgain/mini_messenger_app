@@ -1,39 +1,32 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Page Not Found - Connect.io</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+<!-- templates/errors/404.html -->
+{% extends 'base.html' %}
+
+{% block title %}Page Not Found - Connect.io{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full text-center">
         <div class="mb-8">
-            <div class="mx-auto w-32 h-32 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center">
-                <i class="fas fa-search text-blue-500 text-5xl"></i>
+            <div class="mx-auto flex items-center justify-center h-24 w-24 rounded-full bg-red-100">
+                <i class="fas fa-exclamation-triangle text-red-600 text-4xl"></i>
             </div>
         </div>
-
-        <h1 class="text-4xl font-bold text-gray-900 mb-4">404</h1>
-        <h2 class="text-2xl font-semibold text-gray-800 mb-6">Page Not Found</h2>
+        <h2 class="text-3xl font-extrabold text-gray-900 mb-4">
+            404 - Page Not Found
+        </h2>
         <p class="text-gray-600 mb-8">
             The page you're looking for doesn't exist or has been moved.
         </p>
-
         <div class="space-y-4">
-            <a href="/"
-               class="inline-flex items-center justify-center w-full py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-200">
+            <a href="/" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                 <i class="fas fa-home mr-2"></i>
                 Go to Homepage
             </a>
-
-            <button onclick="window.history.back()"
-                    class="inline-flex items-center justify-center w-full py-3 px-4 border border-gray-300 rounded-xl shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-200">
+            <a href="javascript:history.back()" class="w-full flex justify-center py-3 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                 <i class="fas fa-arrow-left mr-2"></i>
                 Go Back
-            </button>
+            </a>
         </div>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}

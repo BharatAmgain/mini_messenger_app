@@ -1,36 +1,50 @@
 # messenger/urls.py
 from django.contrib import admin
 from django.urls import path, include
-from django.shortcuts import render
-from django.http import HttpResponse
+from django.conf import settings
+from django.conf.urls.static import static
 from django.views.generic import RedirectView
 
-
-# Simple home view
-def home_view(request):
-    return render(request, 'home.html')
-
+# Import error handlers
+from . import views as error_views
 
 urlpatterns = [
-    path('', home_view, name='home'),  # Root URL goes to home.html
-
+    # Admin
     path('admin/', admin.site.urls),
 
-    # Include chat URLs
-    path('chat/', include('chat.urls')),
+    # Root URL redirects based on auth status
+    path('', RedirectView.as_view(pattern_name='accounts:root_redirect'), name='root'),
 
-    # Include accounts URLs
-    path('accounts/', include('accounts.urls')),
+    # Accounts app (with namespace)
+    path('accounts/', include('accounts.urls', namespace='accounts')),
 
-    # Social auth URLs
-    path('auth/', include('social_django.urls', namespace='social')),
+    # Chat app (with namespace)
+    path('chat/', include('chat.urls', namespace='chat')),
 
-    # OTP URLs
-    path('otp/', include('django_otp.urls')),
+    # Social auth URLs - CRITICAL: Use exact paths from social_django
+    path('oauth/', include('social_django.urls', namespace='social')),
+
+    # FIXED: Correct Django OTP URLs pattern
+    # Remove the incorrect path and use the correct one
+    # path('otp/', include('django_otp.urls')),  # REMOVE THIS LINE
+
+    # Instead, if you need OTP URLs, add them manually:
+    path('otp/twilio/', include('otp_twilio.urls')),  # For Twilio OTP
+
+    # Home page for non-authenticated users
+    path('home/', error_views.home, name='home'),
+
+    # Google OAuth debug
+    path('debug/google-oauth/', error_views.debug_google_oauth, name='debug_google_oauth'),
 ]
 
-# Error handlers
-handler400 = 'messenger.views.bad_request'
-handler403 = 'messenger.views.permission_denied'
-handler404 = 'messenger.views.page_not_found'
-handler500 = 'messenger.views.server_error'
+# Error handlers (MUST be at the bottom)
+handler400 = error_views.bad_request
+handler403 = error_views.permission_denied
+handler404 = error_views.page_not_found
+handler500 = error_views.server_error
+
+# Serve static and media files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
