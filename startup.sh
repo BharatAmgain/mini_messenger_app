@@ -13,14 +13,6 @@ fi
 
 echo "✅ Found manage.py"
 
-# First install any missing packages
-echo "📦 Checking for missing packages..."
-pip install qrcode pyotp --no-cache-dir
-
-# Run makemigrations for all apps
-echo "🔧 Running makemigrations..."
-python manage.py makemigrations accounts chat --no-input
-
 # Apply database migrations
 echo "📦 Applying database migrations..."
 python manage.py migrate --no-input
@@ -36,22 +28,18 @@ import os
 import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'messenger.settings')
 django.setup()
-try:
-    from accounts.models import CustomUser
-    if not CustomUser.objects.filter(email='test@example.com').exists():
-        user = CustomUser.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            password='TestPass123!',
-            phone_number='+9779866399895',
-            is_verified=True
-        )
-        print('✅ Created test user: test@example.com / TestPass123!')
-    else:
-        print('✅ Test user already exists')
-except Exception as e:
-    print(f'⚠️ Error creating test user: {e}')
-    print('⚠️ Continuing anyway...')
+from accounts.models import CustomUser
+if not CustomUser.objects.filter(email='test@example.com').exists():
+    user = CustomUser.objects.create_user(
+        username='testuser',
+        email='test@example.com',
+        password='TestPass123!',
+        phone_number='+9779866399895',
+        is_verified=True
+    )
+    print('✅ Created test user: test@example.com / TestPass123!')
+else:
+    print('✅ Test user already exists')
 "
 
 # Start Gunicorn server
