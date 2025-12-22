@@ -1,35 +1,19 @@
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Q
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.views.decorators.csrf import csrf_exempt
-from django.utils import timezone
-from django.conf import settings
-
-from .models import (
-    Conversation,
-    Message,
-    UserStatus,
-    ChatNotification,
-    GroupInvitation,
-    BlockedUser,
-)
-
-from accounts.models import (
-    CustomUser,
-    Notification,
-    Friendship,
-    FriendRequest,
-)
-
-from .utils import EmojiManager
-import emoji
+from .models import Conversation, Message, UserStatus, ChatNotification, GroupInvitation, BlockedUser
+from accounts.models import CustomUser, Notification, Friendship, FriendRequest
 import uuid
 import json
+from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 import os
+from django.conf import settings
+from .utils import EmojiManager
+import emoji
 
 
 @login_required
@@ -830,9 +814,13 @@ def get_messages_ajax(request, conversation_id):
 @csrf_exempt
 @login_required
 def update_online_status(request):
-    """Update user's online status"""
+    """Update user's online status - FIXED: Handle both authenticated and unauthenticated"""
     if request.method == 'POST':
         try:
+            # Only update if user is authenticated
+            if not request.user.is_authenticated:
+                return JsonResponse({'status': 'error', 'message': 'Not authenticated'}, status=401)
+
             data = json.loads(request.body)
             is_online = data.get('online', True)
 
@@ -1027,76 +1015,87 @@ def discover_users(request):
     return render(request, 'chat/discover_users.html', context)
 
 
-# --------------------------------------------------
 @login_required
 def block_user(request, user_id):
-    if request.method != 'POST':
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'error': 'Invalid request'})
-        return redirect('discover_users')
+    """Block a user"""
+    if request.method == 'POST':
+        try:
+            user_to_block = CustomUser.objects.get(id=user_id)
 
-    try:
-        user_to_block = CustomUser.objects.get(id=user_id)
-
-        if user_to_block == request.user:
-            return JsonResponse({'success': False, 'error': 'You cannot block yourself.'})
-
-        # Create block (avoid duplicates)
-        BlockedUser.objects.get_or_create(
-            user=request.user,
-            blocked_user=user_to_block
-        )
-
-        # Cancel pending friend requests (both directions)
-        FriendRequest.objects.filter(
-            Q(from_user=request.user, to_user=user_to_block) |
-            Q(from_user=user_to_block, to_user=request.user),
-            status='pending'
-        ).update(status='cancelled')
-
-        # Remove friendship if exists
-        Friendship.objects.filter(
-            (Q(user1=request.user) & Q(user2=user_to_block)) |
-            (Q(user1=user_to_block) & Q(user2=request.user))
-        ).delete()
-
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': True,
-                'message': f'You have blocked {user_to_block.username}.'
-            })
-
-        messages.success(request, f'You have blocked {user_to_block.username}.')
-        return redirect('discover_users')
-
-    except CustomUser.DoesNotExist:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'error': 'User not found.'})
-        messages.error(request, 'User not found.')
-        return redirect('discover_users')
-
-        @login_required
-        def unblock_user(request, user_id):
-            if request.method != 'POST':
+            # Can't block yourself
+            if user_to_block == request.user:
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'success': False, 'error': 'Invalid request'})
-                return redirect('blocked_users')
+                    return JsonResponse({'success': False, 'error': 'You cannot block yourself.'})
+                messages.error(request, 'You cannot block yourself.')
+                return redirect('discover_users')
 
-            try:
-                user_to_unblock = CustomUser.objects.get(id=user_id)
+            # Check if already blocked
+            if BlockedUser.objects.filter(user=request.user, blocked_user=user_to_block).exists():
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse(
+                        {'success': False, 'error': f'You have already blocked {user_to_block.username}.'})
+                messages.warning(request, f'You have already blocked {user_to_block.username}.')
+                return redirect('discover_users')
 
-                blocked = BlockedUser.objects.filter(
-                    user=request.user,
-                    blocked_user=user_to_unblock
-                )
+            # Create block
+            BlockedUser.objects.create(
+                user=request.user,
+                blocked_user=user_to_block,
+                reason=request.POST.get('reason', '')
+            )
 
-                if not blocked.exists():
-                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                        return JsonResponse({'success': False, 'error': 'User is not blocked.'})
-                    messages.error(request, 'User is not blocked.')
-                    return redirect('blocked_users')
+            # Cancel any pending friend requests
+            FriendRequest.objects.filter(
+                from_user=request.user,
+                to_user=user_to_block,
+                status='pending'
+            ).update(status='cancelled')
 
-                blocked.delete()
+            FriendRequest.objects.filter(
+                from_user=user_to_block,
+                to_user=request.user,
+                status='pending'
+            ).update(status='cancelled')
+
+            # Remove friendship if exists
+            Friendship.objects.filter(
+                (Q(user1=request.user) & Q(user2=user_to_block)) |
+                (Q(user1=user_to_block) & Q(user2=request.user))
+            ).delete()
+
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': f'You have blocked {user_to_block.username}.'
+                })
+
+            messages.success(request, f'You have blocked {user_to_block.username}.')
+
+        except CustomUser.DoesNotExist:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'User not found.'})
+            messages.error(request, 'User not found.')
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': False, 'error': 'Invalid request'})
+    return redirect('discover_users')
+
+
+@login_required
+def unblock_user(request, user_id):
+    """Unblock a user"""
+    if request.method == 'POST':
+        try:
+            user_to_unblock = CustomUser.objects.get(id=user_id)
+
+            # Remove block
+            blocked_entry = BlockedUser.objects.filter(
+                user=request.user,
+                blocked_user=user_to_unblock
+            )
+
+            if blocked_entry.exists():
+                blocked_entry.delete()
 
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({
@@ -1105,68 +1104,72 @@ def block_user(request, user_id):
                     })
 
                 messages.success(request, f'You have unblocked {user_to_unblock.username}.')
-                return redirect('blocked_users')
-
-            except CustomUser.DoesNotExist:
+            else:
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'success': False, 'error': 'User not found.'})
-                messages.error(request, 'User not found.')
-                return redirect('blocked_users')
+                    return JsonResponse({'success': False, 'error': 'User is not blocked.'})
+                messages.error(request, 'User is not blocked.')
 
-        @login_required
-        def blocked_users(request):
-            blocked_users = BlockedUser.objects.filter(
-                user=request.user
-            ).select_related('blocked_user')
+        except CustomUser.DoesNotExist:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'User not found.'})
+            messages.error(request, 'User not found.')
 
-            return render(request, 'chat/blocked_users.html', {
-                'blocked_users': blocked_users
-            })
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': False, 'error': 'Invalid request'})
+    return redirect('blocked_users')
 
-        # Add this function to your existing chat/views.py file
-        # Make sure to add it at the end of the file, before any imports
 
-        @login_required
-        def quick_chat(request, user_id):
-            """Start a quick chat with any user - Updated with friendship check"""
-            try:
-                target_user = CustomUser.objects.get(id=user_id)
+@login_required
+def blocked_users(request):
+    """Show list of blocked users"""
+    blocked_users = BlockedUser.objects.filter(user=request.user).select_related('blocked_user')
 
-                # Check if user is blocked in either direction
-                is_blocked = BlockedUser.objects.filter(
-                    Q(user=request.user, blocked_user=target_user) |
-                    Q(user=target_user, blocked_user=request.user)
-                ).exists()
+    context = {
+        'blocked_users': blocked_users,
+    }
+    return render(request, 'chat/blocked_users.html', context)
 
-                if is_blocked:
-                    messages.error(request, 'You cannot start a chat with this user due to blocking.')
-                    return redirect('discover_users')
 
-                # Check if friends
-                if not Friendship.are_friends(request.user, target_user):
-                    messages.error(request, 'You need to be friends to chat with this user.')
-                    return redirect('discover_users')
+@login_required
+def quick_chat(request, user_id):
+    """Start a quick chat with any user - Updated with friendship check"""
+    try:
+        target_user = CustomUser.objects.get(id=user_id)
 
-                # Check if conversation already exists
-                existing_conversation = Conversation.objects.filter(
-                    participants=request.user
-                ).filter(
-                    participants=target_user
-                ).filter(
-                    is_group=False
-                ).first()
+        # Check if user is blocked in either direction
+        is_blocked = BlockedUser.objects.filter(
+            Q(user=request.user, blocked_user=target_user) |
+            Q(user=target_user, blocked_user=request.user)
+        ).exists()
 
-                if existing_conversation:
-                    return redirect('conversation', conversation_id=existing_conversation.id)
+        if is_blocked:
+            messages.error(request, 'You cannot start a chat with this user due to blocking.')
+            return redirect('discover_users')
 
-                # Create new conversation
-                conversation = Conversation.objects.create()
-                conversation.participants.add(request.user, target_user)
+        # Check if friends
+        if not Friendship.are_friends(request.user, target_user):
+            messages.error(request, 'You need to be friends to chat with this user.')
+            return redirect('discover_users')
 
-                messages.success(request, f'Started chat with {target_user.username}')
-                return redirect('conversation', conversation_id=conversation.id)
+        # Check if conversation already exists
+        existing_conversation = Conversation.objects.filter(
+            participants=request.user
+        ).filter(
+            participants=target_user
+        ).filter(
+            is_group=False
+        ).first()
 
-            except CustomUser.DoesNotExist:
-                messages.error(request, 'User not found.')
-                return redirect('discover_users')
+        if existing_conversation:
+            return redirect('conversation', conversation_id=existing_conversation.id)
 
+        # Create new conversation
+        conversation = Conversation.objects.create()
+        conversation.participants.add(request.user, target_user)
+
+        messages.success(request, f'Started chat with {target_user.username}')
+        return redirect('conversation', conversation_id=conversation.id)
+
+    except CustomUser.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('discover_users')
