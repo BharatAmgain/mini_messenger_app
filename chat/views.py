@@ -1,20 +1,35 @@
-# chat/views.py
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Q
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from .models import Conversation, Message, UserStatus, ChatNotification, GroupInvitation, BlockedUser
-from accounts.models import CustomUser, Notification, Friendship, FriendRequest
-import uuid
-import json
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
-import os
 from django.conf import settings
+
+from .models import (
+    Conversation,
+    Message,
+    UserStatus,
+    ChatNotification,
+    GroupInvitation,
+    BlockedUser,
+)
+
+from accounts.models import (
+    CustomUser,
+    Notification,
+    Friendship,
+    FriendRequest,
+)
+
 from .utils import EmojiManager
 import emoji
+import uuid
+import json
+import os
 
 
 @login_required
@@ -1108,28 +1123,27 @@ def block_user(request, user_id):
                 'blocked_users': blocked_users
             })
 
-        # --------------------------------------------------
         @login_required
         def quick_chat(request, user_id):
             try:
                 target_user = CustomUser.objects.get(id=user_id)
 
-                # Check blocking (both directions)
+                # Check if either user blocked the other
                 is_blocked = BlockedUser.objects.filter(
                     Q(user=request.user, blocked_user=target_user) |
                     Q(user=target_user, blocked_user=request.user)
                 ).exists()
 
                 if is_blocked:
-                    messages.error(request, 'You cannot start a chat with this user.')
+                    messages.error(request, 'You cannot chat with this user.')
                     return redirect('discover_users')
 
                 # Check friendship
                 if not Friendship.are_friends(request.user, target_user):
-                    messages.error(request, 'You must be friends to chat with this user.')
+                    messages.error(request, 'You must be friends to chat.')
                     return redirect('discover_users')
 
-                # Check existing conversation
+                # Existing conversation
                 conversation = Conversation.objects.filter(
                     participants=request.user,
                     is_group=False
@@ -1138,15 +1152,15 @@ def block_user(request, user_id):
                 ).first()
 
                 if conversation:
-                    return redirect('conversation', conversation_id=conversation.id)
+                    return redirect('conversation', conversation.id)
 
                 # Create new conversation
                 conversation = Conversation.objects.create(is_group=False)
                 conversation.participants.add(request.user, target_user)
 
-                messages.success(request, f'Chat started with {target_user.username}')
-                return redirect('conversation', conversation_id=conversation.id)
+                return redirect('conversation', conversation.id)
 
             except CustomUser.DoesNotExist:
-                messages.error(request, 'User not found.')
+                messages.error(request, 'User not found')
                 return redirect('discover_users')
+
