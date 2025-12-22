@@ -1,11 +1,11 @@
-# chat/urls.py - FIXED VERSION
+# chat/urls.py
 from django.urls import path
 from . import views
 
-app_name = 'chat'
+# REMOVE OR COMMENT OUT THIS LINE: app_name = 'chat'
 
 urlpatterns = [
-    # Chat home - using empty string to match 'chat/'
+    # Chat home
     path('', views.chat_home, name='chat_home'),
 
     # Conversations
@@ -31,11 +31,11 @@ urlpatterns = [
     path('typing/<uuid:conversation_id>/', views.typing_indicator, name='typing_indicator'),
     path('typing-status/<uuid:conversation_id>/', views.get_typing_status, name='get_typing_status'),
 
-    # Online status - FIXED: This should be accessible without authentication
+    # Online status
     path('update-online-status/', views.update_online_status, name='update_online_status'),
 
     # Discover users
-    path('discover/', views.discover_users, name='discover_users_chat'),
+    path('discover/', views.discover_users, name='discover_users_chat'),  # Changed name to avoid conflict
     path('search/', views.search_users, name='search_users'),
 
     # Block users

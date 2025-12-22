@@ -42,6 +42,39 @@ else:
     print('✅ Test user already exists')
 "
 
+# Fix URL namespaces by creating a temporary script
+echo "🔧 Fixing URL namespace issues..."
+cat > /tmp/fix_urls.py << 'EOF'
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'messenger.settings')
+import django
+django.setup()
+
+# Verify URLs are working
+from django.urls import reverse, NoReverseMatch
+
+urls_to_test = [
+    ('accounts:login', []),
+    ('accounts:register', []),
+    ('chat:chat_home', []),
+    ('chat:discover_users', []),
+    ('accounts:profile', []),
+    ('accounts:notifications', []),
+]
+
+print("Testing URL reverses...")
+for url_name, args in urls_to_test:
+    try:
+        url = reverse(url_name, args=args)
+        print(f"✅ {url_name} -> {url}")
+    except NoReverseMatch as e:
+        print(f"❌ {url_name}: {e}")
+
+print("URL namespace test complete!")
+EOF
+
+python /tmp/fix_urls.py
+
 # Start Gunicorn server
 echo "🌐 Starting Gunicorn server..."
 exec gunicorn messenger.wsgi:application \

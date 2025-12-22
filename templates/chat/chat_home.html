@@ -14,7 +14,7 @@
                 <h1 class="text-xl font-bold text-gray-900">Chats</h1>
                 <div class="flex items-center space-x-2">
                     <!-- Notifications Badge -->
-                    <a href="{% url 'notifications' %}" class="relative p-2 text-gray-600 hover:text-blue-600 transition duration-200">
+                    <a href="{% url 'accounts:notifications' %}" class="relative p-2 text-gray-600 hover:text-blue-600 transition duration-200">
                         <i class="fas fa-bell"></i>
                         {% if unread_notifications_count > 0 %}
                         <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
@@ -29,11 +29,11 @@
                             <i class="fas fa-edit"></i>
                         </button>
                         <div class="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-10 hidden group-hover:block">
-                            <a href="{% url 'start_chat' %}" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 transition duration-200">
+                            <a href="{% url 'chat:start_chat' %}" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 transition duration-200">
                                 <i class="fas fa-user mr-3 text-blue-600"></i>
                                 New Chat
                             </a>
-                            <a href="{% url 'create_group' %}" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 transition duration-200">
+                            <a href="{% url 'chat:create_group' %}" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 transition duration-200">
                                 <i class="fas fa-users mr-3 text-green-600"></i>
                                 New Group
                             </a>
@@ -56,7 +56,7 @@
         <div class="flex-1 overflow-y-auto custom-scrollbar">
             {% if conversation_data %}
                 {% for data in conversation_data %}
-                <a href="{% url 'conversation' data.conversation.id %}"
+                <a href="{% url 'chat:conversation' data.conversation.id %}"
                    class="flex items-center p-4 border-b border-gray-100 hover:bg-gray-50 transition duration-200 {% if request.resolver_match.url_name == 'conversation' and request.resolver_match.kwargs.conversation_id == data.conversation.id|stringformat:'s' %}bg-blue-50{% endif %}">
                     <!-- Avatar -->
                     <div class="relative flex-shrink-0">
@@ -120,10 +120,10 @@
                     <h3 class="text-lg font-semibold text-gray-900 mb-2">No conversations yet</h3>
                     <p class="text-gray-600 mb-6">Start a new chat to connect with friends</p>
                     <div class="flex space-x-3">
-                        <a href="{% url 'start_chat' %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200">
+                        <a href="{% url 'chat:start_chat' %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200">
                             Start Chat
                         </a>
-                        <a href="{% url 'discover_users' %}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition duration-200">
+                        <a href="{% url 'chat:discover_users' %}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition duration-200">
                             Discover Users
                         </a>
                     </div>
@@ -145,11 +145,11 @@
                 Select a conversation from the sidebar or start a new chat to begin messaging.
             </p>
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <a href="{% url 'start_chat' %}" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 font-medium">
+                <a href="{% url 'chat:start_chat' %}" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 font-medium">
                     <i class="fas fa-user-plus mr-2"></i>
                     Start New Chat
                 </a>
-                <a href="{% url 'create_group' %}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition duration-200 font-medium">
+                <a href="{% url 'chat:create_group' %}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition duration-200 font-medium">
                     <i class="fas fa-users mr-2"></i>
                     Create Group
                 </a>
