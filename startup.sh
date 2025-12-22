@@ -13,9 +13,9 @@ fi
 
 echo "✅ Found manage.py"
 
-# First, run makemigrations if needed
+# Run makemigrations for all apps
 echo "🔧 Running makemigrations..."
-python manage.py makemigrations --no-input
+python manage.py makemigrations accounts chat --no-input
 
 # Apply database migrations
 echo "📦 Applying database migrations..."

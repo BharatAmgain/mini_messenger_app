@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Setup Two-Factor Authentication{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Setup Two-Factor Authentication
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-600">
+                Scan the QR code with your authenticator app
+            </p>
+        </div>
+        
+        <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+            <!-- QR Code -->
+            <div class="text-center mb-6">
+                <div class="inline-block p-4 bg-white rounded-lg border border-gray-200">
+                    <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="w-64 h-64 mx-auto">
+                </div>
+                <p class="mt-4 text-sm text-gray-600">
+                    Scan this QR code with Google Authenticator, Authy, or any TOTP app
+                </p>
+            </div>
+            
+            <!-- Manual Setup Option -->
+            <div class="mb-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Manual Setup</h3>
+                <p class="text-sm text-gray-600 mb-2">
+                    If you can't scan the QR code, enter this code manually:
+                </p>
+                <div class="bg-gray-50 p-3 rounded-lg">
+                    <code class="text-lg font-mono text-gray-900 break-all">{{ secret }}</code>
+                </div>
+            </div>
+            
+            <!-- Instructions -->
+            <div class="mb-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Instructions</h3>
+                <ol class="list-decimal pl-5 text-sm text-gray-600 space-y-2">
+                    <li>Install Google Authenticator on your phone</li>
+                    <li>Open the app and tap "+" to add a new account</li>
+                    <li>Scan the QR code above or enter the secret key manually</li>
+                    <li>Enter the 6-digit code from the app to verify</li>
+                </ol>
+            </div>
+            
+            <!-- Next Button -->
+            <div>
+                <a href="{% url 'verify_otp_setup' %}"
+                   class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    I've scanned the QR code, continue
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

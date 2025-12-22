@@ -24,12 +24,8 @@ urlpatterns = [
     # Social auth URLs - CRITICAL: Use exact paths from social_django
     path('oauth/', include('social_django.urls', namespace='social')),
 
-    # FIXED: Correct Django OTP URLs pattern
-    # Remove the incorrect path and use the correct one
-    # path('otp/', include('django_otp.urls')),  # REMOVE THIS LINE
-
-    # Instead, if you need OTP URLs, add them manually:
-    path('otp/twilio/', include('otp_twilio.urls')),  # For Twilio OTP
+    # Django OTP URLs - FIXED: Correct import
+    path('otp/', include('django_otp.urls')),
 
     # Home page for non-authenticated users
     path('home/', error_views.home, name='home'),

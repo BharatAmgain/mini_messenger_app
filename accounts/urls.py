@@ -78,6 +78,12 @@ urlpatterns = [
     path('test-profile-update/', views.test_profile_update, name='test_profile_update'),
     path('refresh-profile/', views.refresh_profile, name='refresh_profile'),
 
+    path('otp/setup/', views.setup_otp, name='setup_otp'),
+    path('otp/verify-setup/', views.verify_otp_setup, name='verify_otp_setup'),
+    path('otp/status/', views.otp_status, name='otp_status'),
+    path('otp/disable/', views.disable_otp, name='disable_otp'),
+    path('otp/verify-login/', views.verify_login_otp, name='verify_login_otp'),
+
     # Google OAuth debug
     path('debug-google-oauth/', views.debug_google_oauth, name='debug_google_oauth'),
     path('test-google-login/', views.test_google_login, name='test_google_login'),

@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Two-Factor Authentication Status{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-3xl mx-auto">
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+            <div class="px-4 py-5 sm:px-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">
+                    Two-Factor Authentication Status
+                </h3>
+                <p class="mt-1 max-w-2xl text-sm text-gray-500">
+                    Manage your account security settings
+                </p>
+            </div>
+            
+            <div class="border-t border-gray-200 px-4 py-5 sm:p-6">
+                <!-- Status -->
+                <div class="mb-8">
+                    <h4 class="text-md font-medium text-gray-900 mb-2">Current Status</h4>
+                    {% if two_factor_enabled %}
+                    <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                        <i class="fas fa-shield-alt mr-2"></i>
+                        Two-Factor Authentication Enabled
+                    </div>
+                    <p class="mt-2 text-sm text-gray-600">
+                        Your account is protected with two-factor authentication.
+                    </p>
+                    {% else %}
+                    <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        Two-Factor Authentication Disabled
+                    </div>
+                    <p class="mt-2 text-sm text-gray-600">
+                        Your account is not protected with two-factor authentication.
+                    </p>
+                    {% endif %}
+                </div>
+                
+                <!-- Devices -->
+                <div class="mb-8">
+                    <h4 class="text-md font-medium text-gray-900 mb-2">Registered Devices</h4>
+                    {% if devices %}
+                    <ul class="divide-y divide-gray-200">
+                        {% for device in devices %}
+                        <li class="py-4 flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-mobile-alt text-blue-600"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <p class="text-sm font-medium text-gray-900">{{ device.name|title }}</p>
+                                    <p class="text-sm text-gray-500">
+                                        {% if device.confirmed %}
+                                        <span class="text-green-600">Confirmed</span>
+                                        {% else %}
+                                        <span class="text-yellow-600">Pending</span>
+                                        {% endif %}
+                                        • Last used: {% if device.last_used %}{{ device.last_used|date:"M d, Y H:i" }}{% else %}Never{% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-sm text-gray-600">No OTP devices registered.</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Actions -->
+                <div class="mt-6">
+                    {% if not two_factor_enabled or not devices %}
+                    <a href="{% url 'setup_otp' %}"
+                       class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <i class="fas fa-plus mr-2"></i>
+                        Setup Two-Factor Authentication
+                    </a>
+                    {% endif %}
+                    
+                    {% if two_factor_enabled %}
+                    <form method="POST" action="{% url 'disable_otp' %}" class="inline-block ml-3">
+                        {% csrf_token %}
+                        <button type="submit"
+                                onclick="return confirm('Are you sure you want to disable two-factor authentication?')"
+                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                            <i class="fas fa-ban mr-2"></i>
+                            Disable Two-Factor
+                        </button>
+                    </form>
+                    {% endif %}
+                    
+                    <a href="{% url 'accounts:settings_main' %}"
+                       class="ml-3 inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        Back to Settings
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
