@@ -13,16 +13,13 @@ fi
 
 echo "✅ Found manage.py"
 
-# First, check Django OTP installation
-echo "🔧 Checking Django OTP installation..."
-python -c "
-import django_otp
-print('✅ Django OTP found:', django_otp.__version__)
-"
+# First, run makemigrations if needed
+echo "🔧 Running makemigrations..."
+python manage.py makemigrations --no-input
 
-# Apply database migrations - SKIP CHECKS FIRST
-echo "📦 Applying database migrations (skipping checks)..."
-python manage.py migrate --no-input --skip-checks
+# Apply database migrations
+echo "📦 Applying database migrations..."
+python manage.py migrate --no-input
 
 # Create static files
 echo "📁 Collecting static files..."

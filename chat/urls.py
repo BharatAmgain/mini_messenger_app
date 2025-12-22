@@ -2,7 +2,7 @@
 from django.urls import path
 from . import views
 
-# REMOVE OR COMMENT OUT THIS LINE: app_name = 'chat'
+app_name = 'chat'  # Add this line
 
 urlpatterns = [
     # Chat home
@@ -34,8 +34,8 @@ urlpatterns = [
     # Online status
     path('update-online-status/', views.update_online_status, name='update_online_status'),
 
-    # Discover users
-    path('discover/', views.discover_users, name='discover_users_chat'),  # Changed name to avoid conflict
+    # Discover users - FIXED: Use correct name
+    path('discover/', views.discover_users, name='discover_users_chat'),
     path('search/', views.search_users, name='search_users'),
 
     # Block users

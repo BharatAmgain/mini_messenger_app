@@ -1,9 +1,8 @@
 # accounts/urls.py
 from django.urls import path
 from . import views
-from django.contrib.auth import views as auth_views
 
-app_name = 'accounts'  # Add namespace
+app_name = 'accounts'  # Add this line
 
 urlpatterns = [
     # Root URL redirects to login or chat_home based on authentication
