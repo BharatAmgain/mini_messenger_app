@@ -1,9 +1,9 @@
-# messenger/urls.py - COMPLETE WORKING VERSION
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from . import views
+from accounts import views as accounts_views  # Add this import
 
 urlpatterns = [
     # Home page
@@ -11,6 +11,10 @@ urlpatterns = [
 
     # Accounts app URLs
     path('accounts/', include('accounts.urls')),
+
+    # ADD THESE DIRECT URLS TO FIX THE ISSUE:
+    path('accounts/login/', accounts_views.login_view, name='login'),
+    path('accounts/register/', accounts_views.register, name='register'),
 
     # Chat app URLs
     path('chat/', include('chat.urls')),

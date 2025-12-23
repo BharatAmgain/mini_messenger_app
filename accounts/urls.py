@@ -2,7 +2,6 @@
 from django.urls import path
 from . import views
 
-app_name = 'accounts'  # KEEP THIS - accounts app uses namespace
 
 urlpatterns = [
     # Root URL redirects to login or chat_home based on authentication
