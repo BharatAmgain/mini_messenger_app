@@ -361,15 +361,15 @@
         {% endif %}
 
         <div class="space-y-1">
-            <!-- NOTE: chat_home doesn't have namespace in urls.py, using direct URL -->
-            <a href="/chat/"
+            <!-- Chat Home -->
+            <a href="{% url 'chat_home' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}bg-blue-50 text-blue-700 border-l-4 border-blue-500{% endif %}">
                 <i class="fas fa-comments w-6 text-blue-600"></i>
                 <span class="ml-3">Chats</span>
             </a>
 
-            <!-- NOTE: discover_users_chat doesn't have namespace in urls.py, using direct URL -->
-            <a href="/chat/discover/"
+            <!-- Discover Users -->
+            <a href="{% url 'discover_users' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'discover_users' %}bg-green-50 text-green-700 border-l-4 border-green-500{% endif %}">
                 <i class="fas fa-search w-6 text-green-600"></i>
                 <span class="ml-3">Discover</span>
@@ -426,22 +426,22 @@
     <!-- Mobile Bottom Navigation -->
     {% if user.is_authenticated %}
     <div class="desktop-hidden bottom-nav">
-        <!-- NOTE: chat_home doesn't have namespace in urls.py, using direct URL -->
-        <a href="/chat/"
+        <!-- Chat Home -->
+        <a href="{% url 'chat_home' %}"
            class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}text-blue-600{% endif %}">
             <i class="fas fa-comments text-xl mb-1"></i>
             <span class="text-xs">Chats</span>
         </a>
 
-        <!-- NOTE: discover_users_chat doesn't have namespace in urls.py, using direct URL -->
-        <a href="/chat/discover/"
+        <!-- Discover Users -->
+        <a href="{% url 'discover_users' %}"
            class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'discover_users' %}text-blue-600{% endif %}">
             <i class="fas fa-search text-xl mb-1"></i>
             <span class="text-xs">Discover</span>
         </a>
 
-        <!-- NOTE: start_chat doesn't have namespace in urls.py, using direct URL -->
-        <a href="/chat/start-chat/"
+        <!-- Start Chat -->
+        <a href="{% url 'start_chat' %}"
            class="flex flex-col items-center justify-center p-2">
             <div class="w-12 h-12 -mt-6 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
                 <i class="fas fa-edit text-white text-lg"></i>
@@ -476,15 +476,15 @@
 
             <!-- Navigation -->
             <nav class="flex-1 p-4 space-y-1">
-                <!-- NOTE: chat_home doesn't have namespace in urls.py, using direct URL -->
-                <a href="/chat/"
+                <!-- Chat Home -->
+                <a href="{% url 'chat_home' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-blue-50 transition duration-200 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}bg-blue-50 text-blue-600 border-l-4 border-blue-500{% endif %}">
                     <i class="fas fa-comments w-6"></i>
                     <span class="ml-3">Chats</span>
                 </a>
 
-                <!-- NOTE: discover_users_chat doesn't have namespace in urls.py, using direct URL -->
-                <a href="/chat/discover/"
+                <!-- Discover Users -->
+                <a href="{% url 'discover_users' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-green-50 transition duration-200 {% if request.resolver_match.url_name == 'discover_users' %}bg-green-50 text-green-600 border-l-4 border-green-500{% endif %}">
                     <i class="fas fa-search w-6"></i>
                     <span class="ml-3">Discover</span>

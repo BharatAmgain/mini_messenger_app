@@ -1,3 +1,4 @@
+# chat/views.py
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -16,7 +17,7 @@ from .utils import EmojiManager
 import emoji
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def chat_home(request):
     """Chat home page with conversations and search"""
     conversations = Conversation.objects.filter(participants=request.user).order_by('-updated_at')
@@ -71,7 +72,7 @@ def chat_home(request):
     return render(request, 'chat/chat_home.html', context)
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def start_chat(request):
     """Start a new chat with email or phone number - Updated with friendship check"""
     if request.method == 'POST':
@@ -124,7 +125,7 @@ def start_chat(request):
     return render(request, 'chat/start_chat.html')
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def create_group(request):
     """Create a new group chat"""
     if request.method == 'POST':
@@ -181,7 +182,7 @@ def create_group(request):
     return render(request, 'chat/create_group.html', {'users': users})
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def search_users(request):
     """Search users by username, email, or phone number"""
     query = request.GET.get('q', '').strip()
@@ -204,7 +205,7 @@ def search_users(request):
     return render(request, 'chat/search_users.html', context)
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def conversation(request, conversation_id):
     """View conversation and messages - Updated with friendship check"""
     conversation = get_object_or_404(
@@ -272,7 +273,7 @@ def conversation(request, conversation_id):
     return render(request, 'chat/conversation.html', context)
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def group_settings(request, conversation_id):
     """Group settings and management"""
     conversation = get_object_or_404(
@@ -419,7 +420,7 @@ def group_settings(request, conversation_id):
     return render(request, 'chat/group_settings.html', context)
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def leave_group(request, conversation_id):
     """Leave a group"""
     if request.method == 'POST':
@@ -459,7 +460,7 @@ def leave_group(request, conversation_id):
     return redirect('chat_home')
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def invite_to_group(request, conversation_id):
     """Invite users to group via AJAX"""
     if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -493,7 +494,7 @@ def invite_to_group(request, conversation_id):
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 @csrf_exempt
 def typing_indicator(request, conversation_id):
     """Handle typing indicators"""
@@ -512,7 +513,7 @@ def typing_indicator(request, conversation_id):
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def get_typing_status(request, conversation_id):
     """Get typing status for a conversation"""
     conversation = get_object_or_404(Conversation, id=conversation_id, participants=request.user)
@@ -527,7 +528,7 @@ def get_typing_status(request, conversation_id):
     })
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def get_new_messages(request, conversation_id):
     """Get new messages for real-time updates"""
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -580,7 +581,7 @@ def get_new_messages(request, conversation_id):
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def get_notifications(request):
     """Get user notifications for dropdown - FIXED: Use account_notifications"""
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -610,7 +611,7 @@ def get_notifications(request):
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def send_message_ajax(request, conversation_id):
     """Send message via AJAX - Now supports emojis"""
     if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -737,7 +738,7 @@ def send_message_ajax(request, conversation_id):
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def search_emojis(request):
     """Search emojis via AJAX"""
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -758,7 +759,7 @@ def search_emojis(request):
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def get_emoji_categories(request):
     """Get emoji categories via AJAX"""
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -771,7 +772,7 @@ def get_emoji_categories(request):
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def get_messages_ajax(request, conversation_id):
     """Get messages via AJAX"""
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -811,16 +812,16 @@ def get_messages_ajax(request, conversation_id):
     return JsonResponse({'error': 'Invalid request'})
 
 
+# In chat/views.py - Update the update_online_status function:
+
 @csrf_exempt
-@login_required
 def update_online_status(request):
-    """Update user's online status - FIXED: Handle both authenticated and unauthenticated"""
+    """Update user's online status - FIXED VERSION"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'error', 'message': 'Not authenticated'}, status=401)
+
     if request.method == 'POST':
         try:
-            # Only update if user is authenticated
-            if not request.user.is_authenticated:
-                return JsonResponse({'status': 'error', 'message': 'Not authenticated'}, status=401)
-
             data = json.loads(request.body)
             is_online = data.get('online', True)
 
@@ -830,13 +831,12 @@ def update_online_status(request):
             user.last_seen = timezone.now()
             user.save()
 
-            return JsonResponse({'status': 'success'})
+            return JsonResponse({'status': 'success', 'online': is_online})
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)})
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
 
-
-@login_required
+@login_required(login_url='/accounts/login/')
 @csrf_exempt
 def edit_message(request, message_id):
     """Edit a message"""
@@ -871,7 +871,7 @@ def edit_message(request, message_id):
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 @csrf_exempt
 def unsend_message(request, message_id):
     """Unsend (delete) a message"""
@@ -893,7 +893,7 @@ def unsend_message(request, message_id):
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 @csrf_exempt
 def react_to_message(request, message_id):
     """Add reaction to a message"""
@@ -927,7 +927,7 @@ def react_to_message(request, message_id):
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def discover_users(request):
     """Merged page for discovering all users and searching users"""
     query = request.GET.get('q', '').strip()
@@ -1015,7 +1015,7 @@ def discover_users(request):
     return render(request, 'chat/discover_users.html', context)
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def block_user(request, user_id):
     """Block a user"""
     if request.method == 'POST':
@@ -1038,7 +1038,7 @@ def block_user(request, user_id):
                 return redirect('discover_users')
 
             # Create block
-            BlockedUser.objects.create(
+            block = BlockedUser.objects.create(
                 user=request.user,
                 blocked_user=user_to_block,
                 reason=request.POST.get('reason', '')
@@ -1063,25 +1063,46 @@ def block_user(request, user_id):
                 (Q(user1=user_to_block) & Q(user2=request.user))
             ).delete()
 
+            # Create notification for the blocked user
+            Notification.objects.create(
+                user=user_to_block,
+                notification_type='system',
+                title="User Blocked You",
+                message=f"{request.user.username} has blocked you",
+                related_url="/accounts/settings/"
+            )
+
+            # Create notification for the blocker
+            Notification.objects.create(
+                user=request.user,
+                notification_type='system',
+                title="User Blocked",
+                message=f"You have blocked {user_to_block.username}",
+                related_url="/chat/blocked-users/"
+            )
+
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': True,
-                    'message': f'You have blocked {user_to_block.username}.'
+                    'message': f'You have blocked {user_to_block.username}.',
+                    'block_id': block.id
                 })
 
             messages.success(request, f'You have blocked {user_to_block.username}.')
+            return redirect('discover_users')
 
         except CustomUser.DoesNotExist:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'success': False, 'error': 'User not found.'})
             messages.error(request, 'User not found.')
+            return redirect('discover_users')
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'success': False, 'error': 'Invalid request'})
     return redirect('discover_users')
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def unblock_user(request, user_id):
     """Unblock a user"""
     if request.method == 'POST':
@@ -1096,6 +1117,24 @@ def unblock_user(request, user_id):
 
             if blocked_entry.exists():
                 blocked_entry.delete()
+
+                # Create notification for the unblocked user
+                Notification.objects.create(
+                    user=user_to_unblock,
+                    notification_type='system',
+                    title="User Unblocked You",
+                    message=f"{request.user.username} has unblocked you",
+                    related_url="/"
+                )
+
+                # Create notification for the unblocker
+                Notification.objects.create(
+                    user=request.user,
+                    notification_type='system',
+                    title="User Unblocked",
+                    message=f"You have unblocked {user_to_unblock.username}",
+                    related_url="/"
+                )
 
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({
@@ -1119,7 +1158,7 @@ def unblock_user(request, user_id):
     return redirect('blocked_users')
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def blocked_users(request):
     """Show list of blocked users"""
     blocked_users = BlockedUser.objects.filter(user=request.user).select_related('blocked_user')
@@ -1130,7 +1169,7 @@ def blocked_users(request):
     return render(request, 'chat/blocked_users.html', context)
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def quick_chat(request, user_id):
     """Start a quick chat with any user - Updated with friendship check"""
     try:
@@ -1173,3 +1212,526 @@ def quick_chat(request, user_id):
     except CustomUser.DoesNotExist:
         messages.error(request, 'User not found.')
         return redirect('discover_users')
+
+
+@login_required(login_url='/accounts/login/')
+def group_chat(request, conversation_id=None):
+    """Group chat interface"""
+    if conversation_id:
+        # View existing group
+        conversation = get_object_or_404(
+            Conversation,
+            id=conversation_id,
+            is_group=True,
+            participants=request.user
+        )
+
+        # Get messages
+        messages_list = conversation.messages.all().order_by('timestamp')
+
+        context = {
+            'conversation': conversation,
+            'messages': messages_list,
+            'is_group': True,
+            'group_members': conversation.participants.all(),
+            'group_admins': conversation.admins.all(),
+        }
+        return render(request, 'chat/group_chat.html', context)
+    else:
+        # Create new group
+        if request.method == 'POST':
+            group_name = request.POST.get('group_name', '').strip()
+            group_description = request.POST.get('group_description', '').strip()
+            participant_ids = request.POST.getlist('participants')
+
+            if not group_name:
+                messages.error(request, 'Group name is required.')
+                return redirect('create_group')
+
+            # Create group conversation
+            conversation = Conversation.objects.create(
+                is_group=True,
+                group_name=group_name,
+                group_description=group_description,
+                created_by=request.user
+            )
+
+            # Add creator as participant and admin
+            conversation.participants.add(request.user)
+            conversation.admins.add(request.user)
+
+            # Add other participants
+            for user_id in participant_ids:
+                try:
+                    user = CustomUser.objects.get(id=user_id)
+                    if user != request.user:
+                        conversation.participants.add(user)
+                        # Create account notification
+                        Notification.objects.create(
+                            user=user,
+                            notification_type='group_invite',
+                            title="Group Invitation",
+                            message=f"You were added to group '{group_name}' by {request.user.username}",
+                            related_url=f"/chat/group/{conversation.id}/"
+                        )
+                except CustomUser.DoesNotExist:
+                    continue
+
+            # Create welcome message
+            Message.objects.create(
+                conversation=conversation,
+                sender=request.user,
+                content=f"Welcome to {group_name}! This group was created by {request.user.username}.",
+                is_read=True
+            )
+
+            messages.success(request, f'Group "{group_name}" created successfully!')
+            return redirect('group_chat', conversation_id=conversation.id)
+
+        # Get users to invite (exclude current user)
+        users = CustomUser.objects.exclude(id=request.user.id)
+        return render(request, 'chat/create_group.html', {'users': users})
+
+
+@login_required(login_url='/accounts/login/')
+def video_chat(request, conversation_id):
+    """Start a video chat in a conversation"""
+    conversation = get_object_or_404(
+        Conversation,
+        id=conversation_id,
+        participants=request.user
+    )
+
+    # Generate a unique room name
+    import hashlib
+    import time
+    room_seed = f"{conversation_id}_{request.user.id}_{time.time()}"
+    room_hash = hashlib.md5(room_seed.encode()).hexdigest()[:12]
+
+    context = {
+        'conversation': conversation,
+        'room_name': room_hash,
+        'is_group': conversation.is_group,
+    }
+
+    return render(request, 'chat/video_chat.html', context)
+
+
+@login_required(login_url='/accounts/login/')
+def audio_chat(request, conversation_id):
+    """Start an audio chat in a conversation"""
+    conversation = get_object_or_404(
+        Conversation,
+        id=conversation_id,
+        participants=request.user
+    )
+
+    # Generate a unique room name
+    import hashlib
+    import time
+    room_seed = f"{conversation_id}_{request.user.id}_{time.time()}_audio"
+    room_hash = hashlib.md5(room_seed.encode()).hexdigest()[:12]
+
+    context = {
+        'conversation': conversation,
+        'room_name': room_hash,
+        'is_group': conversation.is_group,
+    }
+
+    return render(request, 'chat/audio_chat.html', context)
+
+
+@login_required(login_url='/accounts/login/')
+def message_search(request, conversation_id=None):
+    """Search messages within a conversation or globally"""
+    query = request.GET.get('q', '').strip()
+
+    if not query:
+        messages.error(request, 'Please enter a search query.')
+        return redirect(request.META.get('HTTP_REFERER', 'chat_home'))
+
+    if conversation_id:
+        # Search within specific conversation
+        conversation = get_object_or_404(
+            Conversation,
+            id=conversation_id,
+            participants=request.user
+        )
+
+        search_results = Message.objects.filter(
+            conversation=conversation,
+            content__icontains=query
+        ).order_by('-timestamp')
+
+        context = {
+            'query': query,
+            'search_results': search_results,
+            'conversation': conversation,
+            'search_scope': 'conversation',
+        }
+    else:
+        # Global search across all conversations
+        user_conversations = Conversation.objects.filter(participants=request.user)
+
+        search_results = Message.objects.filter(
+            conversation__in=user_conversations,
+            content__icontains=query
+        ).order_by('-timestamp')
+
+        context = {
+            'query': query,
+            'search_results': search_results,
+            'search_scope': 'global',
+        }
+
+    return render(request, 'chat/message_search.html', context)
+
+
+@login_required(login_url='/accounts/login/')
+def pin_message(request, message_id):
+    """Pin a message in conversation"""
+    if request.method == 'POST':
+        try:
+            message = Message.objects.get(id=message_id)
+            conversation = message.conversation
+
+            # Check if user is in conversation
+            if not conversation.participants.filter(id=request.user.id).exists():
+                return JsonResponse({'success': False, 'error': 'Not authorized.'})
+
+            # Toggle pin status
+            message.is_pinned = not message.is_pinned
+            message.save()
+
+            return JsonResponse({
+                'success': True,
+                'is_pinned': message.is_pinned,
+                'message': 'Message pinned successfully.' if message.is_pinned else 'Message unpinned.'
+            })
+
+        except Message.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Message not found.'})
+
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+
+@login_required(login_url='/accounts/login/')
+def star_message(request, message_id):
+    """Star (favorite) a message"""
+    if request.method == 'POST':
+        try:
+            message = Message.objects.get(id=message_id)
+
+            # Toggle star status for current user
+            if request.user in message.starred_by.all():
+                message.starred_by.remove(request.user)
+                is_starred = False
+                action = 'unstarred'
+            else:
+                message.starred_by.add(request.user)
+                is_starred = True
+                action = 'starred'
+
+            return JsonResponse({
+                'success': True,
+                'is_starred': is_starred,
+                'action': action,
+                'star_count': message.starred_by.count()
+            })
+
+        except Message.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Message not found.'})
+
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+
+@login_required(login_url='/accounts/login/')
+def delete_conversation(request, conversation_id):
+    """Delete a conversation (archive)"""
+    if request.method == 'POST':
+        try:
+            conversation = Conversation.objects.get(
+                id=conversation_id,
+                participants=request.user
+            )
+
+            # Instead of deleting, mark as archived
+            conversation.is_archived = True
+            conversation.archived_at = timezone.now()
+            conversation.archived_by = request.user
+            conversation.save()
+
+            # Remove user from conversation participants
+            conversation.participants.remove(request.user)
+
+            messages.success(request, 'Conversation archived successfully.')
+
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Conversation archived successfully.'
+                })
+
+        except Conversation.DoesNotExist:
+            messages.error(request, 'Conversation not found.')
+
+    return redirect('chat_home')
+
+
+@login_required(login_url='/accounts/login/')
+def restore_conversation(request, conversation_id):
+    """Restore an archived conversation"""
+    if request.method == 'POST':
+        try:
+            conversation = Conversation.objects.get(
+                id=conversation_id,
+                archived_by=request.user
+            )
+
+            conversation.is_archived = False
+            conversation.archived_at = None
+            conversation.archived_by = None
+            conversation.save()
+
+            # Add user back to conversation
+            conversation.participants.add(request.user)
+
+            messages.success(request, 'Conversation restored successfully.')
+
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Conversation restored successfully.'
+                })
+
+        except Conversation.DoesNotExist:
+            messages.error(request, 'Conversation not found.')
+
+    return redirect('chat_home')
+
+
+@login_required(login_url='/accounts/login/')
+def archived_conversations(request):
+    """View archived conversations"""
+    archived_convos = Conversation.objects.filter(
+        is_archived=True,
+        archived_by=request.user
+    ).order_by('-archived_at')
+
+    context = {
+        'archived_conversations': archived_convos,
+    }
+    return render(request, 'chat/archived_conversations.html', context)
+
+
+@login_required(login_url='/accounts/login/')
+def clear_conversation(request, conversation_id):
+    """Clear all messages in a conversation"""
+    if request.method == 'POST':
+        try:
+            conversation = Conversation.objects.get(
+                id=conversation_id,
+                participants=request.user
+            )
+
+            # Delete all messages in conversation
+            deleted_count, _ = conversation.messages.all().delete()
+
+            messages.success(request, f'Cleared {deleted_count} messages from conversation.')
+
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Cleared {deleted_count} messages from conversation.',
+                    'deleted_count': deleted_count
+                })
+
+        except Conversation.DoesNotExist:
+            messages.error(request, 'Conversation not found.')
+
+    return redirect('conversation', conversation_id=conversation_id)
+
+
+@login_required(login_url='/accounts/login/')
+def export_conversation(request, conversation_id):
+    """Export conversation messages"""
+    try:
+        conversation = Conversation.objects.get(
+            id=conversation_id,
+            participants=request.user
+        )
+
+        # Get all messages
+        messages = conversation.messages.all().order_by('timestamp')
+
+        # Prepare export data
+        export_data = {
+            'conversation_id': str(conversation.id),
+            'conversation_type': 'group' if conversation.is_group else 'direct',
+            'export_date': timezone.now().isoformat(),
+            'exported_by': request.user.username,
+            'messages': []
+        }
+
+        if conversation.is_group:
+            export_data['group_name'] = conversation.group_name
+            export_data['group_description'] = conversation.group_description
+        else:
+            other_user = conversation.participants.exclude(id=request.user.id).first()
+            if other_user:
+                export_data['other_user'] = other_user.username
+
+        for msg in messages:
+            message_data = {
+                'id': str(msg.id),
+                'sender': msg.sender.username,
+                'content': msg.content,
+                'timestamp': msg.timestamp.isoformat(),
+                'message_type': msg.message_type,
+                'is_edited': msg.is_edited,
+                'is_unsent': msg.is_unsent,
+            }
+
+            if msg.edited_at:
+                message_data['edited_at'] = msg.edited_at.isoformat()
+
+            export_data['messages'].append(message_data)
+
+        # Create JSON response
+        response = JsonResponse(export_data, json_dumps_params={'indent': 2})
+        response[
+            'Content-Disposition'] = f'attachment; filename="conversation_{conversation_id}_{timezone.now().strftime("%Y%m%d_%H%M%S")}.json"'
+
+        return response
+
+    except Conversation.DoesNotExist:
+        messages.error(request, 'Conversation not found.')
+        return redirect('chat_home')
+
+
+@login_required(login_url='/accounts/login/')
+def conversation_info(request, conversation_id):
+    """Get conversation information"""
+    conversation = get_object_or_404(
+        Conversation,
+        id=conversation_id,
+        participants=request.user
+    )
+
+    # Get conversation statistics
+    total_messages = conversation.messages.count()
+    total_participants = conversation.participants.count()
+
+    # Get recent activity
+    recent_messages = conversation.messages.all().order_by('-timestamp')[:10]
+
+    # Get participant list
+    participants = conversation.participants.all()
+
+    context = {
+        'conversation': conversation,
+        'total_messages': total_messages,
+        'total_participants': total_participants,
+        'recent_messages': recent_messages,
+        'participants': participants,
+    }
+
+    return render(request, 'chat/conversation_info.html', context)
+
+
+@login_required(login_url='/accounts/login/')
+def typing_status_ws(request, conversation_id):
+    """WebSocket endpoint for typing status (simplified for HTTP fallback)"""
+    # This would normally be a WebSocket endpoint
+    # For now, return a JSON response
+    return JsonResponse({
+        'success': True,
+        'message': 'WebSocket endpoint would be here in production',
+        'conversation_id': conversation_id
+    })
+
+
+@login_required(login_url='/accounts/login/')
+def message_stats(request):
+    """Get message statistics for user"""
+    # Get total messages sent by user
+    total_sent = Message.objects.filter(sender=request.user).count()
+
+    # Get total messages received
+    user_conversations = Conversation.objects.filter(participants=request.user)
+    total_received = Message.objects.filter(
+        conversation__in=user_conversations
+    ).exclude(sender=request.user).count()
+
+    # Get most active conversations
+    from django.db.models import Count
+    active_conversations = Message.objects.filter(
+        conversation__in=user_conversations
+    ).values(
+        'conversation__id',
+        'conversation__is_group'
+    ).annotate(
+        message_count=Count('id')
+    ).order_by('-message_count')[:5]
+
+    # Process active conversations
+    active_convos_data = []
+    for conv in active_conversations:
+        conv_obj = Conversation.objects.get(id=conv['conversation__id'])
+        if conv_obj.is_group:
+            name = conv_obj.group_name
+            is_group = True
+        else:
+            other_user = conv_obj.participants.exclude(id=request.user.id).first()
+            name = other_user.username if other_user else "Unknown"
+            is_group = False
+
+        active_convos_data.append({
+            'id': conv['conversation__id'],
+            'name': name,
+            'is_group': is_group,
+            'message_count': conv['message_count']
+        })
+
+    context = {
+        'total_sent': total_sent,
+        'total_received': total_received,
+        'total_messages': total_sent + total_received,
+        'active_conversations': active_convos_data,
+    }
+
+    return render(request, 'chat/message_stats.html', context)
+
+
+@login_required(login_url='/accounts/login/')
+def bulk_delete_messages(request, conversation_id):
+    """Bulk delete messages in conversation"""
+    if request.method == 'POST':
+        try:
+            conversation = Conversation.objects.get(
+                id=conversation_id,
+                participants=request.user
+            )
+
+            message_ids = request.POST.getlist('message_ids[]')
+
+            # Delete selected messages
+            deleted_count, _ = Message.objects.filter(
+                id__in=message_ids,
+                conversation=conversation,
+                sender=request.user  # Users can only delete their own messages
+            ).delete()
+
+            messages.success(request, f'Deleted {deleted_count} messages.')
+
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Deleted {deleted_count} messages.',
+                    'deleted_count': deleted_count
+                })
+
+        except Conversation.DoesNotExist:
+            messages.error(request, 'Conversation not found.')
+
+    return redirect('conversation', conversation_id=conversation_id)
