@@ -1,8 +1,8 @@
-# accounts/urls.py
+# accounts/urls.py - COMPLETE FIXED VERSION
 from django.urls import path
 from . import views
 
-app_name = 'accounts'  # Add this line
+app_name = 'accounts'  # KEEP THIS - accounts app uses namespace
 
 urlpatterns = [
     # Root URL redirects to login or chat_home based on authentication
@@ -56,7 +56,7 @@ urlpatterns = [
     path('remove-friend/<int:user_id>/', views.remove_friend, name='remove_friend'),
 
     # Discover and Search
-    path('discover/', views.discover_users, name='discover_users'),
+    path('discover/', views.discover_users, name='discover_users_accounts'),  # Different name to avoid conflict
     path('search/', views.search_users, name='search_users'),
 
     # Password Reset (with OTP)
@@ -71,18 +71,19 @@ urlpatterns = [
     path('verification/send-otp/', views.send_verification_otp, name='send_verification_otp'),
     path('verification/verify-otp/', views.verify_account_otp, name='verify_account_otp'),
 
+    # Two-Factor Authentication (OTP)
+    path('otp/setup/', views.setup_otp, name='setup_otp'),
+    path('otp/verify-setup/', views.verify_otp_setup, name='verify_otp_setup'),
+    path('otp/status/', views.otp_status, name='otp_status'),
+    path('otp/disable/', views.disable_otp, name='disable_otp'),
+    path('otp/verify-login/', views.verify_login_otp, name='verify_login_otp'),
+
     # Debug endpoints
     path('debug-verification/', views.debug_verification_status, name='debug_verification_status'),
     path('debug-session/', views.debug_session, name='debug_session'),
     path('force-verify/', views.force_verify_user, name='force_verify_user'),
     path('test-profile-update/', views.test_profile_update, name='test_profile_update'),
     path('refresh-profile/', views.refresh_profile, name='refresh_profile'),
-
-    path('otp/setup/', views.setup_otp, name='setup_otp'),
-    path('otp/verify-setup/', views.verify_otp_setup, name='verify_otp_setup'),
-    path('otp/status/', views.otp_status, name='otp_status'),
-    path('otp/disable/', views.disable_otp, name='disable_otp'),
-    path('otp/verify-login/', views.verify_login_otp, name='verify_login_otp'),
 
     # Google OAuth debug
     path('debug-google-oauth/', views.debug_google_oauth, name='debug_google_oauth'),

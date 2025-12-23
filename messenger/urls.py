@@ -1,4 +1,4 @@
-# messenger/urls.py
+# messenger/urls.py - COMPLETE WORKING VERSION
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
@@ -12,7 +12,7 @@ urlpatterns = [
     # Accounts app URLs
     path('accounts/', include('accounts.urls')),
 
-    # Chat app URLs (WITHOUT namespace for backward compatibility)
+    # Chat app URLs
     path('chat/', include('chat.urls')),
 
     # Social auth URLs
@@ -21,11 +21,8 @@ urlpatterns = [
     # Admin
     path('admin/', admin.site.urls),
 
-    # Error handlers
-    path('400/', views.bad_request),
-    path('403/', views.permission_denied),
-    path('404/', views.page_not_found),
-    path('500/', views.server_error),
+    # Debug/Test URLs
+    path('debug-google-oauth/', views.debug_google_oauth, name='debug_google_oauth'),
 ]
 
 # Error handlers

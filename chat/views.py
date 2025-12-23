@@ -812,11 +812,10 @@ def get_messages_ajax(request, conversation_id):
     return JsonResponse({'error': 'Invalid request'})
 
 
-# In chat/views.py - Update the update_online_status function:
-
 @csrf_exempt
 def update_online_status(request):
     """Update user's online status - FIXED VERSION"""
+    # Check if user is authenticated
     if not request.user.is_authenticated:
         return JsonResponse({'status': 'error', 'message': 'Not authenticated'}, status=401)
 
@@ -834,7 +833,9 @@ def update_online_status(request):
             return JsonResponse({'status': 'success', 'online': is_online})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
+
 
 @login_required(login_url='/accounts/login/')
 @csrf_exempt

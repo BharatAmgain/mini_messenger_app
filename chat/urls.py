@@ -1,13 +1,13 @@
-# chat/urls.py - WITHOUT NAMESPACE
+# chat/urls.py - COMPLETE FIXED VERSION (NO NAMESPACE)
 from django.urls import path
 from . import views
 
-# REMOVE: app_name = 'chat'  # Remove this line
+# DO NOT USE: app_name = 'chat'  # REMOVE THIS LINE IF IT EXISTS
 
 urlpatterns = [
     # Chat home and main pages
     path('', views.chat_home, name='chat_home'),
-    path('home/', views.chat_home, name='chat_home_alt'),
+    path('home/', views.chat_home, name='chat_home_alt'),  # Alternative URL
 
     # Conversations
     path('conversation/<uuid:conversation_id>/', views.conversation, name='conversation'),
@@ -16,8 +16,8 @@ urlpatterns = [
 
     # Groups
     path('create-group/', views.create_group, name='create_group'),
-    path('group/', views.group_chat, name='group_chat'),
-    path('group/<uuid:conversation_id>/', views.group_chat, name='group_chat_view'),
+    path('group/', views.group_chat, name='group_chat'),  # For creating new group
+    path('group/<uuid:conversation_id>/', views.group_chat, name='group_chat_view'),  # View existing group
     path('group/<uuid:conversation_id>/settings/', views.group_settings, name='group_settings'),
     path('group/<uuid:conversation_id>/leave/', views.leave_group, name='leave_group'),
     path('group/<uuid:conversation_id>/invite/', views.invite_to_group, name='invite_to_group'),
@@ -26,13 +26,23 @@ urlpatterns = [
     path('send-message/<uuid:conversation_id>/', views.send_message_ajax, name='send_message_ajax'),
     path('get-messages/<uuid:conversation_id>/', views.get_messages_ajax, name='get_messages_ajax'),
     path('get-new-messages/<uuid:conversation_id>/', views.get_new_messages, name='get_new_messages'),
+    path('edit-message/<uuid:message_id>/', views.edit_message, name='edit_message'),
+    path('unsend-message/<uuid:message_id>/', views.unsend_message, name='unsend_message'),
+    path('react-to-message/<uuid:message_id>/', views.react_to_message, name='react_to_message'),
+    path('pin-message/<uuid:message_id>/', views.pin_message, name='pin_message'),
+    path('star-message/<uuid:message_id>/', views.star_message, name='star_message'),
+
+    # Message management
+    path('search/', views.message_search, name='message_search'),
+    path('search/<uuid:conversation_id>/', views.message_search, name='conversation_message_search'),
+    path('bulk-delete/<uuid:conversation_id>/', views.bulk_delete_messages, name='bulk_delete_messages'),
 
     # Typing indicators
     path('typing/<uuid:conversation_id>/', views.typing_indicator, name='typing_indicator'),
     path('typing-status/<uuid:conversation_id>/', views.get_typing_status, name='get_typing_status'),
     path('typing-ws/<uuid:conversation_id>/', views.typing_status_ws, name='typing_status_ws'),
 
-    # Online status - FIX THIS VIEW
+    # Online status - FIXED (no login_required decorator in view)
     path('update-online-status/', views.update_online_status, name='update_online_status'),
 
     # Discover and search users
@@ -48,21 +58,21 @@ urlpatterns = [
     path('video-chat/<uuid:conversation_id>/', views.video_chat, name='video_chat'),
     path('audio-chat/<uuid:conversation_id>/', views.audio_chat, name='audio_chat'),
 
-    # Notifications
-    path('notifications/', views.get_notifications, name='get_notifications_chat'),
-
-    # Edit/Delete messages
-    path('edit-message/<uuid:message_id>/', views.edit_message, name='edit_message'),
-    path('unsend-message/<uuid:message_id>/', views.unsend_message, name='unsend_message'),
-    path('react-to-message/<uuid:message_id>/', views.react_to_message, name='react_to_message'),
-
     # Conversation management
     path('delete-conversation/<uuid:conversation_id>/', views.delete_conversation, name='delete_conversation'),
     path('restore-conversation/<uuid:conversation_id>/', views.restore_conversation, name='restore_conversation'),
     path('archived-conversations/', views.archived_conversations, name='archived_conversations'),
     path('clear-conversation/<uuid:conversation_id>/', views.clear_conversation, name='clear_conversation'),
+    path('export-conversation/<uuid:conversation_id>/', views.export_conversation, name='export_conversation'),
+    path('conversation-info/<uuid:conversation_id>/', views.conversation_info, name='conversation_info'),
 
-    # Search
-    path('search/', views.message_search, name='message_search'),
-    path('search/<uuid:conversation_id>/', views.message_search, name='conversation_message_search'),
+    # Notifications
+    path('notifications/', views.get_notifications, name='get_notifications_chat'),
+
+    # Emojis
+    path('search-emojis/', views.search_emojis, name='search_emojis'),
+    path('emoji-categories/', views.get_emoji_categories, name='get_emoji_categories'),
+
+    # Statistics
+    path('message-stats/', views.message_stats, name='message_stats'),
 ]

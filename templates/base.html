@@ -1,3 +1,4 @@
+<!-- templates/base.html - COMPLETE FIXED VERSION -->
 {% load static %}
 
 <!DOCTYPE html>
@@ -361,32 +362,35 @@
         {% endif %}
 
         <div class="space-y-1">
-            <!-- Chat Home -->
+            <!-- Chat URLs (NO namespace) -->
             <a href="{% url 'chat_home' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}bg-blue-50 text-blue-700 border-l-4 border-blue-500{% endif %}">
                 <i class="fas fa-comments w-6 text-blue-600"></i>
                 <span class="ml-3">Chats</span>
             </a>
 
-            <!-- Discover Users -->
+            <!-- Chat URLs (NO namespace) -->
             <a href="{% url 'discover_users' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'discover_users' %}bg-green-50 text-green-700 border-l-4 border-green-500{% endif %}">
                 <i class="fas fa-search w-6 text-green-600"></i>
                 <span class="ml-3">Discover</span>
             </a>
 
+            <!-- Accounts URLs (WITH namespace) -->
             <a href="{% url 'accounts:friend_requests' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'friend_requests' %}bg-purple-50 text-purple-700 border-l-4 border-purple-500{% endif %}">
                 <i class="fas fa-user-friends w-6 text-purple-600"></i>
                 <span class="ml-3">Friends</span>
             </a>
 
+            <!-- Accounts URLs (WITH namespace) -->
             <a href="{% url 'accounts:profile' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}bg-yellow-50 text-yellow-700 border-l-4 border-yellow-500{% endif %}">
                 <i class="fas fa-user w-6 text-yellow-600"></i>
                 <span class="ml-3">Profile</span>
             </a>
 
+            <!-- Accounts URLs (WITH namespace) -->
             <a href="{% url 'accounts:notifications' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'notifications' %}bg-red-50 text-red-700 border-l-4 border-red-500{% endif %}">
                 <i class="fas fa-bell w-6 text-red-600"></i>
@@ -398,6 +402,7 @@
                 {% endif %}
             </a>
 
+            <!-- Accounts URLs (WITH namespace) -->
             <a href="{% url 'accounts:settings_main' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'settings_main' %}bg-gray-100 text-gray-900 border-l-4 border-gray-500{% endif %}">
                 <i class="fas fa-cog w-6 text-gray-600"></i>
@@ -407,6 +412,7 @@
             <hr class="my-4">
 
             {% if user.is_authenticated %}
+            <!-- Accounts URLs (WITH namespace) -->
             <form method="POST" action="{% url 'accounts:logout' %}">
                 {% csrf_token %}
                 <button type="submit" class="flex items-center w-full p-3 rounded-lg hover:bg-red-50 transition duration-200 text-red-600">
@@ -415,6 +421,7 @@
                 </button>
             </form>
             {% else %}
+            <!-- Accounts URLs (WITH namespace) -->
             <a href="{% url 'accounts:login' %}" class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200">
                 <i class="fas fa-sign-in-alt w-6 text-blue-600"></i>
                 <span class="ml-3">Login</span>
@@ -426,21 +433,21 @@
     <!-- Mobile Bottom Navigation -->
     {% if user.is_authenticated %}
     <div class="desktop-hidden bottom-nav">
-        <!-- Chat Home -->
+        <!-- Chat URLs (NO namespace) -->
         <a href="{% url 'chat_home' %}"
            class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}text-blue-600{% endif %}">
             <i class="fas fa-comments text-xl mb-1"></i>
             <span class="text-xs">Chats</span>
         </a>
 
-        <!-- Discover Users -->
+        <!-- Chat URLs (NO namespace) -->
         <a href="{% url 'discover_users' %}"
            class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'discover_users' %}text-blue-600{% endif %}">
             <i class="fas fa-search text-xl mb-1"></i>
             <span class="text-xs">Discover</span>
         </a>
 
-        <!-- Start Chat -->
+        <!-- Chat URLs (NO namespace) -->
         <a href="{% url 'start_chat' %}"
            class="flex flex-col items-center justify-center p-2">
             <div class="w-12 h-12 -mt-6 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
@@ -448,12 +455,14 @@
             </div>
         </a>
 
+        <!-- Accounts URLs (WITH namespace) -->
         <a href="{% url 'accounts:friend_requests' %}"
            class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'friend_requests' %}text-blue-600{% endif %}">
             <i class="fas fa-user-friends text-xl mb-1"></i>
             <span class="text-xs">Friends</span>
         </a>
 
+        <!-- Accounts URLs (WITH namespace) -->
         <a href="{% url 'accounts:profile' %}"
            class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}text-blue-600{% endif %}">
             <i class="fas fa-user text-xl mb-1"></i>
@@ -476,32 +485,35 @@
 
             <!-- Navigation -->
             <nav class="flex-1 p-4 space-y-1">
-                <!-- Chat Home -->
+                <!-- Chat URLs (NO namespace) -->
                 <a href="{% url 'chat_home' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-blue-50 transition duration-200 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}bg-blue-50 text-blue-600 border-l-4 border-blue-500{% endif %}">
                     <i class="fas fa-comments w-6"></i>
                     <span class="ml-3">Chats</span>
                 </a>
 
-                <!-- Discover Users -->
+                <!-- Chat URLs (NO namespace) -->
                 <a href="{% url 'discover_users' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-green-50 transition duration-200 {% if request.resolver_match.url_name == 'discover_users' %}bg-green-50 text-green-600 border-l-4 border-green-500{% endif %}">
                     <i class="fas fa-search w-6"></i>
                     <span class="ml-3">Discover</span>
                 </a>
 
+                <!-- Accounts URLs (WITH namespace) -->
                 <a href="{% url 'accounts:friend_requests' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-purple-50 transition duration-200 {% if request.resolver_match.url_name == 'friend_requests' %}bg-purple-50 text-purple-600 border-l-4 border-purple-500{% endif %}">
                     <i class="fas fa-user-friends w-6"></i>
                     <span class="ml-3">Friends</span>
                 </a>
 
+                <!-- Accounts URLs (WITH namespace) -->
                 <a href="{% url 'accounts:profile' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-yellow-50 transition duration-200 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}bg-yellow-50 text-yellow-600 border-l-4 border-yellow-500{% endif %}">
                     <i class="fas fa-user w-6"></i>
                     <span class="ml-3">Profile</span>
                 </a>
 
+                <!-- Accounts URLs (WITH namespace) -->
                 <a href="{% url 'accounts:notifications' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-red-50 transition duration-200 {% if request.resolver_match.url_name == 'notifications' %}bg-red-50 text-red-600 border-l-4 border-red-500{% endif %}">
                     <i class="fas fa-bell w-6"></i>
@@ -513,6 +525,7 @@
                     {% endif %}
                 </a>
 
+                <!-- Accounts URLs (WITH namespace) -->
                 <a href="{% url 'accounts:settings_main' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'settings_main' %}bg-gray-100 text-gray-900 border-l-4 border-gray-500{% endif %}">
                     <i class="fas fa-cog w-6"></i>
@@ -539,6 +552,7 @@
                             <p class="text-sm font-medium text-gray-900 truncate">{{ user.username }}</p>
                             <p class="text-xs text-gray-500 truncate">{{ user.email|truncatechars:20 }}</p>
                         </div>
+                        <!-- Accounts URLs (WITH namespace) -->
                         <form method="POST" action="{% url 'accounts:logout' %}">
                             {% csrf_token %}
                             <button type="submit" class="p-2 text-gray-400 hover:text-red-600 transition duration-200"
@@ -556,6 +570,7 @@
                             <p class="text-sm font-medium text-gray-900 truncate">Guest</p>
                             <p class="text-xs text-gray-500 truncate">Not logged in</p>
                         </div>
+                        <!-- Accounts URLs (WITH namespace) -->
                         <a href="{% url 'accounts:login' %}" class="p-2 text-blue-400 hover:text-blue-600 transition duration-200"
                            title="Login">
                             <i class="fas fa-sign-in-alt"></i>
@@ -716,6 +731,7 @@
                 return;
             }
 
+            // Use accounts:get-unread-count URL (WITH namespace in Django, but URL is just /accounts/get-unread-count/)
             fetch('/accounts/get-unread-count/')
                 .then(response => {
                     if (!response.ok) {
@@ -911,11 +927,442 @@
                 if (mobileMenu && mobileMenu.classList.contains('open')) {
                     const closeMobileMenu = document.getElementById('closeMobileMenu');
                     if (closeMobileMenu) {
-                        closeMobileMenu.click();
-                    }
+                        closeMobile
+                        }
+            });
+        }
+
+        // Handle mobile swipe to refresh
+        let touchStartY = 0;
+        let touchEndY = 0;
+        const minSwipeDistance = 100;
+
+        document.addEventListener('touchstart', function(e) {
+            touchStartY = e.changedTouches[0].screenY;
+        });
+
+        document.addEventListener('touchend', function(e) {
+            touchEndY = e.changedTouches[0].screenY;
+            handleVerticalSwipe();
+        });
+
+        function handleVerticalSwipe() {
+            const swipeDistance = touchEndY - touchStartY;
+
+            // Swipe down from top to refresh
+            if (swipeDistance > minSwipeDistance && touchStartY < 100) {
+                // Only refresh if we're at the top of the page
+                if (window.scrollY === 0) {
+                    location.reload();
+                }
+            }
+        }
+
+        // Handle active link highlighting
+        function updateActiveLinks() {
+            const currentPath = window.location.pathname;
+            const allLinks = document.querySelectorAll('a[href*="/"]');
+
+            allLinks.forEach(link => {
+                const href = link.getAttribute('href');
+                if (href && currentPath.includes(href) && href !== '/') {
+                    link.classList.add('active');
+                } else {
+                    link.classList.remove('active');
                 }
             });
         }
+
+        // Update active links on page load and navigation
+        updateActiveLinks();
+        window.addEventListener('popstate', updateActiveLinks);
+
+        // Handle form submissions with CSRF protection
+        document.addEventListener('submit', function(e) {
+            const form = e.target;
+            if (form.tagName === 'FORM' && form.method.toUpperCase() === 'POST') {
+                const csrfToken = getCSRFToken();
+                if (csrfToken) {
+                    // Add CSRF token if not present
+                    let hasCsrfInput = false;
+                    const inputs = form.querySelectorAll('input[name="csrfmiddlewaretoken"]');
+                    inputs.forEach(input => {
+                        if (input.value !== csrfToken) {
+                            input.value = csrfToken;
+                        }
+                        hasCsrfInput = true;
+                    });
+
+                    if (!hasCsrfInput) {
+                        const csrfInput = document.createElement('input');
+                        csrfInput.type = 'hidden';
+                        csrfInput.name = 'csrfmiddlewaretoken';
+                        csrfInput.value = csrfToken;
+                        form.appendChild(csrfInput);
+                    }
+                }
+            }
+        });
+
+        // Handle AJAX form submissions
+        function submitFormAjax(form, successCallback, errorCallback) {
+            const formData = new FormData(form);
+            const csrfToken = getCSRFToken();
+
+            if (!csrfToken) {
+                console.error('CSRF token not found');
+                if (errorCallback) errorCallback('CSRF token not found');
+                return;
+            }
+
+            formData.append('csrfmiddlewaretoken', csrfToken);
+
+            fetch(form.action, {
+                method: form.method,
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (successCallback) successCallback(data);
+                } else {
+                    if (errorCallback) errorCallback(data.error || 'Unknown error');
+                }
+            })
+            .catch(error => {
+                console.error('Form submission error:', error);
+                if (errorCallback) errorCallback(error.message);
+            });
+        }
+
+        // Add loading indicators to forms
+        document.addEventListener('submit', function(e) {
+            const form = e.target;
+            const submitButtons = form.querySelectorAll('button[type="submit"], input[type="submit"]');
+
+            submitButtons.forEach(button => {
+                const originalText = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+                button.disabled = true;
+
+                // Restore button after form submission completes
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }, 3000);
+            });
+        });
+
+        // Handle image loading errors
+        document.addEventListener('error', function(e) {
+            if (e.target.tagName === 'IMG') {
+                e.target.onerror = null; // Prevent infinite loop
+                e.target.src = '{% static "images/default-avatar.png" %}';
+                e.target.alt = 'Image not available';
+                e.target.classList.add('bg-gray-200');
+            }
+        }, true);
+
+        // Copy text to clipboard
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                showToast('Copied to clipboard!', 'success');
+            }, function(err) {
+                console.error('Could not copy text: ', err);
+                showToast('Failed to copy', 'error');
+            });
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full ${type === 'success' ? 'bg-green-500 text-white' : type === 'error' ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'}`;
+            toast.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} mr-3"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            document.body.appendChild(toast);
+
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+                toast.classList.add('translate-x-0');
+            }, 10);
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.classList.remove('translate-x-0');
+                toast.classList.add('translate-x-full');
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
+
+        // Handle offline/online status
+        function updateConnectionStatus() {
+            const status = navigator.onLine ? 'online' : 'offline';
+            const message = status === 'online' ? 'You are back online!' : 'You are offline. Some features may not work.';
+            const type = status === 'online' ? 'success' : 'warning';
+
+            showToast(message, type);
+
+            // Update online status in database
+            if (status === 'online' && document.body.classList.contains('user-authenticated')) {
+                updateOnlineStatus(true);
+            }
+        }
+
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+
+        // Initialize connection status
+        if (!navigator.onLine) {
+            showToast('You are offline. Some features may not work.', 'warning');
+        }
+
+        // Handle push notifications permission
+        function requestNotificationPermission() {
+            if (!('Notification' in window)) {
+                console.log('This browser does not support notifications');
+                return;
+            }
+
+            if (Notification.permission === 'default') {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        showToast('Notifications enabled!', 'success');
+                    }
+                });
+            }
+        }
+
+        // Auto-request notification permission on user interaction
+        document.addEventListener('click', function() {
+            if (Notification.permission === 'default') {
+                // Request after a delay to avoid interrupting user
+                setTimeout(requestNotificationPermission, 2000);
+            }
+        }, { once: true });
+
+        // Handle theme preference
+        function getPreferredTheme() {
+            if (localStorage.getItem('theme')) {
+                return localStorage.getItem('theme');
+            }
+            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+
+        function setTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            localStorage.setItem('theme', theme);
+        }
+
+        // Initialize theme
+        const preferredTheme = getPreferredTheme();
+        setTheme(preferredTheme);
+
+        // Listen for theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            if (!localStorage.getItem('theme')) {
+                setTheme(e.matches ? 'dark' : 'light');
+            }
+        });
+
+        // Handle scroll to top
+        const scrollToTopBtn = document.createElement('button');
+        scrollToTopBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
+        scrollToTopBtn.className = 'fixed bottom-20 right-4 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition duration-200 opacity-0 transform translate-y-10 transition-all duration-300 z-40';
+        scrollToTopBtn.style.display = 'none';
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        document.body.appendChild(scrollToTopBtn);
+
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                scrollToTopBtn.style.display = 'block';
+                setTimeout(() => {
+                    scrollToTopBtn.classList.remove('opacity-0', 'translate-y-10');
+                    scrollToTopBtn.classList.add('opacity-100', 'translate-y-0');
+                }, 10);
+            } else {
+                scrollToTopBtn.classList.remove('opacity-100', 'translate-y-0');
+                scrollToTopBtn.classList.add('opacity-0', 'translate-y-10');
+                setTimeout(() => {
+                    scrollToTopBtn.style.display = 'none';
+                }, 300);
+            }
+        });
+
+        // Handle lazy loading images
+        if ('IntersectionObserver' in window) {
+            const imageObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        const src = img.getAttribute('data-src');
+                        if (src) {
+                            img.src = src;
+                            img.removeAttribute('data-src');
+                        }
+                        imageObserver.unobserve(img);
+                    }
+                });
+            });
+
+            document.querySelectorAll('img[data-src]').forEach(img => {
+                imageObserver.observe(img);
+            });
+        }
+
+        // Handle video autoplay
+        document.querySelectorAll('video').forEach(video => {
+            video.addEventListener('play', function() {
+                // Pause other videos when one starts playing
+                document.querySelectorAll('video').forEach(otherVideo => {
+                    if (otherVideo !== video && !otherVideo.paused) {
+                        otherVideo.pause();
+                    }
+                });
+            });
+        });
+
+        // Handle file upload preview
+        document.addEventListener('change', function(e) {
+            if (e.target.type === 'file' && e.target.accept && e.target.accept.includes('image')) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const previewId = e.target.getAttribute('data-preview');
+                        if (previewId) {
+                            const preview = document.getElementById(previewId);
+                            if (preview) {
+                                preview.src = event.target.result;
+                                preview.style.display = 'block';
+                            }
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+
+        // Handle password visibility toggle
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('toggle-password')) {
+                const input = e.target.previousElementSibling;
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    e.target.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                } else {
+                    input.type = 'password';
+                    e.target.innerHTML = '<i class="fas fa-eye"></i>';
+                }
+            }
+        });
+
+        // Initialize tooltips
+        document.querySelectorAll('[title]').forEach(element => {
+            element.addEventListener('mouseenter', function() {
+                const tooltip = document.createElement('div');
+                tooltip.className = 'fixed bg-gray-900 text-white text-sm px-2 py-1 rounded shadow-lg z-50';
+                tooltip.textContent = this.getAttribute('title');
+                document.body.appendChild(tooltip);
+
+                const rect = this.getBoundingClientRect();
+                tooltip.style.top = (rect.top - tooltip.offsetHeight - 5) + 'px';
+                tooltip.style.left = (rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2)) + 'px';
+
+                this._tooltip = tooltip;
+            });
+
+            element.addEventListener('mouseleave', function() {
+                if (this._tooltip) {
+                    document.body.removeChild(this._tooltip);
+                    delete this._tooltip;
+                }
+            });
+        });
+
+        // Handle session timeout warning
+        let sessionTimeout;
+        function resetSessionTimer() {
+            clearTimeout(sessionTimeout);
+
+            // Warn user 1 minute before session expires (assuming 15 minute session)
+            sessionTimeout = setTimeout(() => {
+                if (document.body.classList.contains('user-authenticated')) {
+                    showToast('Your session will expire in 1 minute. Please save your work.', 'warning');
+                }
+            }, 14 * 60 * 1000); // 14 minutes
+        }
+
+        // Reset timer on user activity
+        ['click', 'keypress', 'scroll', 'mousemove'].forEach(event => {
+            document.addEventListener(event, resetSessionTimer, { passive: true });
+        });
+
+        // Initialize session timer
+        resetSessionTimer();
+
+        // Handle browser back/forward cache (bfcache)
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                // Page was loaded from bfcache
+                location.reload();
+            }
+        });
+
+        // Handle service worker registration for PWA
+        if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('{% static "js/service-worker.js" %}')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('ServiceWorker registration failed: ', error);
+                    });
+            });
+        }
+
+        // Handle PWA install prompt
+        let deferredPrompt;
+        const installButton = document.createElement('button');
+        installButton.innerHTML = '<i class="fas fa-download mr-2"></i>Install App';
+        installButton.className = 'fixed bottom-24 right-4 bg-purple-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-purple-700 transition duration-200 hidden z-40';
+        installButton.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    installButton.style.display = 'none';
+                }
+                deferredPrompt = null;
+            }
+        });
+        document.body.appendChild(installButton);
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installButton.style.display = 'block';
+        });
+
+        // Final initialization
+        console.log('Base template JavaScript initialized successfully');
     </script>
 
     {% block extra_js %}{% endblock %}
