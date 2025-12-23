@@ -1,4 +1,4 @@
-# messenger/settings.py - COMPLETE FIXED VERSION WITH ERROR HANDLERS
+# messenger/settings.py - COMPLETE FIXED VERSION
 import os
 import sys
 from pathlib import Path
@@ -15,7 +15,7 @@ sys.path.append(str(BASE_DIR / 'apps'))
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-development-key-change-this-in-production')
 
 # Debug Mode
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 # Allowed Hosts - Load from environment
 ALLOWED_HOSTS = config('ALLOWED_HOSTS',
@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'accounts',
     'chat',
 ]
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -66,7 +67,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'social_django.middleware.SocialAuthExceptionMiddleware',
     'django_otp.middleware.OTPMiddleware',
-    # REMOVED: 'accounts.middleware.AuthRedirectMiddleware', # Remove this line
 ]
 
 # URL Configuration
@@ -162,16 +162,18 @@ USE_TZ = True
 
 # ========== STATIC FILES FIXED SECTION ==========
 # Static files
-STATIC_URL = config('STATIC_URL', default='/static/')
-STATICFILES_DIRS = [BASE_DIR / 'static'] if os.path.exists(BASE_DIR / 'static') else []
-STATIC_ROOT = BASE_DIR / config('STATIC_ROOT', default='staticfiles')
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# FIXED: Changed from CompressedManifestStaticFilesStorage to CompressedStaticFilesStorage
+# WhiteNoise for static files
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # Media files
-MEDIA_URL = config('MEDIA_URL', default='/media/')
-MEDIA_ROOT = BASE_DIR / config('MEDIA_ROOT', default='media')
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -686,6 +688,13 @@ print("✅ 400 Handler: messenger.views.bad_request")
 print("✅ CSRF Failure: messenger.views.csrf_failure")
 print("=" * 60)
 
+# ========== CREATE DIRECTORIES ON STARTUP ==========
+# Create necessary directories
+print("\n📁 Creating necessary directories...")
+for directory in [STATIC_ROOT, MEDIA_ROOT, BASE_DIR / 'logs', BASE_DIR / 'static' / 'images', BASE_DIR / 'static' / 'js']:
+    directory.mkdir(exist_ok=True, parents=True)
+    print(f"✅ Created directory: {directory}")
+
 # ========== RUN DATABASE SETUP ==========
 # Run database setup on startup
 if __name__ == 'messenger.settings':
@@ -715,8 +724,6 @@ if __name__ == 'messenger.settings':
         STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
         STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
-        # IMPORTANT: Fix for Daphne/Gunicorn on Render
-        ASGI_THREADS = 4
         print(f"✅ Configured for Render with hostname: {RENDER_EXTERNAL_HOSTNAME}")
     else:
         print("💻 Running in local development mode")

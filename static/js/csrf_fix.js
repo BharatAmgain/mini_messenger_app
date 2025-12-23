@@ -1,16 +1,16 @@
-// CSRF Token Fix for Django
+// static/js/csrf_fix.js - FIXED VERSION
 (function() {
-    // Set global csrftoken variable
-    window.csrftoken = null;
+    console.log('CSRF fix loaded...');
 
-    // Function to get CSRF token from cookies
+    // Function to get cookie by name
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
             const cookies = document.cookie.split(';');
             for (let i = 0; i < cookies.length; i++) {
                 const cookie = cookies[i].trim();
-                if (cookie.startsWith(name + '=')) {
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
                     cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                     break;
                 }
@@ -20,54 +20,46 @@
     }
 
     // Get CSRF token
-    window.csrftoken = getCookie('csrftoken');
+    const csrftoken = getCookie('csrftoken');
+    console.log('CSRF Token found:', csrftoken ? 'Yes' : 'No');
 
-    // Ensure AJAX requests include CSRF token
-    if (window.csrftoken) {
-        // Store for jQuery if available
+    // Store globally for access
+    window.csrftoken = csrftoken;
+
+    // Setup AJAX requests
+    if (csrftoken) {
+        // For jQuery
         if (typeof jQuery !== 'undefined') {
             $.ajaxSetup({
-                headers: {
-                    'X-CSRFToken': window.csrftoken
+                beforeSend: function(xhr, settings) {
+                    if (!this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    }
                 }
             });
         }
 
-        // Setup fetch to include CSRF token
+        // For fetch API
         const originalFetch = window.fetch;
-        window.fetch = function(url, options = {}) {
-            const newOptions = { ...options };
+        window.fetch = function(...args) {
+            const [url, options = {}] = args;
 
-            if (!newOptions.headers) {
-                newOptions.headers = {};
+            // Only add CSRF token for same-origin requests
+            const isSameOrigin = new URL(url, window.location.origin).origin === window.location.origin;
+
+            if (isSameOrigin && ['POST', 'PUT', 'PATCH', 'DELETE'].includes((options.method || 'GET').toUpperCase())) {
+                options.headers = {
+                    ...options.headers,
+                    'X-CSRFToken': csrftoken
+                };
+                options.credentials = 'same-origin';
             }
 
-            // Add CSRF token for same-origin requests
-            if (url.startsWith('/') || url.startsWith(window.location.origin)) {
-                newOptions.headers['X-CSRFToken'] = window.csrftoken;
-            }
-
-            // Ensure credentials are included
-            newOptions.credentials = 'same-origin';
-
-            return originalFetch(url, newOptions);
+            return originalFetch(url, options);
         };
 
-        // Setup XMLHttpRequest to include CSRF token
-        const originalXHROpen = XMLHttpRequest.prototype.open;
-        XMLHttpRequest.prototype.open = function(method, url) {
-            originalXHROpen.apply(this, arguments);
-
-            // Add CSRF token for same-origin requests
-            if (url.startsWith('/') || url.startsWith(window.location.origin)) {
-                this.addEventListener('readystatechange', function() {
-                    if (this.readyState === 1 && window.csrftoken) {
-                        this.setRequestHeader('X-CSRFToken', window.csrftoken);
-                    }
-                });
-            }
-        };
+        console.log('CSRF protection enabled for AJAX requests');
+    } else {
+        console.warn('CSRF token not found in cookies');
     }
-
-    console.log('CSRF token fix loaded');
 })();

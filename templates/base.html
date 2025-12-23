@@ -1,4 +1,4 @@
-<!-- templates/base.html - COMPLETE FIXED VERSION (WITH DIRECT URL PATHS) -->
+<!-- templates/base.html - COMPLETE FIXED VERSION (WITH ALL ERRORS RESOLVED) -->
 {% load static %}
 
 <!DOCTYPE html>
@@ -213,7 +213,7 @@
             animation: fadeIn 0.3s ease-out;
         }
 
-        /* Profile picture styling - SAFE VERSION */
+        /* Profile picture styling - FIXED VERSION */
         .profile-picture {
             width: 40px;
             height: 40px;
@@ -237,6 +237,11 @@
             color: #6b7280;
             font-size: 14px;
             font-weight: 500;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .profile-picture-sm {
@@ -271,6 +276,75 @@
         /* Mobile swipe gestures */
         .swipe-area {
             touch-action: pan-y;
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            z-index: 9999;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .toast-success {
+            background-color: #10b981;
+        }
+
+        .toast-error {
+            background-color: #ef4444;
+        }
+
+        .toast-warning {
+            background-color: #f59e0b;
+        }
+
+        .toast-info {
+            background-color: #3b82f6;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        /* Form error styling */
+        .form-error {
+            color: #ef4444;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
+        /* Image fallback */
+        .image-fallback {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
     </style>
 </head>
@@ -309,9 +383,11 @@
 
                 <!-- Profile -->
                 <a href="/accounts/profile/" class="flex items-center">
-                    {% if user.is_authenticated and user.profile_picture and user.profile_picture.url %}
+                    {% if user.is_authenticated and user.profile_picture %}
                     <div class="profile-picture">
-                        <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}">
+                        <img src="{{ user.profile_picture.url }}"
+                             alt="{{ user.username }}"
+                             onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\'placeholder\'><i class=\"fas fa-user text-gray-500\"></i></div>';">
                     </div>
                     {% else %}
                     <div class="profile-picture bg-gray-300">
@@ -342,9 +418,11 @@
         {% if user.is_authenticated %}
         <div class="mb-6 p-3 bg-gray-50 rounded-lg">
             <div class="flex items-center space-x-3">
-                {% if user.profile_picture and user.profile_picture.url %}
+                {% if user.profile_picture %}
                 <div class="profile-picture-lg">
-                    <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}">
+                    <img src="{{ user.profile_picture.url }}"
+                         alt="{{ user.username }}"
+                         onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\'placeholder\'><i class=\"fas fa-user text-gray-500 text-2xl\"></i></div>';">
                 </div>
                 {% else %}
                 <div class="profile-picture-lg bg-gray-300">
@@ -413,7 +491,7 @@
 
             {% if user.is_authenticated %}
             <!-- Accounts URLs - USING DIRECT PATHS -->
-            <form method="POST" action="/accounts/logout/">
+            <form method="POST" action="/accounts/logout/" id="logoutFormMobile">
                 {% csrf_token %}
                 <button type="submit" class="flex items-center w-full p-3 rounded-lg hover:bg-red-50 transition duration-200 text-red-600">
                     <i class="fas fa-sign-out-alt w-6"></i>
@@ -537,9 +615,11 @@
             <div class="p-4 border-t border-gray-200">
                 <div class="flex items-center space-x-3">
                     {% if user.is_authenticated %}
-                        {% if user.profile_picture and user.profile_picture.url %}
+                        {% if user.profile_picture %}
                         <div class="profile-picture">
-                            <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}">
+                            <img src="{{ user.profile_picture.url }}"
+                                 alt="{{ user.username }}"
+                                 onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\'placeholder\'><i class=\"fas fa-user text-gray-500\"></i></div>';">
                         </div>
                         {% else %}
                         <div class="profile-picture bg-gray-300">
@@ -553,7 +633,7 @@
                             <p class="text-xs text-gray-500 truncate">{{ user.email|truncatechars:20 }}</p>
                         </div>
                         <!-- Accounts URLs - USING DIRECT PATHS -->
-                        <form method="POST" action="/accounts/logout/">
+                        <form method="POST" action="/accounts/logout/" id="logoutFormDesktop">
                             {% csrf_token %}
                             <button type="submit" class="p-2 text-gray-400 hover:text-red-600 transition duration-200"
                                     title="Logout">
@@ -623,7 +703,7 @@
 
     <!-- JavaScript -->
     <script>
-        // Function to get CSRF token from cookies
+        // Function to get CSRF token from cookies - FIXED VERSION
         function getCSRFToken() {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -654,10 +734,11 @@
                 cookieValue = window.csrftoken;
             }
 
+            console.log('CSRF Token found:', cookieValue ? 'Yes' : 'No');
             return cookieValue;
         }
 
-        // Function to handle online status updates with CSRF protection
+        // Function to handle online status updates with CSRF protection - FIXED VERSION
         function updateOnlineStatus(isOnline) {
             // Only update if user is authenticated
             if (!document.body.classList.contains('user-authenticated')) {
@@ -672,6 +753,7 @@
                 return;
             }
 
+            // Use fetch with proper error handling
             fetch('/chat/update-online-status/', {
                 method: 'POST',
                 headers: {
@@ -686,6 +768,16 @@
             }).then(response => {
                 if (!response.ok) {
                     console.log('Online status update failed:', response.status);
+                    return response.json().then(data => {
+                        console.error('Error details:', data);
+                    }).catch(() => {
+                        console.error('Could not parse error response');
+                    });
+                }
+                return response.json();
+            }).then(data => {
+                if (data && data.success) {
+                    console.log('Online status updated successfully');
                 }
             }).catch(error => {
                 console.log('Error updating online status:', error);
@@ -696,20 +788,18 @@
         function sendBeforeUnloadBeacon() {
             const csrfToken = getCSRFToken();
             if (csrfToken && navigator.sendBeacon) {
-                const formData = new FormData();
-                formData.append('online', 'false');
-                formData.append('csrfmiddlewaretoken', csrfToken);
+                const data = new URLSearchParams();
+                data.append('online', 'false');
+                data.append('csrfmiddlewaretoken', csrfToken);
 
-                const blob = new Blob([JSON.stringify({
-                    online: false,
-                    csrfmiddlewaretoken: csrfToken
-                })], {
-                    type: 'application/json'
-                });
-                navigator.sendBeacon('/chat/update-online-status/', blob);
+                navigator.sendBeacon('/chat/update-online-status/', data);
             } else {
                 // Fallback sync request
-                updateOnlineStatus(false);
+                try {
+                    updateOnlineStatus(false);
+                } catch (e) {
+                    console.log('Error in beforeunload:', e);
+                }
             }
         }
 
@@ -731,7 +821,7 @@
                 return;
             }
 
-                        fetch('/accounts/get-unread-count/')
+            fetch('/accounts/get-unread-count/')
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Network response was not ok');
@@ -764,8 +854,32 @@
                 });
         }
 
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'} mr-3"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            document.body.appendChild(toast);
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s';
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
+
         // Mobile menu functionality
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('Base template JavaScript initializing...');
+
             const mobileMenuButton = document.getElementById('mobileMenuButton');
             const closeMobileMenu = document.getElementById('closeMobileMenu');
             const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
@@ -802,7 +916,9 @@
                     alert.style.opacity = '0';
                     alert.style.transition = 'opacity 0.5s ease';
                     setTimeout(() => {
-                        alert.remove();
+                        if (alert.parentElement) {
+                            alert.remove();
+                        }
                     }, 500);
                 }, 5000);
             });
@@ -822,7 +938,7 @@
             });
 
             // Check if user is authenticated
-            const userAuthenticated = document.body.classList.contains('user-authenticated');
+                       const userAuthenticated = document.body.classList.contains('user-authenticated');
             if (userAuthenticated) {
                 // Fetch notification count on page load
                 fetchNotificationCount();
@@ -860,509 +976,522 @@
                     updateOnlineStatus(false);
                 }
             });
-        });
 
-        // Prevent zoom on double-tap for mobile
-        let lastTouchEnd = 0;
-        document.addEventListener('touchend', function(event) {
-            const now = (new Date()).getTime();
-            if (now - lastTouchEnd <= 300) {
-                event.preventDefault();
+            // Handle form submissions with CSRF protection
+            const logoutFormMobile = document.getElementById('logoutFormMobile');
+            const logoutFormDesktop = document.getElementById('logoutFormDesktop');
+
+            if (logoutFormMobile) {
+                logoutFormMobile.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    submitFormWithCSRF(this);
+                });
             }
-            lastTouchEnd = now;
-        }, false);
 
-        // Touch device detection
-        function isTouchDevice() {
-            return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
-        }
+            if (logoutFormDesktop) {
+                logoutFormDesktop.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    submitFormWithCSRF(this);
+                });
+            }
 
-        if (isTouchDevice()) {
-            document.body.classList.add('touch-device');
+            // Handle all forms with CSRF protection
+            document.addEventListener('submit', function(e) {
+                const form = e.target;
 
-            // Add swipe gestures for mobile menu
-            let touchStartX = 0;
-            let touchEndX = 0;
-
-            document.addEventListener('touchstart', function(e) {
-                touchStartX = e.changedTouches[0].screenX;
-            });
-
-            document.addEventListener('touchend', function(e) {
-                touchEndX = e.changedTouches[0].screenX;
-                handleSwipe();
-            });
-
-            function handleSwipe() {
-                const swipeThreshold = 50;
-                const swipeDistance = touchEndX - touchStartX;
-
-                // Swipe right to open menu
-                if (swipeDistance > swipeThreshold && touchStartX < 50) {
-                    const mobileMenuButton = document.getElementById('mobileMenuButton');
-                    if (mobileMenuButton) {
-                        mobileMenuButton.click();
-                    }
+                // Skip if already handled
+                if (form.id === 'logoutFormMobile' || form.id === 'logoutFormDesktop') {
+                    return;
                 }
 
-                // Swipe left to close menu
-                if (swipeDistance < -swipeThreshold) {
-                    const mobileMenu = document.getElementById('mobileMenu');
-                    if (mobileMenu && mobileMenu.classList.contains('open')) {
-                        const closeMobileMenu = document.getElementById('closeMobileMenu');
-                        if (closeMobileMenu) {
-                            closeMobileMenu.click();
+                if (form.tagName === 'FORM' && form.method.toUpperCase() === 'POST') {
+                    ensureCSRFToken(form);
+                }
+            });
+
+            // Handle image loading errors globally
+            document.addEventListener('error', function(e) {
+                if (e.target.tagName === 'IMG') {
+                    console.log('Image failed to load:', e.target.src);
+
+                    // Create fallback
+                    const fallbackHTML = `
+                        <div class="image-fallback" style="width: 100%; height: 100%; border-radius: inherit;">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    `;
+
+                    // Replace image with fallback
+                    e.target.style.display = 'none';
+
+                    const parent = e.target.parentElement;
+                    if (parent && parent.classList.contains('profile-picture')) {
+                        if (!parent.querySelector('.image-fallback')) {
+                            parent.insertAdjacentHTML('beforeend', fallbackHTML);
+                        }
+                    }
+                }
+            }, true);
+
+            // Prevent zoom on double-tap for mobile
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', function(event) {
+                const now = (new Date()).getTime();
+                if (now - lastTouchEnd <= 300) {
+                    event.preventDefault();
+                }
+                lastTouchEnd = now;
+            }, false);
+
+            // Touch device detection
+            function isTouchDevice() {
+                return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+            }
+
+            if (isTouchDevice()) {
+                document.body.classList.add('touch-device');
+
+                // Add swipe gestures for mobile menu
+                let touchStartX = 0;
+                let touchEndX = 0;
+
+                document.addEventListener('touchstart', function(e) {
+                    touchStartX = e.changedTouches[0].screenX;
+                });
+
+                document.addEventListener('touchend', function(e) {
+                    touchEndX = e.changedTouches[0].screenX;
+                    handleSwipe();
+                });
+
+                function handleSwipe() {
+                    const swipeThreshold = 50;
+                    const swipeDistance = touchEndX - touchStartX;
+
+                    // Swipe right to open menu
+                    if (swipeDistance > swipeThreshold && touchStartX < 50) {
+                        if (mobileMenuButton) {
+                            mobileMenuButton.click();
+                        }
+                    }
+
+                    // Swipe left to close menu
+                    if (swipeDistance < -swipeThreshold) {
+                        if (mobileMenu && mobileMenu.classList.contains('open')) {
+                            closeMobileMenuFunc();
                         }
                     }
                 }
             }
-        }
 
-        // Handle mobile back button
-        if (window.innerWidth <= 768) {
-            window.addEventListener('popstate', function() {
-                // Handle back button press
-                const mobileMenu = document.getElementById('mobileMenu');
-                if (mobileMenu && mobileMenu.classList.contains('open')) {
-                    const closeMobileMenu = document.getElementById('closeMobileMenu');
-                    if (closeMobileMenu) {
-                        closeMobileMenu.click();
+            // Handle mobile back button
+            if (window.innerWidth <= 768) {
+                window.addEventListener('popstate', function() {
+                    // Handle back button press
+                    if (mobileMenu && mobileMenu.classList.contains('open')) {
+                        closeMobileMenuFunc();
+                    }
+                });
+            }
+
+            // Handle active link highlighting
+            function updateActiveLinks() {
+                const currentPath = window.location.pathname;
+                const allLinks = document.querySelectorAll('a[href]');
+
+                allLinks.forEach(link => {
+                    const href = link.getAttribute('href');
+                    if (href && currentPath.startsWith(href) && href !== '/' && href.length > 1) {
+                        link.classList.add('active');
+                    } else {
+                        link.classList.remove('active');
+                    }
+                });
+            }
+
+            // Update active links on page load and navigation
+            updateActiveLinks();
+            window.addEventListener('popstate', updateActiveLinks);
+
+            // Handle AJAX form submissions
+            function submitFormWithCSRF(form) {
+                const csrfToken = getCSRFToken();
+                if (!csrfToken) {
+                    showToast('Session expired. Please refresh the page.', 'error');
+                    return false;
+                }
+
+                // Add CSRF token if not present
+                let hasCsrfInput = false;
+                const inputs = form.querySelectorAll('input[name="csrfmiddlewaretoken"]');
+                inputs.forEach(input => {
+                    if (input.value !== csrfToken) {
+                        input.value = csrfToken;
+                    }
+                    hasCsrfInput = true;
+                });
+
+                if (!hasCsrfInput) {
+                    const csrfInput = document.createElement('input');
+                    csrfInput.type = 'hidden';
+                    csrfInput.name = 'csrfmiddlewaretoken';
+                    csrfInput.value = csrfToken;
+                    form.appendChild(csrfInput);
+                }
+
+                // Submit the form
+                form.submit();
+                return true;
+            }
+
+            // Ensure CSRF token in form
+            function ensureCSRFToken(form) {
+                const csrfToken = getCSRFToken();
+                if (!csrfToken) {
+                    console.error('CSRF token not found');
+                    return;
+                }
+
+                // Add CSRF token if not present
+                let hasCsrfInput = false;
+                const inputs = form.querySelectorAll('input[name="csrfmiddlewaretoken"]');
+                inputs.forEach(input => {
+                    if (input.value !== csrfToken) {
+                        input.value = csrfToken;
+                    }
+                    hasCsrfInput = true;
+                });
+
+                if (!hasCsrfInput) {
+                    const csrfInput = document.createElement('input');
+                    csrfInput.type = 'hidden';
+                    csrfInput.name = 'csrfmiddlewaretoken';
+                    csrfInput.value = csrfToken;
+                    form.appendChild(csrfInput);
+                }
+            }
+
+            // Add loading indicators to forms
+            document.addEventListener('submit', function(e) {
+                const form = e.target;
+                const submitButtons = form.querySelectorAll('button[type="submit"], input[type="submit"]');
+
+                submitButtons.forEach(button => {
+                    const originalText = button.innerHTML;
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+                    button.disabled = true;
+
+                    // Restore button after 5 seconds (in case submission fails)
+                    setTimeout(() => {
+                        if (button.disabled) {
+                            button.innerHTML = originalText;
+                            button.disabled = false;
+                            showToast('Submission timed out. Please try again.', 'warning');
+                        }
+                    }, 5000);
+                });
+            });
+
+            // Copy text to clipboard
+            function copyToClipboard(text) {
+                navigator.clipboard.writeText(text).then(function() {
+                    showToast('Copied to clipboard!', 'success');
+                }, function(err) {
+                    console.error('Could not copy text: ', err);
+                    showToast('Failed to copy', 'error');
+                });
+            }
+
+            // Handle offline/online status
+            function updateConnectionStatus() {
+                const status = navigator.onLine ? 'online' : 'offline';
+                const message = status === 'online' ? 'You are back online!' : 'You are offline. Some features may not work.';
+                const type = status === 'online' ? 'success' : 'warning';
+
+                showToast(message, type);
+
+                // Update online status in database
+                if (status === 'online' && userAuthenticated) {
+                    updateOnlineStatus(true);
+                }
+            }
+
+            window.addEventListener('online', updateConnectionStatus);
+            window.addEventListener('offline', updateConnectionStatus);
+
+            // Initialize connection status
+            if (!navigator.onLine) {
+                showToast('You are offline. Some features may not work.', 'warning');
+            }
+
+            // Handle push notifications permission
+            function requestNotificationPermission() {
+                if (!('Notification' in window)) {
+                    console.log('This browser does not support notifications');
+                    return;
+                }
+
+                if (Notification.permission === 'default') {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            showToast('Notifications enabled!', 'success');
+                        }
+                    });
+                }
+            }
+
+            // Auto-request notification permission on user interaction
+            document.addEventListener('click', function() {
+                if (Notification.permission === 'default') {
+                    // Request after a delay to avoid interrupting user
+                    setTimeout(requestNotificationPermission, 2000);
+                }
+            }, { once: true });
+
+            // Handle theme preference
+            function getPreferredTheme() {
+                if (localStorage.getItem('theme')) {
+                    return localStorage.getItem('theme');
+                }
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+
+            function setTheme(theme) {
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+                localStorage.setItem('theme', theme);
+            }
+
+            // Initialize theme
+            const preferredTheme = getPreferredTheme();
+            setTheme(preferredTheme);
+
+            // Listen for theme changes
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                if (!localStorage.getItem('theme')) {
+                    setTheme(e.matches ? 'dark' : 'light');
+                }
+            });
+
+            // Handle scroll to top
+            const scrollToTopBtn = document.createElement('button');
+            scrollToTopBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
+            scrollToTopBtn.className = 'fixed bottom-20 right-4 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition duration-200 opacity-0 transform translate-y-10 transition-all duration-300 z-40';
+            scrollToTopBtn.style.display = 'none';
+            scrollToTopBtn.addEventListener('click', () => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+            document.body.appendChild(scrollToTopBtn);
+
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 300) {
+                    scrollToTopBtn.style.display = 'block';
+                    setTimeout(() => {
+                        scrollToTopBtn.classList.remove('opacity-0', 'translate-y-10');
+                        scrollToTopBtn.classList.add('opacity-100', 'translate-y-0');
+                    }, 10);
+                } else {
+                    scrollToTopBtn.classList.remove('opacity-100', 'translate-y-0');
+                    scrollToTopBtn.classList.add('opacity-0', 'translate-y-10');
+                    setTimeout(() => {
+                        scrollToTopBtn.style.display = 'none';
+                    }, 300);
+                }
+            });
+
+            // Handle lazy loading images
+            if ('IntersectionObserver' in window) {
+                const imageObserver = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target;
+                            const src = img.getAttribute('data-src');
+                            if (src) {
+                                img.src = src;
+                                img.removeAttribute('data-src');
+                            }
+                            imageObserver.unobserve(img);
+                        }
+                    });
+                });
+
+                document.querySelectorAll('img[data-src]').forEach(img => {
+                    imageObserver.observe(img);
+                });
+            }
+
+            // Handle video autoplay
+            document.querySelectorAll('video').forEach(video => {
+                video.addEventListener('play', function() {
+                    // Pause other videos when one starts playing
+                    document.querySelectorAll('video').forEach(otherVideo => {
+                        if (otherVideo !== video && !otherVideo.paused) {
+                            otherVideo.pause();
+                        }
+                    });
+                });
+            });
+
+            // Handle file upload preview
+            document.addEventListener('change', function(e) {
+                if (e.target.type === 'file' && e.target.accept && e.target.accept.includes('image')) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(event) {
+                            const previewId = e.target.getAttribute('data-preview');
+                            if (previewId) {
+                                const preview = document.getElementById(previewId);
+                                if (preview) {
+                                    preview.src = event.target.result;
+                                    preview.style.display = 'block';
+                                }
+                            }
+                        };
+                        reader.readAsDataURL(file);
                     }
                 }
             });
-        }
 
-        // Handle mobile swipe to refresh
-        let touchStartY = 0;
-        let touchEndY = 0;
-        const minSwipeDistance = 100;
+            // Handle password visibility toggle
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('toggle-password')) {
+                    const input = e.target.previousElementSibling;
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        e.target.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                    } else {
+                        input.type = 'password';
+                        e.target.innerHTML = '<i class="fas fa-eye"></i>';
+                    }
+                }
+            });
 
-        document.addEventListener('touchstart', function(e) {
-            touchStartY = e.changedTouches[0].screenY;
-        });
+            // Initialize tooltips
+            document.querySelectorAll('[title]').forEach(element => {
+                element.addEventListener('mouseenter', function() {
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'fixed bg-gray-900 text-white text-sm px-2 py-1 rounded shadow-lg z-50';
+                    tooltip.textContent = this.getAttribute('title');
+                    document.body.appendChild(tooltip);
 
-        document.addEventListener('touchend', function(e) {
-            touchEndY = e.changedTouches[0].screenY;
-            handleVerticalSwipe();
-        });
+                    const rect = this.getBoundingClientRect();
+                    tooltip.style.top = (rect.top - tooltip.offsetHeight - 5) + 'px';
+                    tooltip.style.left = (rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2)) + 'px';
 
-        function handleVerticalSwipe() {
-            const swipeDistance = touchEndY - touchStartY;
+                    this._tooltip = tooltip;
+                });
 
-            // Swipe down from top to refresh
-            if (swipeDistance > minSwipeDistance && touchStartY < 100) {
-                // Only refresh if we're at the top of the page
-                if (window.scrollY === 0) {
+                element.addEventListener('mouseleave', function() {
+                    if (this._tooltip) {
+                        document.body.removeChild(this._tooltip);
+                        delete this._tooltip;
+                    }
+                });
+            });
+
+            // Handle session timeout warning
+            let sessionTimeout;
+            function resetSessionTimer() {
+                clearTimeout(sessionTimeout);
+
+                // Warn user 1 minute before session expires (assuming 15 minute session)
+                sessionTimeout = setTimeout(() => {
+                    if (userAuthenticated) {
+                        showToast('Your session will expire in 1 minute. Please save your work.', 'warning');
+                    }
+                }, 14 * 60 * 1000); // 14 minutes
+            }
+
+            // Reset timer on user activity
+            ['click', 'keypress', 'scroll', 'mousemove'].forEach(event => {
+                document.addEventListener(event, resetSessionTimer, { passive: true });
+            });
+
+            // Initialize session timer
+            resetSessionTimer();
+
+            // Handle browser back/forward cache (bfcache)
+            window.addEventListener('pageshow', function(event) {
+                if (event.persisted) {
+                    // Page was loaded from bfcache
+                    console.log('Page loaded from bfcache, refreshing...');
                     location.reload();
                 }
-            }
-        }
-
-        // Handle active link highlighting
-        function updateActiveLinks() {
-            const currentPath = window.location.pathname;
-            const allLinks = document.querySelectorAll('a[href*="/"]');
-
-            allLinks.forEach(link => {
-                const href = link.getAttribute('href');
-                if (href && currentPath.includes(href) && href !== '/') {
-                    link.classList.add('active');
-                } else {
-                    link.classList.remove('active');
-                }
             });
-        }
 
-        // Update active links on page load and navigation
-        updateActiveLinks();
-        window.addEventListener('popstate', updateActiveLinks);
-
-        // Handle form submissions with CSRF protection
-        document.addEventListener('submit', function(e) {
-            const form = e.target;
-            if (form.tagName === 'FORM' && form.method.toUpperCase() === 'POST') {
-                const csrfToken = getCSRFToken();
-                if (csrfToken) {
-                    // Add CSRF token if not present
-                    let hasCsrfInput = false;
-                    const inputs = form.querySelectorAll('input[name="csrfmiddlewaretoken"]');
-                    inputs.forEach(input => {
-                        if (input.value !== csrfToken) {
-                            input.value = csrfToken;
-                        }
-                        hasCsrfInput = true;
-                    });
-
-                    if (!hasCsrfInput) {
-                        const csrfInput = document.createElement('input');
-                        csrfInput.type = 'hidden';
-                        csrfInput.name = 'csrfmiddlewaretoken';
-                        csrfInput.value = csrfToken;
-                        form.appendChild(csrfInput);
-                    }
-                }
-            }
-        });
-
-        // Handle AJAX form submissions
-        function submitFormAjax(form, successCallback, errorCallback) {
-            const formData = new FormData(form);
-            const csrfToken = getCSRFToken();
-
-            if (!csrfToken) {
-                console.error('CSRF token not found');
-                if (errorCallback) errorCallback('CSRF token not found');
-                return;
-            }
-
-            formData.append('csrfmiddlewaretoken', csrfToken);
-
-            fetch(form.action, {
-                method: form.method,
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                credentials: 'same-origin'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    if (successCallback) successCallback(data);
-                } else {
-                    if (errorCallback) errorCallback(data.error || 'Unknown error');
-                }
-            })
-            .catch(error => {
-                console.error('Form submission error:', error);
-                if (errorCallback) errorCallback(error.message);
-            });
-        }
-
-        // Add loading indicators to forms
-        document.addEventListener('submit', function(e) {
-            const form = e.target;
-            const submitButtons = form.querySelectorAll('button[type="submit"], input[type="submit"]');
-
-            submitButtons.forEach(button => {
-                const originalText = button.innerHTML;
-                button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
-                button.disabled = true;
-
-                // Restore button after form submission completes
-                setTimeout(() => {
-                    button.innerHTML = originalText;
-                    button.disabled = false;
-                }, 3000);
-            });
-        });
-
-        // Handle image loading errors
-        document.addEventListener('error', function(e) {
-            if (e.target.tagName === 'IMG') {
-                e.target.onerror = null; // Prevent infinite loop
-                e.target.src = '{% static "images/default-avatar.png" %}';
-                e.target.alt = 'Image not available';
-                e.target.classList.add('bg-gray-200');
-            }
-        }, true);
-
-        // Copy text to clipboard
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(function() {
-                showToast('Copied to clipboard!', 'success');
-            }, function(err) {
-                console.error('Could not copy text: ', err);
-                showToast('Failed to copy', 'error');
-            });
-        }
-
-        // Show toast notification
-        function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full ${type === 'success' ? 'bg-green-500 text-white' : type === 'error' ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'}`;
-            toast.innerHTML = `
-                <div class="flex items-center">
-                    <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} mr-3"></i>
-                    <span>${message}</span>
-                </div>
-            `;
-            document.body.appendChild(toast);
-
-            // Animate in
-            setTimeout(() => {
-                toast.classList.remove('translate-x-full');
-                toast.classList.add('translate-x-0');
-            }, 10);
-
-            // Remove after 3 seconds
-            setTimeout(() => {
-                toast.classList.remove('translate-x-0');
-                toast.classList.add('translate-x-full');
-                setTimeout(() => {
-                    document.body.removeChild(toast);
-                }, 300);
-            }, 3000);
-        }
-
-        // Handle offline/online status
-        function updateConnectionStatus() {
-            const status = navigator.onLine ? 'online' : 'offline';
-            const message = status === 'online' ? 'You are back online!' : 'You are offline. Some features may not work.';
-            const type = status === 'online' ? 'success' : 'warning';
-
-            showToast(message, type);
-
-            // Update online status in database
-            if (status === 'online' && document.body.classList.contains('user-authenticated')) {
-                updateOnlineStatus(true);
-            }
-        }
-
-        window.addEventListener('online', updateConnectionStatus);
-        window.addEventListener('offline', updateConnectionStatus);
-
-        // Initialize connection status
-        if (!navigator.onLine) {
-            showToast('You are offline. Some features may not work.', 'warning');
-        }
-
-        // Handle push notifications permission
-        function requestNotificationPermission() {
-            if (!('Notification' in window)) {
-                console.log('This browser does not support notifications');
-                return;
-            }
-
-            if (Notification.permission === 'default') {
-                Notification.requestPermission().then(permission => {
-                    if (permission === 'granted') {
-                        showToast('Notifications enabled!', 'success');
-                    }
+            // Handle service worker registration for PWA
+            if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+                window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('{% static "js/service-worker.js" %}')
+                        .then(registration => {
+                            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                        })
+                        .catch(error => {
+                            console.log('ServiceWorker registration failed: ', error);
+                        });
                 });
             }
-        }
 
-        // Auto-request notification permission on user interaction
-        document.addEventListener('click', function() {
-            if (Notification.permission === 'default') {
-                // Request after a delay to avoid interrupting user
-                setTimeout(requestNotificationPermission, 2000);
-            }
-        }, { once: true });
-
-        // Handle theme preference
-        function getPreferredTheme() {
-            if (localStorage.getItem('theme')) {
-                return localStorage.getItem('theme');
-            }
-            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        }
-
-        function setTheme(theme) {
-            if (theme === 'dark') {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
-            localStorage.setItem('theme', theme);
-        }
-
-        // Initialize theme
-        const preferredTheme = getPreferredTheme();
-        setTheme(preferredTheme);
-
-        // Listen for theme changes
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-            if (!localStorage.getItem('theme')) {
-                setTheme(e.matches ? 'dark' : 'light');
-            }
-        });
-
-        // Handle scroll to top
-        const scrollToTopBtn = document.createElement('button');
-        scrollToTopBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
-        scrollToTopBtn.className = 'fixed bottom-20 right-4 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition duration-200 opacity-0 transform translate-y-10 transition-all duration-300 z-40';
-        scrollToTopBtn.style.display = 'none';
-        scrollToTopBtn.addEventListener('click', () => {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-        document.body.appendChild(scrollToTopBtn);
-
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 300) {
-                scrollToTopBtn.style.display = 'block';
-                setTimeout(() => {
-                    scrollToTopBtn.classList.remove('opacity-0', 'translate-y-10');
-                    scrollToTopBtn.classList.add('opacity-100', 'translate-y-0');
-                }, 10);
-            } else {
-                scrollToTopBtn.classList.remove('opacity-100', 'translate-y-0');
-                scrollToTopBtn.classList.add('opacity-0', 'translate-y-10');
-                setTimeout(() => {
-                    scrollToTopBtn.style.display = 'none';
-                }, 300);
-            }
-        });
-
-        // Handle lazy loading images
-        if ('IntersectionObserver' in window) {
-            const imageObserver = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const img = entry.target;
-                        const src = img.getAttribute('data-src');
-                        if (src) {
-                            img.src = src;
-                            img.removeAttribute('data-src');
-                        }
-                        imageObserver.unobserve(img);
+            // Handle PWA install prompt
+            let deferredPrompt;
+            const installButton = document.createElement('button');
+            installButton.innerHTML = '<i class="fas fa-download mr-2"></i>Install App';
+            installButton.className = 'fixed bottom-24 right-4 bg-purple-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-purple-700 transition duration-200 hidden z-40';
+            installButton.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        installButton.style.display = 'none';
                     }
-                });
-            });
-
-            document.querySelectorAll('img[data-src]').forEach(img => {
-                imageObserver.observe(img);
-            });
-        }
-
-        // Handle video autoplay
-        document.querySelectorAll('video').forEach(video => {
-            video.addEventListener('play', function() {
-                // Pause other videos when one starts playing
-                document.querySelectorAll('video').forEach(otherVideo => {
-                    if (otherVideo !== video && !otherVideo.paused) {
-                        otherVideo.pause();
-                    }
-                });
-            });
-        });
-
-        // Handle file upload preview
-        document.addEventListener('change', function(e) {
-            if (e.target.type === 'file' && e.target.accept && e.target.accept.includes('image')) {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(event) {
-                        const previewId = e.target.getAttribute('data-preview');
-                        if (previewId) {
-                            const preview = document.getElementById(previewId);
-                            if (preview) {
-                                preview.src = event.target.result;
-                                preview.style.display = 'block';
-                            }
-                        }
-                    };
-                    reader.readAsDataURL(file);
-                }
-            }
-        });
-
-        // Handle password visibility toggle
-        document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('toggle-password')) {
-                const input = e.target.previousElementSibling;
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    e.target.innerHTML = '<i class="fas fa-eye-slash"></i>';
-                } else {
-                    input.type = 'password';
-                    e.target.innerHTML = '<i class="fas fa-eye"></i>';
-                }
-            }
-        });
-
-        // Initialize tooltips
-        document.querySelectorAll('[title]').forEach(element => {
-            element.addEventListener('mouseenter', function() {
-                const tooltip = document.createElement('div');
-                tooltip.className = 'fixed bg-gray-900 text-white text-sm px-2 py-1 rounded shadow-lg z-50';
-                tooltip.textContent = this.getAttribute('title');
-                document.body.appendChild(tooltip);
-
-                const rect = this.getBoundingClientRect();
-                tooltip.style.top = (rect.top - tooltip.offsetHeight - 5) + 'px';
-                tooltip.style.left = (rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2)) + 'px';
-
-                this._tooltip = tooltip;
-            });
-
-            element.addEventListener('mouseleave', function() {
-                if (this._tooltip) {
-                    document.body.removeChild(this._tooltip);
-                    delete this._tooltip;
+                    deferredPrompt = null;
                 }
             });
-        });
+            document.body.appendChild(installButton);
 
-        // Handle session timeout warning
-        let sessionTimeout;
-        function resetSessionTimer() {
-            clearTimeout(sessionTimeout);
-
-            // Warn user 1 minute before session expires (assuming 15 minute session)
-            sessionTimeout = setTimeout(() => {
-                if (document.body.classList.contains('user-authenticated')) {
-                    showToast('Your session will expire in 1 minute. Please save your work.', 'warning');
-                }
-            }, 14 * 60 * 1000); // 14 minutes
-        }
-
-        // Reset timer on user activity
-        ['click', 'keypress', 'scroll', 'mousemove'].forEach(event => {
-            document.addEventListener(event, resetSessionTimer, { passive: true });
-        });
-
-        // Initialize session timer
-        resetSessionTimer();
-
-        // Handle browser back/forward cache (bfcache)
-        window.addEventListener('pageshow', function(event) {
-            if (event.persisted) {
-                // Page was loaded from bfcache
-                location.reload();
-            }
-        });
-
-        // Handle service worker registration for PWA
-        if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('{% static "js/service-worker.js" %}')
-                    .then(registration => {
-                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                    })
-                    .catch(error => {
-                        console.log('ServiceWorker registration failed: ', error);
-                    });
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                installButton.style.display = 'block';
             });
-        }
 
-        // Handle PWA install prompt
-        let deferredPrompt;
-        const installButton = document.createElement('button');
-        installButton.innerHTML = '<i class="fas fa-download mr-2"></i>Install App';
-        installButton.className = 'fixed bottom-24 right-4 bg-purple-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-purple-700 transition duration-200 hidden z-40';
-        installButton.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    installButton.style.display = 'none';
+            // Show loading indicator for slow connections
+            let loadingTimeout = setTimeout(() => {
+                if (document.readyState !== 'complete') {
+                    const loadingOverlay = document.createElement('div');
+                    loadingOverlay.className = 'loading-overlay';
+                    loadingOverlay.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-2"></i><p class="text-gray-600">Loading...</p></div>';
+                    document.body.appendChild(loadingOverlay);
                 }
-                deferredPrompt = null;
-            }
-        });
-        document.body.appendChild(installButton);
+            }, 2000);
 
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installButton.style.display = 'block';
+            window.addEventListener('load', () => {
+                clearTimeout(loadingTimeout);
+                const loadingOverlay = document.querySelector('.loading-overlay');
+                if (loadingOverlay) {
+                    loadingOverlay.remove();
+                }
+            });
+
+            // Final initialization
+            console.log('Base template JavaScript initialized successfully');
         });
 
-        // Final initialization
-        console.log('Base template JavaScript initialized successfully');
+        // Global error handler for uncaught errors
+        window.addEventListener('error', function(e) {
+            console.error('Uncaught error:', e.error);
+            showToast('An error occurred. Please try again.', 'error');
+        });
+
+        // Handle unhandled promise rejections
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('Unhandled promise rejection:', e.reason);
+            showToast('An error occurred. Please try again.', 'error');
+        });
     </script>
 
     {% block extra_js %}{% endblock %}

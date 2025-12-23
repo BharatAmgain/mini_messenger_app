@@ -812,29 +812,39 @@ def get_messages_ajax(request, conversation_id):
     return JsonResponse({'error': 'Invalid request'})
 
 
+# chat/views.py - ADD THIS FUNCTION
 @csrf_exempt
 def update_online_status(request):
     """Update user's online status - FIXED VERSION"""
-    # Check if user is authenticated
-    if not request.user.is_authenticated:
-        return JsonResponse({'status': 'error', 'message': 'Not authenticated'}, status=401)
-
-    if request.method == 'POST':
+    if request.method == 'POST' and request.user.is_authenticated:
         try:
             data = json.loads(request.body)
-            is_online = data.get('online', True)
+            is_online = data.get('is_online', False)
 
-            # Update user's online status
             user = request.user
-            user.is_online = is_online
             user.last_seen = timezone.now()
-            user.save()
 
-            return JsonResponse({'status': 'success', 'online': is_online})
+            # Only update if explicitly setting online status
+            if 'online' in data:
+                user.is_online = bool(data['online'])
+
+            user.save(update_fields=['last_seen', 'is_online'])
+
+            return JsonResponse({'success': True, 'is_online': user.is_online})
+
+        except json.JSONDecodeError:
+            # Simple form data fallback
+            is_online = request.POST.get('is_online', 'false') == 'true'
+            user = request.user
+            user.last_seen = timezone.now()
+            user.is_online = is_online
+            user.save(update_fields=['last_seen', 'is_online'])
+
+            return JsonResponse({'success': True, 'is_online': user.is_online})
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+            return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
+    return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
 
 
 @login_required(login_url='/accounts/login/')

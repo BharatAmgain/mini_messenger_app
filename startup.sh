@@ -1,5 +1,5 @@
 #!/bin/bash
-# startup.sh - OPTIMIZED FOR YOUR REQUIREMENTS - FIXED VERSION
+# startup.sh - FIXED VERSION
 
 echo "🚀 Starting Connect.io Messenger App..."
 
@@ -13,16 +13,58 @@ if [ -n "$RENDER" ]; then
     export DJANGO_SETTINGS_MODULE=messenger.settings
 fi
 
-# ====== CRITICAL: COLLECT STATIC FILES FIRST ======
-echo "📁 Step 1: Collecting static files..."
+# ====== CRITICAL: CREATE STATIC DIRECTORIES FIRST ======
+echo "📁 Step 1: Creating static and media directories..."
+mkdir -p static static/images static/js media
+
+# ====== CREATE DEFAULT AVATAR IF NOT EXISTS ======
+if [ ! -f "static/images/default-avatar.png" ]; then
+    echo "🖼️  Creating default avatar placeholder..."
+    # Create a simple placeholder using ImageMagick or fallback
+    if command -v convert &> /dev/null; then
+        convert -size 100x100 xc:#cccccc -pointsize 20 -fill white -gravity center -draw "text 0,0 'Avatar'" static/images/default-avatar.png
+    else
+        echo "⚠️  ImageMagick not available, creating text file"
+        echo "Placeholder avatar" > static/images/default-avatar.png
+    fi
+fi
+
+# ====== ENSURE CSRF FIX JS EXISTS ======
+if [ ! -f "static/js/csrf_fix.js" ]; then
+    echo "🔧 Creating csrf_fix.js..."
+    cat > static/js/csrf_fix.js << 'EOF'
+// CSRF fix for Django
+(function() {
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+    window.csrftoken = csrftoken;
+})();
+EOF
+fi
+
+# ====== COLLECT STATIC FILES ======
+echo "📁 Step 2: Collecting static files..."
 python manage.py collectstatic --no-input --clear
 
-# ====== THEN RUN MIGRATIONS ======
-echo "📦 Step 2: Applying database migrations..."
+# ====== RUN MIGRATIONS ======
+echo "📦 Step 3: Applying database migrations..."
 python manage.py migrate --no-input
 
-# ====== THEN CREATE USERS ======
-echo "👤 Step 3: Setting up users..."
+# ====== CREATE USERS ======
+echo "👤 Step 4: Setting up users..."
 python manage.py shell << EOF
 from django.contrib.auth import get_user_model
 User = get_user_model()
@@ -49,20 +91,14 @@ if not User.objects.filter(is_superuser=True).exists():
     print(f"✅ Created admin user: admin / AdminPass123!")
 EOF
 
-# ====== FINALLY START SERVER ======
-echo "🌐 Step 4: Starting server on port \$PORT..."
+# ====== START SERVER ======
+echo "🌐 Step 5: Starting server on port \$PORT..."
 
-# Check if using ASGI (Channels) or WSGI
-if [ -f "messenger/asgi.py" ] && grep -q "channels" requirements.txt; then
-    echo "🔌 Using ASGI with Daphne (WebSockets enabled)"
-    exec daphne -b 0.0.0.0 -p "\$PORT" messenger.asgi:application
-else
-    echo "🔌 Using WSGI with Gunicorn"
-    exec gunicorn messenger.wsgi:application \
-        --bind 0.0.0.0:"\$PORT" \
-        --workers 2 \
-        --threads 4 \
-        --timeout 120 \
-        --access-logfile - \
-        --error-logfile -
-fi
+# Use Gunicorn for production
+exec gunicorn messenger.wsgi:application \
+    --bind 0.0.0.0:"\$PORT" \
+    --workers 2 \
+    --threads 4 \
+    --timeout 120 \
+    --access-logfile - \
+    --error-logfile -
