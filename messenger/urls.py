@@ -1,22 +1,18 @@
+# messenger/urls.py - FIXED VERSION
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from . import views
-from accounts import views as accounts_views  # Add this import
 
 urlpatterns = [
     # Home page
     path('', views.home, name='home'),
 
-    # Accounts app URLs
-    path('accounts/', include('accounts.urls')),
+    # Accounts app URLs WITH namespace
+    path('accounts/', include(('accounts.urls', 'accounts'), namespace='accounts')),
 
-    # ADD THESE DIRECT URLS TO FIX THE ISSUE:
-    path('accounts/login/', accounts_views.login_view, name='login'),
-    path('accounts/register/', accounts_views.register, name='register'),
-
-    # Chat app URLs
+    # Chat app URLs - NO namespace
     path('chat/', include('chat.urls')),
 
     # Social auth URLs
@@ -27,8 +23,7 @@ urlpatterns = [
 
     # Debug/Test URLs
     path('debug-google-oauth/', views.debug_google_oauth, name='debug_google_oauth'),
-
-    path('health-check/', views.health_check, name='health_check'),  # Add this line
+    path('health-check/', views.health_check, name='health_check'),
 ]
 
 # Error handlers

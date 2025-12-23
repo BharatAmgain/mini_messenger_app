@@ -1,7 +1,8 @@
-# accounts/urls.py - COMPLETE FIXED VERSION
+# accounts/urls.py - REMOVE THE NAMESPACE
 from django.urls import path
 from . import views
 
+# REMOVE THIS LINE: app_name = 'accounts'  # DELETE THIS
 
 urlpatterns = [
     # Root URL redirects to login or chat_home based on authentication
@@ -11,6 +12,7 @@ urlpatterns = [
     path('register/', views.register, name='register'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
+
 
     # Profile
     path('profile/', views.profile, name='profile'),
