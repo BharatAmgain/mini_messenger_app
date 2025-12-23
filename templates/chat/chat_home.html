@@ -16,7 +16,7 @@
                 <h1 class="text-xl font-bold text-gray-900">Chats</h1>
                 <div class="flex items-center space-x-2">
                     <!-- Notifications Badge -->
-                    <a href="{% url 'accounts:notifications' %}" class="relative p-2 text-gray-600 hover:text-blue-600 transition duration-200">
+                    <a href="/accounts/notifications/" class="relative p-2 text-gray-600 hover:text-blue-600 transition duration-200">
                         <i class="fas fa-bell"></i>
                         {% if unread_notifications_count > 0 %}
                         <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
