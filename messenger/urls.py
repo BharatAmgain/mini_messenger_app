@@ -23,6 +23,8 @@ urlpatterns = [
 
     # Debug/Test URLs
     path('debug-google-oauth/', views.debug_google_oauth, name='debug_google_oauth'),
+
+    path('health-check/', views.health_check, name='health_check'),  # Add this line
 ]
 
 # Error handlers

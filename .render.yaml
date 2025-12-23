@@ -1,9 +1,16 @@
 services:
   - type: web
-    name: messenger-app
+    name: connect-io-messenger
     env: python
-    buildCommand: pip install -r requirements.txt && python manage.py migrate --no-input
-    startCommand: chmod +x startup.sh && ./startup.sh
+    region: oregon
+    plan: free
+    buildCommand: |
+      pip install --upgrade pip setuptools wheel
+      pip install -r requirements.txt
+      echo "✅ Dependencies installed"
+    startCommand: |
+      chmod +x startup.sh
+      ./startup.sh
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -11,9 +18,26 @@ services:
           property: connectionString
       - key: SECRET_KEY
         generateValue: true
-      - key: WEB_CONCURRENCY
-        value: 4
+      - key: DEBUG
+        value: false
+      - key: PORT
+        value: 10000
+      - key: PYTHON_VERSION
+        value: 3.9.16
+      - key: RENDER
+        value: true
+      - key: PYTHONUNBUFFERED
+        value: 1
+      - key: DISABLE_COLLECTSTATIC
+        value: 0
+    disk:
+      name: media
+      mountPath: /opt/render/project/src/media
+      sizeGB: 1
+    healthCheckPath: /health-check/
+    autoDeploy: true
 
 databases:
   - name: messenger-db
     plan: free
+    region: oregon

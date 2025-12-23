@@ -687,3 +687,51 @@ print("=" * 60)
 # Run database setup on startup
 if __name__ == 'messenger.settings':
     ensure_migrations_and_user()
+
+    # messenger/settings.py - ADD THESE LINES AT THE VERY END
+
+    # ========== CRITICAL FIX FOR RENDER ==========
+    if 'RENDER' in os.environ:
+        # Force production settings for Render
+        print("🚨 RENDER DETECTED - APPLYING PRODUCTION SETTINGS")
+
+        # Security settings
+        DEBUG = False
+        SECURE_SSL_REDIRECT = True
+        SESSION_COOKIE_SECURE = True
+        CSRF_COOKIE_SECURE = True
+        SECURE_HSTS_SECONDS = 31536000
+        SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+        # Auto-detect Render hostname
+        RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+        if RENDER_EXTERNAL_HOSTNAME:
+            ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+            CSRF_TRUSTED_ORIGINS.append(f'https://{RENDER_EXTERNAL_HOSTNAME}')
+            print(f"✅ Added {RENDER_EXTERNAL_HOSTNAME} to allowed hosts")
+
+        # Static files on Render
+        STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+        STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+        # IMPORTANT: Fix for Daphne/Gunicorn on Render
+        ASGI_THREADS = 4
+        print(f"✅ Configured for Render with hostname: {RENDER_EXTERNAL_HOSTNAME}")
+    else:
+        print("💻 Running in local development mode")
+
+    # ========== ERROR HANDLERS ==========
+    handler404 = 'messenger.views.page_not_found'
+    handler500 = 'messenger.views.server_error'
+    handler403 = 'messenger.views.permission_denied'
+    handler400 = 'messenger.views.bad_request'
+
+    print("\n" + "=" * 60)
+    print("DEPLOYMENT CONFIGURATION COMPLETE")
+    print("=" * 60)
+    print(f"🔧 DEBUG: {DEBUG}")
+    print(f"🌍 ALLOWED_HOSTS: {ALLOWED_HOSTS}")
+    print(f"🛡️ CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}")
+    print(f"💾 DATABASE: {DATABASES['default']['ENGINE']}")
+    print(f"📧 EMAIL: {EMAIL_BACKEND}")
+    print("=" * 60)
