@@ -1,5 +1,5 @@
 #!/bin/bash
-# startup.sh - OPTIMIZED FOR YOUR REQUIREMENTS
+# startup.sh - OPTIMIZED FOR YOUR REQUIREMENTS - FIXED VERSION
 
 echo "🚀 Starting Connect.io Messenger App..."
 
@@ -13,15 +13,15 @@ if [ -n "$RENDER" ]; then
     export DJANGO_SETTINGS_MODULE=messenger.settings
 fi
 
-# 1. Apply database migrations
-echo "📦 Step 1: Applying database migrations..."
-python manage.py migrate --no-input
-
-# 2. Collect static files
-echo "📁 Step 2: Collecting static files..."
+# ====== CRITICAL: COLLECT STATIC FILES FIRST ======
+echo "📁 Step 1: Collecting static files..."
 python manage.py collectstatic --no-input --clear
 
-# 3. Create admin/test user
+# ====== THEN RUN MIGRATIONS ======
+echo "📦 Step 2: Applying database migrations..."
+python manage.py migrate --no-input
+
+# ====== THEN CREATE USERS ======
 echo "👤 Step 3: Setting up users..."
 python manage.py shell << EOF
 from django.contrib.auth import get_user_model
@@ -49,17 +49,17 @@ if not User.objects.filter(is_superuser=True).exists():
     print(f"✅ Created admin user: admin / AdminPass123!")
 EOF
 
-# 4. Start server based on configuration
-echo "🌐 Step 4: Starting server on port $PORT..."
+# ====== FINALLY START SERVER ======
+echo "🌐 Step 4: Starting server on port \$PORT..."
 
 # Check if using ASGI (Channels) or WSGI
 if [ -f "messenger/asgi.py" ] && grep -q "channels" requirements.txt; then
     echo "🔌 Using ASGI with Daphne (WebSockets enabled)"
-    exec daphne -b 0.0.0.0 -p $PORT messenger.asgi:application
+    exec daphne -b 0.0.0.0 -p "\$PORT" messenger.asgi:application
 else
     echo "🔌 Using WSGI with Gunicorn"
     exec gunicorn messenger.wsgi:application \
-        --bind 0.0.0.0:$PORT \
+        --bind 0.0.0.0:"\$PORT" \
         --workers 2 \
         --threads 4 \
         --timeout 120 \

@@ -160,11 +160,14 @@ USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
+# ========== STATIC FILES FIXED SECTION ==========
 # Static files
 STATIC_URL = config('STATIC_URL', default='/static/')
 STATICFILES_DIRS = [BASE_DIR / 'static'] if os.path.exists(BASE_DIR / 'static') else []
 STATIC_ROOT = BASE_DIR / config('STATIC_ROOT', default='staticfiles')
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# FIXED: Changed from CompressedManifestStaticFilesStorage to CompressedStaticFilesStorage
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # Media files
 MEDIA_URL = config('MEDIA_URL', default='/media/')
@@ -674,7 +677,7 @@ handler403 = 'messenger.views.permission_denied'
 handler400 = 'messenger.views.bad_request'
 
 print("\n" + "=" * 60)
-print("ERROR HANDLERS CONFIGURED")
+print("ERROR HANDLERS CONFIGURATED")
 print("=" * 60)
 print("✅ 404 Handler: messenger.views.page_not_found")
 print("✅ 500 Handler: messenger.views.server_error")
@@ -687,8 +690,6 @@ print("=" * 60)
 # Run database setup on startup
 if __name__ == 'messenger.settings':
     ensure_migrations_and_user()
-
-    # messenger/settings.py - ADD THESE LINES AT THE VERY END
 
     # ========== CRITICAL FIX FOR RENDER ==========
     if 'RENDER' in os.environ:
@@ -712,19 +713,13 @@ if __name__ == 'messenger.settings':
 
         # Static files on Render
         STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-        STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+        STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
         # IMPORTANT: Fix for Daphne/Gunicorn on Render
         ASGI_THREADS = 4
         print(f"✅ Configured for Render with hostname: {RENDER_EXTERNAL_HOSTNAME}")
     else:
         print("💻 Running in local development mode")
-
-    # ========== ERROR HANDLERS ==========
-    handler404 = 'messenger.views.page_not_found'
-    handler500 = 'messenger.views.server_error'
-    handler403 = 'messenger.views.permission_denied'
-    handler400 = 'messenger.views.bad_request'
 
     print("\n" + "=" * 60)
     print("DEPLOYMENT CONFIGURATION COMPLETE")
