@@ -1,100 +1,94 @@
 #!/bin/bash
-# startup.sh - FIXED VERSION
+# startup.sh - UPDATED VERSION
 
 echo "🚀 Starting Connect.io Messenger App..."
 
-# Set Python path and environment
-export PYTHONPATH="/opt/render/project/src:$PYTHONPATH"
-export PYTHONUNBUFFERED=1
+# Create directories if they don't exist
+echo "📁 Creating required directories..."
+mkdir -p static static/images static/js media media/profile_pictures logs
 
-# Check if on Render
-if [ -n "$RENDER" ]; then
-    echo "🌐 Running on Render Production Environment"
-    export DJANGO_SETTINGS_MODULE=messenger.settings
-fi
+# Create essential static files
+echo "📝 Creating essential static files..."
 
-# ====== CRITICAL: CREATE STATIC DIRECTORIES FIRST ======
-echo "📁 Step 1: Creating static and media directories..."
-mkdir -p static static/images static/js media
-
-# ====== CREATE DEFAULT AVATAR IF NOT EXISTS ======
+# Create default avatar if missing
 if [ ! -f "static/images/default-avatar.png" ]; then
     echo "🖼️  Creating default avatar placeholder..."
-    # Create a simple placeholder using ImageMagick or fallback
-    if command -v convert &> /dev/null; then
-        convert -size 100x100 xc:#cccccc -pointsize 20 -fill white -gravity center -draw "text 0,0 'Avatar'" static/images/default-avatar.png
-    else
-        echo "⚠️  ImageMagick not available, creating text file"
-        echo "Placeholder avatar" > static/images/default-avatar.png
-    fi
+    # Create simple text file as placeholder
+    echo "Placeholder Avatar Image" > static/images/default-avatar.png
 fi
 
-# ====== ENSURE CSRF FIX JS EXISTS ======
-if [ ! -f "static/js/csrf_fix.js" ]; then
-    echo "🔧 Creating csrf_fix.js..."
-    cat > static/js/csrf_fix.js << 'EOF'
-// CSRF fix for Django
+# Create csrf_fix.js
+cat > static/js/csrf_fix.js << 'EOF'
+// CSRF Fix - Simplified Version
 (function() {
     function getCookie(name) {
-        let cookieValue = null;
+        let value = null;
         if (document.cookie && document.cookie !== '') {
             const cookies = document.cookie.split(';');
             for (let i = 0; i < cookies.length; i++) {
                 const cookie = cookies[i].trim();
                 if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    value = decodeURIComponent(cookie.substring(name.length + 1));
                     break;
                 }
             }
         }
-        return cookieValue;
+        return value;
     }
-    const csrftoken = getCookie('csrftoken');
-    window.csrftoken = csrftoken;
+    window.csrftoken = getCookie('csrftoken');
+    console.log('CSRF initialized');
 })();
 EOF
-fi
+
+# Create service-worker.js
+cat > static/js/service-worker.js << 'EOF'
+// Minimal Service Worker
+self.addEventListener('install', e => self.skipWaiting());
+self.addEventListener('activate', e => self.clients.claim());
+EOF
+
+# Set permissions
+chmod -R 755 static media logs
 
 # ====== COLLECT STATIC FILES ======
-echo "📁 Step 2: Collecting static files..."
+echo "📁 Collecting static files..."
 python manage.py collectstatic --no-input --clear
 
 # ====== RUN MIGRATIONS ======
-echo "📦 Step 3: Applying database migrations..."
+echo "📦 Applying database migrations..."
+python manage.py makemigrations --no-input
 python manage.py migrate --no-input
 
-# ====== CREATE USERS ======
-echo "👤 Step 4: Setting up users..."
+# ====== CREATE DEFAULT USER ======
+echo "👤 Creating default user..."
 python manage.py shell << EOF
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
-# Create test user
+# Create test user if not exists
 if not User.objects.filter(username='testuser').exists():
-    user = User.objects.create_user(
+    User.objects.create_user(
         username='testuser',
         email='test@example.com',
         password='TestPass123!',
         is_verified=True,
         phone_number='+9779866399895'
     )
-    print(f"✅ Created test user: testuser / TestPass123!")
+    print("✅ Created test user: testuser / TestPass123!")
 
-# Create superuser if doesn't exist
+# Create admin if not exists
 if not User.objects.filter(is_superuser=True).exists():
-    admin = User.objects.create_superuser(
+    User.objects.create_superuser(
         username='admin',
         email='admin@connect.io',
         password='AdminPass123!',
         is_verified=True
     )
-    print(f"✅ Created admin user: admin / AdminPass123!")
+    print("✅ Created admin user: admin / AdminPass123!")
 EOF
 
 # ====== START SERVER ======
-echo "🌐 Step 5: Starting server on port \$PORT..."
-
-# Use Gunicorn for production
+echo "🌐 Starting server on port \$PORT..."
 exec gunicorn messenger.wsgi:application \
     --bind 0.0.0.0:"\$PORT" \
     --workers 2 \

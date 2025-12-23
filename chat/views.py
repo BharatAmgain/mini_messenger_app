@@ -812,39 +812,49 @@ def get_messages_ajax(request, conversation_id):
     return JsonResponse({'error': 'Invalid request'})
 
 
-# chat/views.py - ADD THIS FUNCTION
 @csrf_exempt
+@login_required
 def update_online_status(request):
-    """Update user's online status - FIXED VERSION"""
-    if request.method == 'POST' and request.user.is_authenticated:
-        try:
-            data = json.loads(request.body)
-            is_online = data.get('is_online', False)
+    """Update user's online status - COMPLETELY FIXED VERSION"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
 
-            user = request.user
-            user.last_seen = timezone.now()
+    try:
+        # Parse JSON data - handle empty body case
+        if request.body:
+            try:
+                data = json.loads(request.body)
+            except json.JSONDecodeError:
+                # If JSON parsing fails, try form data
+                data = request.POST.dict()
+        else:
+            # Empty body case
+            data = {}
 
-            # Only update if explicitly setting online status
+        user = request.user
+        user.last_seen = timezone.now()
+
+        # Check if is_online field exists in the model
+        if hasattr(user, 'is_online'):
+            # Update online status if provided, otherwise just update last_seen
             if 'online' in data:
-                user.is_online = bool(data['online'])
-
+                user.is_online = bool(data.get('online', False))
             user.save(update_fields=['last_seen', 'is_online'])
+        else:
+            # Just update last_seen if is_online field doesn't exist
+            user.save(update_fields=['last_seen'])
 
-            return JsonResponse({'success': True, 'is_online': user.is_online})
+        return JsonResponse({
+            'success': True,
+            'last_seen': user.last_seen.isoformat(),
+            'is_online': getattr(user, 'is_online', False)
+        })
 
-        except json.JSONDecodeError:
-            # Simple form data fallback
-            is_online = request.POST.get('is_online', 'false') == 'true'
-            user = request.user
-            user.last_seen = timezone.now()
-            user.is_online = is_online
-            user.save(update_fields=['last_seen', 'is_online'])
-
-            return JsonResponse({'success': True, 'is_online': user.is_online})
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)}, status=400)
-
-    return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
 
 @login_required(login_url='/accounts/login/')
