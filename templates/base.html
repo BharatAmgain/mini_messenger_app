@@ -1,4 +1,4 @@
-<!-- templates/base.html - COMPLETE FIXED VERSION (WITHOUT NAMESPACE) -->
+<!-- templates/base.html - COMPLETE FIXED VERSION (WITH DIRECT URL PATHS) -->
 {% load static %}
 
 <!DOCTYPE html>
@@ -300,7 +300,7 @@
             <div class="flex items-center space-x-3">
                 {% if user.is_authenticated %}
                 <!-- Notifications -->
-                <a href="{% url 'notifications' %}" class="relative p-2 text-gray-600">
+                <a href="/accounts/notifications/" class="relative p-2 text-gray-600">
                     <i class="fas fa-bell text-lg"></i>
                     <span class="notification-badge absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">
                         0
@@ -308,7 +308,7 @@
                 </a>
 
                 <!-- Profile -->
-                <a href="{% url 'profile' %}" class="flex items-center">
+                <a href="/accounts/profile/" class="flex items-center">
                     {% if user.is_authenticated and user.profile_picture and user.profile_picture.url %}
                     <div class="profile-picture">
                         <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}">
@@ -362,36 +362,36 @@
         {% endif %}
 
         <div class="space-y-1">
-            <!-- Chat URLs (NO namespace) -->
+            <!-- Chat URLs -->
             <a href="{% url 'chat_home' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}bg-blue-50 text-blue-700 border-l-4 border-blue-500{% endif %}">
                 <i class="fas fa-comments w-6 text-blue-600"></i>
                 <span class="ml-3">Chats</span>
             </a>
 
-            <!-- Chat URLs (NO namespace) -->
+            <!-- Chat URLs -->
             <a href="{% url 'discover_users' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'discover_users' %}bg-green-50 text-green-700 border-l-4 border-green-500{% endif %}">
                 <i class="fas fa-search w-6 text-green-600"></i>
                 <span class="ml-3">Discover</span>
             </a>
 
-            <!-- Accounts URLs (WITHOUT namespace) -->
-            <a href="{% url 'friend_requests' %}"
+            <!-- Accounts URLs - USING DIRECT PATHS -->
+            <a href="/accounts/friend-requests/"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'friend_requests' %}bg-purple-50 text-purple-700 border-l-4 border-purple-500{% endif %}">
                 <i class="fas fa-user-friends w-6 text-purple-600"></i>
                 <span class="ml-3">Friends</span>
             </a>
 
-            <!-- Accounts URLs (WITHOUT namespace) -->
-            <a href="{% url 'profile' %}"
+            <!-- Accounts URLs - USING DIRECT PATHS -->
+            <a href="/accounts/profile/"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}bg-yellow-50 text-yellow-700 border-l-4 border-yellow-500{% endif %}">
                 <i class="fas fa-user w-6 text-yellow-600"></i>
                 <span class="ml-3">Profile</span>
             </a>
 
-            <!-- Accounts URLs (WITHOUT namespace) -->
-            <a href="{% url 'notifications' %}"
+            <!-- Accounts URLs - USING DIRECT PATHS -->
+            <a href="/accounts/notifications/"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'notifications' %}bg-red-50 text-red-700 border-l-4 border-red-500{% endif %}">
                 <i class="fas fa-bell w-6 text-red-600"></i>
                 <span class="ml-3">Notifications</span>
@@ -402,8 +402,8 @@
                 {% endif %}
             </a>
 
-            <!-- Accounts URLs (WITHOUT namespace) -->
-            <a href="{% url 'settings_main' %}"
+            <!-- Accounts URLs - USING DIRECT PATHS -->
+            <a href="/accounts/settings/"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'settings_main' %}bg-gray-100 text-gray-900 border-l-4 border-gray-500{% endif %}">
                 <i class="fas fa-cog w-6 text-gray-600"></i>
                 <span class="ml-3">Settings</span>
@@ -412,8 +412,8 @@
             <hr class="my-4">
 
             {% if user.is_authenticated %}
-            <!-- Accounts URLs (WITHOUT namespace) -->
-            <form method="POST" action="{% url 'logout' %}">
+            <!-- Accounts URLs - USING DIRECT PATHS -->
+            <form method="POST" action="/accounts/logout/">
                 {% csrf_token %}
                 <button type="submit" class="flex items-center w-full p-3 rounded-lg hover:bg-red-50 transition duration-200 text-red-600">
                     <i class="fas fa-sign-out-alt w-6"></i>
@@ -421,8 +421,8 @@
                 </button>
             </form>
             {% else %}
-            <!-- Accounts URLs (WITHOUT namespace) -->
-            <a href="{% url 'login' %}" class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200">
+            <!-- Accounts URLs - USING DIRECT PATHS -->
+            <a href="/accounts/login/" class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200">
                 <i class="fas fa-sign-in-alt w-6 text-blue-600"></i>
                 <span class="ml-3">Login</span>
             </a>
@@ -433,21 +433,21 @@
     <!-- Mobile Bottom Navigation -->
     {% if user.is_authenticated %}
     <div class="desktop-hidden bottom-nav">
-        <!-- Chat URLs (NO namespace) -->
+        <!-- Chat URLs -->
         <a href="{% url 'chat_home' %}"
            class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}text-blue-600{% endif %}">
             <i class="fas fa-comments text-xl mb-1"></i>
             <span class="text-xs">Chats</span>
         </a>
 
-        <!-- Chat URLs (NO namespace) -->
+        <!-- Chat URLs -->
         <a href="{% url 'discover_users' %}"
            class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'discover_users' %}text-blue-600{% endif %}">
             <i class="fas fa-search text-xl mb-1"></i>
             <span class="text-xs">Discover</span>
         </a>
 
-        <!-- Chat URLs (NO namespace) -->
+        <!-- Chat URLs -->
         <a href="{% url 'start_chat' %}"
            class="flex flex-col items-center justify-center p-2">
             <div class="w-12 h-12 -mt-6 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
@@ -455,15 +455,15 @@
             </div>
         </a>
 
-        <!-- Accounts URLs (WITHOUT namespace) -->
-        <a href="{% url 'friend_requests' %}"
+        <!-- Accounts URLs - USING DIRECT PATHS -->
+        <a href="/accounts/friend-requests/"
            class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'friend_requests' %}text-blue-600{% endif %}">
             <i class="fas fa-user-friends text-xl mb-1"></i>
             <span class="text-xs">Friends</span>
         </a>
 
-        <!-- Accounts URLs (WITHOUT namespace) -->
-        <a href="{% url 'profile' %}"
+        <!-- Accounts URLs - USING DIRECT PATHS -->
+        <a href="/accounts/profile/"
            class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}text-blue-600{% endif %}">
             <i class="fas fa-user text-xl mb-1"></i>
             <span class="text-xs">Profile</span>
@@ -485,36 +485,36 @@
 
             <!-- Navigation -->
             <nav class="flex-1 p-4 space-y-1">
-                <!-- Chat URLs (NO namespace) -->
+                <!-- Chat URLs -->
                 <a href="{% url 'chat_home' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-blue-50 transition duration-200 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}bg-blue-50 text-blue-600 border-l-4 border-blue-500{% endif %}">
                     <i class="fas fa-comments w-6"></i>
                     <span class="ml-3">Chats</span>
                 </a>
 
-                <!-- Chat URLs (NO namespace) -->
+                <!-- Chat URLs -->
                 <a href="{% url 'discover_users' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-green-50 transition duration-200 {% if request.resolver_match.url_name == 'discover_users' %}bg-green-50 text-green-600 border-l-4 border-green-500{% endif %}">
                     <i class="fas fa-search w-6"></i>
                     <span class="ml-3">Discover</span>
                 </a>
 
-                <!-- Accounts URLs (WITHOUT namespace) -->
-                <a href="{% url 'friend_requests' %}"
+                <!-- Accounts URLs - USING DIRECT PATHS -->
+                <a href="/accounts/friend-requests/"
                    class="flex items-center p-3 rounded-lg hover:bg-purple-50 transition duration-200 {% if request.resolver_match.url_name == 'friend_requests' %}bg-purple-50 text-purple-600 border-l-4 border-purple-500{% endif %}">
                     <i class="fas fa-user-friends w-6"></i>
                     <span class="ml-3">Friends</span>
                 </a>
 
-                <!-- Accounts URLs (WITHOUT namespace) -->
-                <a href="{% url 'profile' %}"
+                <!-- Accounts URLs - USING DIRECT PATHS -->
+                <a href="/accounts/profile/"
                    class="flex items-center p-3 rounded-lg hover:bg-yellow-50 transition duration-200 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}bg-yellow-50 text-yellow-600 border-l-4 border-yellow-500{% endif %}">
                     <i class="fas fa-user w-6"></i>
                     <span class="ml-3">Profile</span>
                 </a>
 
-                <!-- Accounts URLs (WITHOUT namespace) -->
-                <a href="{% url 'notifications' %}"
+                <!-- Accounts URLs - USING DIRECT PATHS -->
+                <a href="/accounts/notifications/"
                    class="flex items-center p-3 rounded-lg hover:bg-red-50 transition duration-200 {% if request.resolver_match.url_name == 'notifications' %}bg-red-50 text-red-600 border-l-4 border-red-500{% endif %}">
                     <i class="fas fa-bell w-6"></i>
                     <span class="ml-3">Notifications</span>
@@ -525,8 +525,8 @@
                     {% endif %}
                 </a>
 
-                <!-- Accounts URLs (WITHOUT namespace) -->
-                <a href="{% url 'settings_main' %}"
+                <!-- Accounts URLs - USING DIRECT PATHS -->
+                <a href="/accounts/settings/"
                    class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'settings_main' %}bg-gray-100 text-gray-900 border-l-4 border-gray-500{% endif %}">
                     <i class="fas fa-cog w-6"></i>
                     <span class="ml-3">Settings</span>
@@ -552,8 +552,8 @@
                             <p class="text-sm font-medium text-gray-900 truncate">{{ user.username }}</p>
                             <p class="text-xs text-gray-500 truncate">{{ user.email|truncatechars:20 }}</p>
                         </div>
-                        <!-- Accounts URLs (WITHOUT namespace) -->
-                        <form method="POST" action="{% url 'logout' %}">
+                        <!-- Accounts URLs - USING DIRECT PATHS -->
+                        <form method="POST" action="/accounts/logout/">
                             {% csrf_token %}
                             <button type="submit" class="p-2 text-gray-400 hover:text-red-600 transition duration-200"
                                     title="Logout">
@@ -570,8 +570,8 @@
                             <p class="text-sm font-medium text-gray-900 truncate">Guest</p>
                             <p class="text-xs text-gray-500 truncate">Not logged in</p>
                         </div>
-                        <!-- Accounts URLs (WITHOUT namespace) -->
-                        <a href="{% url 'login' %}" class="p-2 text-blue-400 hover:text-blue-600 transition duration-200"
+                        <!-- Accounts URLs - USING DIRECT PATHS -->
+                        <a href="/accounts/login/" class="p-2 text-blue-400 hover:text-blue-600 transition duration-200"
                            title="Login">
                             <i class="fas fa-sign-in-alt"></i>
                         </a>
@@ -731,8 +731,7 @@
                 return;
             }
 
-            // Use /accounts/get-unread-count/ URL
-            fetch('/accounts/get-unread-count/')
+                        fetch('/accounts/get-unread-count/')
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Network response was not ok');
@@ -934,8 +933,8 @@
         }
 
         // Handle mobile swipe to refresh
-        let touchStartY = 0
-                let touchEndY = 0;
+        let touchStartY = 0;
+        let touchEndY = 0;
         const minSwipeDistance = 100;
 
         document.addEventListener('touchstart', function(e) {

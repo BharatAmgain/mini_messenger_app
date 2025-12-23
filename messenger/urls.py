@@ -1,18 +1,28 @@
-# messenger/urls.py - FIXED VERSION
+# messenger/urls.py - COMPLETE FIXED VERSION
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from . import views
+from accounts import views as accounts_views  # Add this import
 
 urlpatterns = [
     # Home page
     path('', views.home, name='home'),
 
-    # Accounts app URLs WITH namespace
-    path('accounts/', include(('accounts.urls', 'accounts'), namespace='accounts')),
+    # Accounts app URLs
+    path('accounts/', include('accounts.urls')),
 
-    # Chat app URLs - NO namespace
+    # ADD THESE DIRECT URLS (CRITICAL FIX):
+    path('login/', accounts_views.login_view, name='login'),
+    path('register/', accounts_views.register, name='register'),
+    path('logout/', accounts_views.logout_view, name='logout'),
+    path('profile/', accounts_views.profile, name='profile'),
+    path('notifications/', accounts_views.notifications, name='notifications'),
+    path('friend-requests/', accounts_views.friend_requests, name='friend_requests'),
+    path('settings/', accounts_views.settings_main, name='settings_main'),
+
+    # Chat app URLs
     path('chat/', include('chat.urls')),
 
     # Social auth URLs
