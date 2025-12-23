@@ -50,16 +50,16 @@ if not User.objects.filter(is_superuser=True).exists():
 EOF
 
 # 4. Start server based on configuration
-echo "🌐 Step 4: Starting server on port \$PORT..."
+echo "🌐 Step 4: Starting server on port $PORT..."
 
 # Check if using ASGI (Channels) or WSGI
 if [ -f "messenger/asgi.py" ] && grep -q "channels" requirements.txt; then
     echo "🔌 Using ASGI with Daphne (WebSockets enabled)"
-    exec daphne -b 0.0.0.0 -p \$PORT messenger.asgi:application
+    exec daphne -b 0.0.0.0 -p $PORT messenger.asgi:application
 else
     echo "🔌 Using WSGI with Gunicorn"
     exec gunicorn messenger.wsgi:application \
-        --bind 0.0.0.0:\$PORT \
+        --bind 0.0.0.0:$PORT \
         --workers 2 \
         --threads 4 \
         --timeout 120 \

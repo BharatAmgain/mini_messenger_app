@@ -222,7 +222,7 @@ site/
 *.swn
 
 # ========== RENDER SPECIFIC ==========
-.render.yaml
+render.yaml
 render.yaml
 .render/
 .render-*
