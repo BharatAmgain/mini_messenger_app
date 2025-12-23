@@ -6,6 +6,12 @@ def home(request):
     """Home page for non-authenticated users"""
     return render(request, 'home.html')
 
+from django.http import JsonResponse
+
+def health_check(request):
+    return JsonResponse({"status": "ok"})
+
+
 def csrf_failure(request, reason=""):
     """CSRF failure view"""
     return render(request, 'errors/csrf_failure.html', {'reason': reason}, status=403)
