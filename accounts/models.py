@@ -1,59 +1,67 @@
-# accounts/models.py - COMPLETE FIXED VERSION
-from django.db import models
-from django.contrib.auth.models import AbstractUser, Group, Permission
-import uuid
-from django.utils import timezone
-from django.db.models import Q
-import os
-import random
+# accounts/models.py (UPDATED - Fix gender field max_length)
+import secrets
 import string
-from django.core.mail import send_mail
-from django.conf import settings
-import phonenumbers
-from phonenumbers import NumberParseException
-import requests
-import base64
-
-
-def user_profile_picture_path(instance, filename):
-    """File upload path for user profile pictures"""
-    ext = filename.split('.')[-1]
-    if instance.id:
-        filename = f"profile_picture_{instance.id}.{ext}"
-    else:
-        filename = f"profile_picture_{instance.username}.{ext}"
-    return os.path.join('profile_pictures', f'user_{instance.id if instance.id else instance.username}', filename)
+from datetime import timedelta
+from django.db import models
+from django.contrib.auth.models import AbstractUser
+from django.utils import timezone
+from django.core.exceptions import ValidationError
+import uuid
+from django.db.models import Q
 
 
 class CustomUser(AbstractUser):
-    # BASIC FIELDS
-    online_status = models.BooleanField(default=False)
+    """Extended User model with additional fields"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Profile fields
     profile_picture = models.ImageField(
-        upload_to=user_profile_picture_path,
-        blank=True,
+        upload_to='profile_pictures/',
         null=True,
-        default=None
+        blank=True,
+        default='profile_pictures/default.png'
     )
-    last_seen = models.DateTimeField(auto_now=True)
-    phone_number = models.CharField(max_length=20, blank=True, null=True, unique=True)
-    email = models.EmailField(unique=True)
     bio = models.TextField(max_length=500, blank=True)
-
-    # ✅ FIXED: is_verified as BooleanField ONLY
-    is_verified = models.BooleanField(default=False, verbose_name="Email Verified")
-
-    # PROFILE FIELDS
-    date_of_birth = models.DateField(blank=True, null=True)
+    phone_number = models.CharField(max_length=15, blank=True, null=True, unique=True)
+    date_of_birth = models.DateField(null=True, blank=True)
     location = models.CharField(max_length=100, blank=True)
-    website = models.URLField(blank=True)
-    gender = models.CharField(max_length=10, choices=[
+    website = models.URLField(max_length=200, blank=True)
+    gender = models.CharField(max_length=20, choices=[  # CHANGED from 10 to 20
         ('male', 'Male'),
         ('female', 'Female'),
         ('other', 'Other'),
-        ('prefer_not', 'Prefer not to say')
+        ('prefer_not_to_say', 'Prefer not to say')
     ], blank=True)
 
-    # PRIVACY SETTINGS
+    # Social media links
+    facebook_url = models.URLField(max_length=200, blank=True)
+    twitter_url = models.URLField(max_length=200, blank=True)
+    instagram_url = models.URLField(max_length=200, blank=True)
+    linkedin_url = models.URLField(max_length=200, blank=True)
+
+    # Online status
+    online_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('online', 'Online'),
+            ('offline', 'Offline'),
+            ('away', 'Away'),
+            ('busy', 'Busy'),
+            ('invisible', 'Invisible')
+        ],
+        default='offline'
+    )
+    last_seen = models.DateTimeField(default=timezone.now)
+    is_online = models.BooleanField(default=False)
+
+    # Account verification
+    is_verified = models.BooleanField(default=False)
+    verification_date = models.DateTimeField(null=True, blank=True)
+
+    # Two-factor authentication
+    two_factor_enabled = models.BooleanField(default=False)
+
+    # Privacy settings
     show_online_status = models.BooleanField(default=True)
     allow_message_requests = models.BooleanField(default=True)
     allow_calls = models.BooleanField(default=True)
@@ -61,11 +69,8 @@ class CustomUser(AbstractUser):
     show_last_seen = models.BooleanField(default=True)
     show_profile_picture = models.BooleanField(default=True)
 
-    # NOTIFICATION SETTINGS
-    email_notifications = models.BooleanField(default=True)
-    push_notifications = models.BooleanField(default=True)
+    # Notification preferences
     message_notifications = models.BooleanField(default=True)
-    marketing_emails = models.BooleanField(default=False)
     message_sound = models.BooleanField(default=True)
     message_preview = models.BooleanField(default=True)
     group_notifications = models.BooleanField(default=True)
@@ -74,73 +79,70 @@ class CustomUser(AbstractUser):
     friend_online_notifications = models.BooleanField(default=True)
     system_notifications = models.BooleanField(default=True)
     marketing_notifications = models.BooleanField(default=False)
+    push_notifications = models.BooleanField(default=True)
+    email_notifications = models.BooleanField(default=True)
     desktop_notifications = models.BooleanField(default=True)
 
-    # QUIET HOURS
+    # Quiet hours
     quiet_hours_enabled = models.BooleanField(default=False)
-    quiet_hours_start = models.TimeField(blank=True, null=True)
-    quiet_hours_end = models.TimeField(blank=True, null=True)
+    quiet_hours_start = models.TimeField(null=True, blank=True)
+    quiet_hours_end = models.TimeField(null=True, blank=True)
 
-    # SECURITY & APPEARANCE
-    two_factor_enabled = models.BooleanField(default=False)
-    theme = models.CharField(max_length=10, choices=[
-        ('light', 'Light'),
-        ('dark', 'Dark'),
-        ('auto', 'Auto')
-    ], default='auto')
-
-    # SOCIAL AUTH
-    social_avatar = models.URLField(blank=True, null=True)
-    social_provider = models.CharField(max_length=20, blank=True, null=True)
-
-    # GROUPS AND PERMISSIONS - FIXED
-    groups = models.ManyToManyField(
-        Group,
-        verbose_name='groups',
-        blank=True,
-        help_text='The groups this user belongs to.',
-        related_name='customuser_set',
-        related_query_name='customuser',
+    # Theme
+    theme = models.CharField(
+        max_length=10,
+        choices=[
+            ('light', 'Light'),
+            ('dark', 'Dark'),
+            ('auto', 'Auto')
+        ],
+        default='auto'
     )
-    user_permissions = models.ManyToManyField(
-        Permission,
-        verbose_name='user permissions',
-        blank=True,
-        help_text='Specific permissions for this user.',
-        related_name='customuser_set',
-        related_query_name='customuser',
-    )
+
+    # Additional metadata
+    email_verified = models.BooleanField(default=False)
+    phone_verified = models.BooleanField(default=False)
+    date_joined = models.DateTimeField(default=timezone.now)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    # Social auth fields
+    google_id = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:
-        verbose_name = 'Custom User'
-        verbose_name_plural = 'Custom Users'
+        ordering = ['-date_joined']
 
     def __str__(self):
         return self.username
 
-    @property
-    def full_name(self):
-        return f"{self.first_name} {self.last_name}".strip() or self.username
+    def get_full_name(self):
+        """Return full name if available, otherwise username"""
+        if self.first_name and self.last_name:
+            return f"{self.first_name} {self.last_name}"
+        return self.username
 
     def get_profile_picture_url(self):
-        """Get profile picture URL with fallback"""
+        """Get URL for profile picture"""
         if self.profile_picture and hasattr(self.profile_picture, 'url'):
             return self.profile_picture.url
-        elif self.social_avatar:
-            return self.social_avatar
-        else:
-            return '/static/images/default-avatar.png'
+        return '/static/images/default-profile.png'
 
-    def get_age(self):
-        if self.date_of_birth:
-            today = timezone.now().date()
-            return today.year - self.date_of_birth.year - (
-                    (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day)
-            )
-        return None
+    def update_online_status(self, status='online'):
+        """Update user's online status"""
+        self.online_status = status
+        self.is_online = (status == 'online')
+        self.last_seen = timezone.now()
+        self.save(update_fields=['online_status', 'is_online', 'last_seen'])
+
+    def is_currently_online(self):
+        """Check if user is currently online"""
+        if self.online_status == 'online':
+            return True
+        elif self.show_last_seen:
+            return (timezone.now() - self.last_seen) < timedelta(minutes=5)
+        return False
 
     def get_friend_status(self, other_user):
-        """Get friendship status between this user and another user"""
+        """Get friendship status with another user"""
         if self == other_user:
             return 'self'
 
@@ -151,7 +153,8 @@ class CustomUser(AbstractUser):
             from_user=self,
             to_user=other_user,
             status='pending'
-        ).first()
+        ).exists()
+
         if sent_request:
             return 'request_sent'
 
@@ -159,91 +162,102 @@ class CustomUser(AbstractUser):
             from_user=other_user,
             to_user=self,
             status='pending'
-        ).first()
+        ).exists()
+
         if received_request:
             return 'request_received'
 
         return 'not_friends'
 
-    def save(self, *args, **kwargs):
-        """Override save to ensure is_verified is always a boolean"""
-        # Ensure is_verified is a boolean
-        if not isinstance(self.is_verified, bool):
-            self.is_verified = bool(self.is_verified)
+    def get_mutual_friends(self, other_user):
+        """Get mutual friends between two users"""
+        user_friends = Friendship.get_friends(self)
+        other_friends = Friendship.get_friends(other_user)
 
-        # Save the model
+        mutual_friends = set(user_friends) & set(other_friends)
+        return list(mutual_friends)
+
+    def get_friend_count(self):
+        """Get number of friends"""
+        return Friendship.get_friend_count(self)
+
+    def clean(self):
+        """Custom validation"""
+        # Check for duplicate email
+        if self.email and CustomUser.objects.filter(email=self.email).exclude(id=self.id).exists():
+            raise ValidationError({'email': 'This email is already registered.'})
+
+        # Check for duplicate phone number
+        if self.phone_number and CustomUser.objects.filter(
+                phone_number=self.phone_number
+        ).exclude(id=self.id).exists():
+            raise ValidationError({'phone_number': 'This phone number is already registered.'})
+
+        # Validate quiet hours
+        if self.quiet_hours_enabled:
+            if not self.quiet_hours_start or not self.quiet_hours_end:
+                raise ValidationError('Both start and end times are required for quiet hours.')
+
+        super().clean()
+
+    def save(self, *args, **kwargs):
+        """Override save to handle validation and updates"""
+        self.full_clean()
+        if not self.pk:
+            self.date_joined = timezone.now()
         super().save(*args, **kwargs)
 
 
-class SocialAccount(models.Model):
-    PROVIDER_CHOICES = [
-        ('google', 'Google'),
-        ('facebook', 'Facebook'),
-    ]
-
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='social_accounts')
-    provider = models.CharField(max_length=20, choices=PROVIDER_CHOICES)
-    provider_id = models.CharField(max_length=255)
-    email = models.EmailField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ['provider', 'provider_id']
-
-    def __str__(self):
-        return f"{self.user.username} - {self.provider}"
-
-
-class Contact(models.Model):
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='contacts')
-    contact_user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='added_by')
-    created_at = models.DateTimeField(auto_now_add=True)
-    nickname = models.CharField(max_length=100, blank=True)
-
-    class Meta:
-        unique_together = ['user', 'contact_user']
-
-    def __str__(self):
-        return f"{self.user} -> {self.contact_user}"
-
-
-class Invitation(models.Model):
-    INVITATION_TYPES = [
-        ('email', 'Email'),
-        ('phone', 'Phone'),
-    ]
-    STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('accepted', 'Accepted'),
-        ('expired', 'Expired'),
+class Notification(models.Model):
+    """Notification model for user notifications"""
+    NOTIFICATION_TYPES = [
+        ('message', 'New Message'),
+        ('friend_request', 'Friend Request'),
+        ('friend_online', 'Friend Online'),
+        ('group_invite', 'Group Invitation'),
+        ('system', 'System Notification'),
+        ('marketing', 'Marketing'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    inviter = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='account_sent_invitations')
-    email = models.EmailField(blank=True, null=True)
-    phone_number = models.CharField(max_length=20, blank=True, null=True)
-    invitation_type = models.CharField(max_length=10, choices=INVITATION_TYPES)
-    message = models.TextField(blank=True)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
-    created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField()
-    accepted_at = models.DateTimeField(blank=True, null=True)
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='account_notifications'
+    )
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    related_url = models.CharField(max_length=500, blank=True)
+    is_read = models.BooleanField(default=False)
+    is_archived = models.BooleanField(default=False)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ['email', 'inviter']
-        indexes = [
-            models.Index(fields=['email', 'status']),
-            models.Index(fields=['phone_number', 'status']),
-        ]
+        ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.inviter} -> {self.email or self.phone_number} ({self.status})"
+        return f"{self.user.username} - {self.title}"
 
-    def is_expired(self):
-        return timezone.now() > self.expires_at
+    def mark_as_read(self):
+        """Mark notification as read"""
+        self.is_read = True
+        self.save(update_fields=['is_read'])
+
+    def mark_as_unread(self):
+        """Mark notification as unread"""
+        self.is_read = False
+        self.save(update_fields=['is_read'])
+
+    def archive(self):
+        """Archive notification"""
+        self.is_archived = True
+        self.save(update_fields=['is_archived'])
 
 
 class FriendRequest(models.Model):
+    """Friend request model"""
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('accepted', 'Accepted'),
@@ -251,140 +265,147 @@ class FriendRequest(models.Model):
         ('cancelled', 'Cancelled'),
     ]
 
-    from_user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='sent_friend_requests')
-    to_user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='received_friend_requests')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    created_at = models.DateTimeField(auto_now_add=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    from_user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='sent_friend_requests'
+    )
+    to_user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='received_friend_requests'
+    )
+    message = models.TextField(blank=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
-    message = models.TextField(blank=True, null=True)
 
     class Meta:
         unique_together = ['from_user', 'to_user']
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.from_user.username} -> {self.to_user.username} ({self.status})"
+        return f"{self.from_user} -> {self.to_user}: {self.status}"
 
     def accept(self):
+        """Accept friend request"""
         self.status = 'accepted'
-        self.save()
+        self.save(update_fields=['status', 'updated_at'])
+        return True
 
     def reject(self):
+        """Reject friend request"""
         self.status = 'rejected'
-        self.save()
+        self.save(update_fields=['status', 'updated_at'])
+        return True
 
     def cancel(self):
+        """Cancel friend request"""
         self.status = 'cancelled'
-        self.save()
+        self.save(update_fields=['status', 'updated_at'])
+        return True
 
-    @property
-    def is_accepted(self):
-        return self.status == 'accepted'
-
-    @property
-    def is_pending(self):
+    def is_active(self):
+        """Check if request is active (pending)"""
         return self.status == 'pending'
 
 
 class Friendship(models.Model):
-    user1 = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='friendships1')
-    user2 = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='friendships2')
-    created_at = models.DateTimeField(auto_now_add=True)
+    """Friendship model to represent mutual friendships"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user1 = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='friendships_as_user1'
+    )
+    user2 = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='friendships_as_user2'
+    )
+    created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         unique_together = ['user1', 'user2']
+        ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.user1.username} - {self.user2.username}"
+        return f"{self.user1} <-> {self.user2}"
+
+    @classmethod
+    def create_friendship(cls, user1, user2):
+        """Create a mutual friendship"""
+        # Ensure consistent ordering
+        if user1.id > user2.id:
+            user1, user2 = user2, user1
+
+        friendship, created = cls.objects.get_or_create(
+            user1=user1,
+            user2=user2
+        )
+        return friendship, created
 
     @classmethod
     def are_friends(cls, user1, user2):
+        """Check if two users are friends"""
         return cls.objects.filter(
             (Q(user1=user1) & Q(user2=user2)) |
             (Q(user1=user2) & Q(user2=user1))
         ).exists()
 
     @classmethod
-    def create_friendship(cls, user1, user2):
-        """Create a friendship between two users"""
-        if user1.id > user2.id:
-            user1, user2 = user2, user1
-        return cls.objects.get_or_create(user1=user1, user2=user2)
+    def get_friends(cls, user):
+        """Get all friends of a user"""
+        friendships = cls.objects.filter(
+            Q(user1=user) | Q(user2=user)
+        ).select_related('user1', 'user2')
 
+        friends = []
+        for friendship in friendships:
+            if friendship.user1 == user:
+                friends.append(friendship.user2)
+            else:
+                friends.append(friendship.user1)
 
-class Notification(models.Model):
-    NOTIFICATION_TYPES = [
-        ('message', 'New Message'),
-        ('friend_request', 'Friend Request'),
-        ('invitation', 'Invitation'),
-        ('system', 'System'),
-        ('group', 'Group Message'),
-        ('message_reaction', 'Message Reaction'),
-        ('message_edit', 'Message Edited'),
-        ('online_status', 'Online Status'),
-    ]
+        return friends
 
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='account_notifications')
-    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
-    title = models.CharField(max_length=200)
-    message = models.TextField()
-    is_read = models.BooleanField(default=False)
-    is_archived = models.BooleanField(default=False)
-    priority = models.CharField(max_length=10, choices=[
-        ('low', 'Low'),
-        ('normal', 'Normal'),
-        ('high', 'High'),
-        ('urgent', 'Urgent')
-    ], default='normal')
-    created_at = models.DateTimeField(auto_now_add=True)
-    related_url = models.URLField(blank=True, null=True)
-    action_buttons = models.JSONField(default=dict, blank=True)
+    @classmethod
+    def get_friend_count(cls, user):
+        """Get number of friends for a user"""
+        return cls.objects.filter(
+            Q(user1=user) | Q(user2=user)
+        ).count()
 
-    class Meta:
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['user', 'is_read', 'created_at']),
-            models.Index(fields=['user', 'notification_type']),
-        ]
-
-    def __str__(self):
-        return f"{self.user.username} - {self.title}"
-
-    def mark_as_read(self):
-        self.is_read = True
-        self.save()
-
-    def mark_as_unread(self):
-        self.is_read = False
-        self.save()
-
-    def archive(self):
-        self.is_archived = True
-        self.save()
-
-    def unarchive(self):
-        self.is_archived = False
-        self.save()
+    @classmethod
+    def remove_friendship(cls, user1, user2):
+        """Remove friendship between two users"""
+        cls.objects.filter(
+            (Q(user1=user1) & Q(user2=user2)) |
+            (Q(user1=user2) & Q(user2=user1))
+        ).delete()
 
 
 class OTPVerification(models.Model):
+    """OTP verification for various purposes"""
     VERIFICATION_TYPES = [
-        ('email', 'Email'),
-        ('phone', 'Phone'),
-        ('password_reset', 'Password Reset'),
         ('account_verification', 'Account Verification'),
+        ('phone_verification', 'Phone Verification'),
+        ('email_verification', 'Email Verification'),
+        ('two_factor', 'Two-Factor Authentication'),
     ]
 
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='otp_verifications')
-    verification_type = models.CharField(max_length=50, choices=VERIFICATION_TYPES)
+    verification_type = models.CharField(max_length=30, choices=VERIFICATION_TYPES)
     otp_code = models.CharField(max_length=6)
     email = models.EmailField(blank=True, null=True)
-    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    phone_number = models.CharField(max_length=15, blank=True, null=True)
+    verification_sid = models.CharField(max_length=100, blank=True, null=True)
     is_verified = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
     expires_at = models.DateTimeField()
-    verified_at = models.DateTimeField(blank=True, null=True)
-    verification_sid = models.CharField(max_length=100, blank=True, null=True)  # ADDED FOR TWILIO SUPPORT
 
     class Meta:
         ordering = ['-created_at']
@@ -392,45 +413,11 @@ class OTPVerification(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.verification_type} - {self.otp_code}"
 
-    def is_expired(self):
-        return timezone.now() > self.expires_at
-
     @classmethod
-    def generate_otp(cls, length=6):
-        """Generate random OTP code"""
-        return ''.join(random.choices(string.digits, k=length))
-
-    @classmethod
-    def send_otp_email(cls, email, otp_code, verification_type='account_verification'):
-        """Send OTP via email"""
-        subject = f"Your Verification Code - {verification_type.replace('_', ' ').title()}"
-        message = f"""
-        Hello,
-
-        Your verification code is: {otp_code}
-
-        This code will expire in 5 minutes.
-
-        If you didn't request this, please ignore this email.
-
-        Best regards,
-        Connect.io Team
-        """
-
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            [email],
-            fail_silently=False,
-        )
-        return True
-
-    @classmethod
-    def create_otp(cls, user, verification_type='account_verification', email=None, phone_number=None):
-        """Create and send OTP"""
-        otp_code = cls.generate_otp()
-        expires_at = timezone.now() + timezone.timedelta(minutes=5)
+    def create_otp(cls, user, verification_type, email=None, phone_number=None):
+        """Create a new OTP"""
+        otp_code = ''.join(secrets.choice(string.digits) for _ in range(6))
+        expires_at = timezone.now() + timedelta(minutes=10)
 
         otp = cls.objects.create(
             user=user,
@@ -441,47 +428,37 @@ class OTPVerification(models.Model):
             expires_at=expires_at
         )
 
-        if email:
-            cls.send_otp_email(email, otp_code, verification_type)
-
         return otp
 
-    # In accounts/models.py - OTPVerification model
     def verify_otp(self, otp_code):
-        """Verify OTP code - FIXED: Properly update user's is_verified"""
+        """Verify OTP code"""
         if self.is_expired():
-            return False, "OTP has expired"
-
-        if self.is_verified:
-            return False, "OTP already used"
+            return False, "OTP has expired. Please request a new one."
 
         if self.otp_code == otp_code:
             self.is_verified = True
             self.verified_at = timezone.now()
-            self.save()
+            self.save(update_fields=['is_verified', 'verified_at'])
+            return True, "OTP verified successfully."
 
-            # CRITICAL FIX: Update user's is_verified status for account verification
-            if self.verification_type == 'account_verification':
-                # Refresh user object from database to ensure we have latest
-                user = CustomUser.objects.get(id=self.user.id)
-                user.is_verified = True
-                user.save(update_fields=['is_verified'])
-                print(f"DEBUG: User {user.username} is_verified updated to True")
+        return False, "Invalid OTP code."
 
-            return True, "OTP verified successfully"
-
-        return False, "Invalid OTP code"
+    def is_expired(self):
+        """Check if OTP has expired"""
+        return timezone.now() > self.expires_at
 
 
 class PasswordResetOTP(models.Model):
+    """OTP for password reset"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='password_reset_otps')
     otp_code = models.CharField(max_length=6)
-    email = models.EmailField()
-    phone_number = models.CharField(max_length=20, blank=True, null=True)
-    is_used = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField()
+    email = models.EmailField(blank=True, null=True)
+    phone_number = models.CharField(max_length=15, blank=True, null=True)
     verification_sid = models.CharField(max_length=100, blank=True, null=True)
+    is_used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField()
 
     class Meta:
         ordering = ['-created_at']
@@ -489,14 +466,11 @@ class PasswordResetOTP(models.Model):
     def __str__(self):
         return f"{self.user.username} - Password Reset OTP"
 
-    def is_expired(self):
-        return timezone.now() > self.expires_at
-
     @classmethod
     def create_password_reset_otp(cls, user, email=None, phone_number=None):
         """Create password reset OTP"""
-        otp_code = cls.generate_otp()
-        expires_at = timezone.now() + timezone.timedelta(minutes=10)
+        otp_code = ''.join(secrets.choice(string.digits) for _ in range(6))
+        expires_at = timezone.now() + timedelta(minutes=10)
 
         otp = cls.objects.create(
             user=user,
@@ -506,54 +480,131 @@ class PasswordResetOTP(models.Model):
             expires_at=expires_at
         )
 
-        if email:
-            cls.send_password_reset_email(email, otp_code)
-
         return otp
-
-    @classmethod
-    def generate_otp(cls, length=6):
-        """Generate random OTP code"""
-        return ''.join(random.choices(string.digits, k=length))
-
-    @classmethod
-    def send_password_reset_email(cls, email, otp_code):
-        """Send password reset OTP via email"""
-        subject = "Password Reset Verification Code"
-        message = f"""
-        Hello,
-
-        You requested to reset your password. Your verification code is:
-
-        {otp_code}
-
-        This code will expire in 10 minutes.
-
-        If you didn't request a password reset, please ignore this email.
-
-        Best regards,
-        Connect.io Team
-        """
-
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            [email],
-            fail_silently=False,
-        )
 
     def verify_and_use(self, otp_code):
         """Verify and mark OTP as used"""
         if self.is_expired():
-            return False, "OTP has expired"
+            return False, "OTP has expired. Please request a new one."
 
         if self.is_used:
-            return False, "OTP already used"
+            return False, "OTP has already been used."
 
         if self.otp_code == otp_code:
             self.is_used = True
-            self.save()
-            return True, "OTP verified successfully"
+            self.save(update_fields=['is_used'])
+            return True, "OTP verified successfully."
 
-        return False, "Invalid OTP code"
+        return False, "Invalid OTP code."
+
+    def is_expired(self):
+        """Check if OTP has expired"""
+        return timezone.now() > self.expires_at
+
+    def can_resend(self):
+        """Check if OTP can be resent"""
+        return self.is_expired() or (not self.is_used and timezone.now() > self.created_at + timedelta(minutes=1))
+
+
+class BlockedUser(models.Model):
+    """Model for blocked users"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    blocker = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='blocked_users'
+    )
+    blocked = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='blocked_by'
+    )
+    reason = models.TextField(blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        unique_together = ['blocker', 'blocked']
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.blocker.username} blocked {self.blocked.username}"
+
+    @classmethod
+    def is_blocked(cls, user1, user2):
+        """Check if user1 has blocked user2 or vice versa"""
+        return cls.objects.filter(
+            (Q(blocker=user1) & Q(blocked=user2)) |
+            (Q(blocker=user2) & Q(blocked=user1))
+        ).exists()
+
+
+# Signal handlers at the bottom to avoid circular imports
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+
+@receiver(post_save, sender=CustomUser)
+def update_last_seen_on_save(sender, instance, **kwargs):
+    """Update last_seen when user saves their profile"""
+    if instance.online_status == 'online':
+        instance.last_seen = timezone.now()
+        # Avoid infinite recursion
+        if 'update_fields' not in kwargs:
+            instance.save(update_fields=['last_seen'])
+
+
+@receiver(post_save, sender=FriendRequest)
+def create_friend_request_notification(sender, instance, created, **kwargs):
+    """Create notification for friend request"""
+    if created and instance.status == 'pending':
+        Notification.objects.create(
+            user=instance.to_user,
+            notification_type='friend_request',
+            title="New Friend Request",
+            message=f"{instance.from_user.username} sent you a friend request",
+            related_url="/accounts/friend-requests/"
+        )
+
+
+@receiver(post_save, sender=FriendRequest)
+def update_friend_request_notification(sender, instance, **kwargs):
+    """Update notification when friend request status changes"""
+    if instance.status == 'accepted':
+        # Create notification for the requester
+        Notification.objects.create(
+            user=instance.from_user,
+            notification_type='friend_request',
+            title="Friend Request Accepted",
+            message=f"{instance.to_user.username} accepted your friend request",
+            related_url=f"/accounts/profile/{instance.to_user.id}/"
+        )
+
+        # Archive the original notification for the receiver
+        Notification.objects.filter(
+            user=instance.to_user,
+            notification_type='friend_request',
+            message__contains=f"{instance.from_user.username} sent you a friend request"
+        ).update(is_archived=True)
+
+
+@receiver(post_save, sender=BlockedUser)
+def create_block_notification(sender, instance, created, **kwargs):
+    """Create notification when user is blocked"""
+    if created:
+        # Notification for blocked user
+        Notification.objects.create(
+            user=instance.blocked,
+            notification_type='system',
+            title="User Blocked You",
+            message=f"{instance.blocker.username} has blocked you",
+            related_url="/accounts/settings/"
+        )
+
+        # Notification for blocker
+        Notification.objects.create(
+            user=instance.blocker,
+            notification_type='system',
+            title="User Blocked",
+            message=f"You have blocked {instance.blocked.username}",
+            related_url="/chat/blocked-users/"
+        )

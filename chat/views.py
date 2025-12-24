@@ -5,8 +5,9 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Q
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from .models import Conversation, Message, UserStatus, ChatNotification, GroupInvitation, BlockedUser
-from accounts.models import CustomUser, Notification, Friendship, FriendRequest
+# TO:
+from .models import Conversation, Message, UserStatus, ChatNotification, GroupInvitation
+from accounts.models import CustomUser, Notification, Friendship, FriendRequest, BlockedUser
 import uuid
 import json
 from django.views.decorators.csrf import csrf_exempt
