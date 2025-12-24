@@ -1,10 +1,11 @@
-# chat/models.py
+# chat/models.py - FINAL COMPLETE VERSION WITH IMAGEFIELD
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
 import uuid
 from django.db.models import Q
 import os
+from datetime import timedelta
 
 
 class Conversation(models.Model):
@@ -871,7 +872,11 @@ class ChatMedia(models.Model):
     duration = models.IntegerField(null=True, blank=True)  # in seconds for video/audio
 
     # Thumbnail for videos and large images
-    thumbnail = models.ImageField(upload_to='chat_media/thumbnails/', null=True, blank=True)
+    thumbnail = models.ImageField(
+        upload_to='chat_media/thumbnails/',
+        null=True,
+        blank=True
+    )
 
     # Metadata
     uploaded_by = models.ForeignKey(
