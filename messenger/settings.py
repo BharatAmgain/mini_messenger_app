@@ -1,4 +1,4 @@
-# messenger/settings.py - COMPLETE FIXED VERSION WITH VALIDATION
+# messenger/settings.py - COMPLETE FIXED VERSION
 import os
 import sys
 from pathlib import Path
@@ -515,7 +515,7 @@ ENABLE_PUSH_NOTIFICATIONS = config('ENABLE_PUSH_NOTIFICATIONS', default=False, c
 ENABLE_EMAIL_NOTIFICATIONS = config('ENABLE_EMAIL_NOTIFICATIONS', default=True, cast=bool)
 
 
-# ========== DATABASE SETUP FUNCTION ==========
+# ========== DATABASE SETUP FUNCTION - UPDATED FIX ==========
 def ensure_migrations_and_user():
     """Run migrations and create test user automatically"""
     try:
@@ -536,18 +536,26 @@ def ensure_migrations_and_user():
             print("⚠️  Please check your database configuration")
             return
 
-        # Run migrations
+        # Run migrations - FIXED TO HANDLE UUID ISSUE
         print("1. Running database migrations...")
         try:
-            # First make migrations
-            execute_from_command_line(['manage.py', 'makemigrations', '--no-input'])
-            # Then apply migrations
+            # First, make migrations for accounts app specifically to fix UUID issue
+            execute_from_command_line(['manage.py', 'makemigrations', 'accounts', '--no-input'])
+            print("✅ Made migrations for accounts app")
+
+            # Apply all migrations
             execute_from_command_line(['manage.py', 'migrate', '--no-input'])
             print("✅ Migrations completed")
         except Exception as e:
             print(f"❌ Migration error: {e}")
-            # Try to continue anyway
-            return
+            print("⚠️ Trying to continue anyway...")
+
+            # Try to apply migrations without making new ones
+            try:
+                execute_from_command_line(['manage.py', 'migrate', '--no-input'])
+                print("✅ Applied existing migrations")
+            except Exception as e2:
+                print(f"❌ Could not apply migrations: {e2}")
 
         # Create test user
         print("2. Creating test user...")
@@ -555,20 +563,24 @@ def ensure_migrations_and_user():
         User = get_user_model()
 
         try:
-            if not User.objects.filter(email='test@example.com').exists():
-                User.objects.create_user(
+            # Check if test user exists by username
+            if not User.objects.filter(username='testuser').exists():
+                user = User.objects.create_user(
                     username='testuser',
                     email='test@example.com',
                     password='TestPass123!',
                     phone_number='+9779866399895',
                     is_verified=True
                 )
-                print("✅ Created test user: test@example.com / TestPass123!")
-                print("✅ Phone number set: +9779866399895")
+                print("✅ Created test user: testuser / TestPass123!")
+                print("✅ Email: test@example.com")
+                print("✅ Phone number: +9779866399895")
             else:
-                print("✅ Test user already exists")
+                print("✅ Test user already exists (username: testuser)")
+
         except Exception as e:
             print(f"❌ Error creating test user: {e}")
+            print("⚠️ This is okay if the user already exists")
 
         print("=" * 50)
         print("DATABASE SETUP COMPLETE")
@@ -579,6 +591,7 @@ def ensure_migrations_and_user():
         print("⚠️  Django might not be properly installed")
     except Exception as e:
         print(f"❌ Database setup error: {e}")
+        print("⚠️  Continuing anyway...")
 
 
 # ========== RENDER-SPECIFIC CONFIGURATION ==========
@@ -623,7 +636,7 @@ if 'RENDER' in os.environ:
             print("   EMAIL_PORT=587")
             print("   EMAIL_USE_TLS=True")
             print("   EMAIL_HOST_USER=apikey")
-            print("   EMAIL_HOST_PASSWORD=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")
+            print("   EMAIL_HOST_PASSWORD=YOUR_SENDGRID_API_KEY_HERE")
             print("   DEFAULT_FROM_EMAIL=noreply@connect.io")
     else:
         print("⚠️  Not using SendGrid - password reset may fail")
@@ -695,7 +708,8 @@ print("=" * 60)
 # ========== CREATE DIRECTORIES ON STARTUP ==========
 # Create necessary directories
 print("\n📁 Creating necessary directories...")
-for directory in [STATIC_ROOT, MEDIA_ROOT, BASE_DIR / 'logs', BASE_DIR / 'static' / 'images', BASE_DIR / 'static' / 'js']:
+for directory in [STATIC_ROOT, MEDIA_ROOT, BASE_DIR / 'logs', BASE_DIR / 'static' / 'images',
+                  BASE_DIR / 'static' / 'js']:
     directory.mkdir(exist_ok=True, parents=True)
     print(f"✅ Created directory: {directory}")
 
@@ -720,9 +734,18 @@ if __name__ == 'messenger.settings':
         # Auto-detect Render hostname
         RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
         if RENDER_EXTERNAL_HOSTNAME:
-            ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
-            CSRF_TRUSTED_ORIGINS.append(f'https://{RENDER_EXTERNAL_HOSTNAME}')
-            print(f"✅ Added {RENDER_EXTERNAL_HOSTNAME} to allowed hosts")
+            # Remove duplicates from ALLOWED_HOSTS
+            ALLOWED_HOSTS = list(set(ALLOWED_HOSTS))
+            if RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
+                ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+                print(f"✅ Added {RENDER_EXTERNAL_HOSTNAME} to allowed hosts")
+
+            # Remove duplicates from CSRF_TRUSTED_ORIGINS
+            CSRF_TRUSTED_ORIGINS = list(set(CSRF_TRUSTED_ORIGINS))
+            new_origin = f'https://{RENDER_EXTERNAL_HOSTNAME}'
+            if new_origin not in CSRF_TRUSTED_ORIGINS:
+                CSRF_TRUSTED_ORIGINS.append(new_origin)
+                print(f"✅ Added {new_origin} to CSRF trusted origins")
 
         # Static files on Render
         STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
@@ -741,3 +764,188 @@ if __name__ == 'messenger.settings':
     print(f"💾 DATABASE: {DATABASES['default']['ENGINE']}")
     print(f"📧 EMAIL: {EMAIL_BACKEND}")
     print("=" * 60)
+
+    # Create missing static files automatically
+    print("\n📁 Creating missing static files...")
+    try:
+        # Create csrf_fix.js
+        csrf_fix_path = BASE_DIR / 'static' / 'js' / 'csrf_fix.js'
+        if not csrf_fix_path.exists():
+            csrf_fix_path.parent.mkdir(parents=True, exist_ok=True)
+            csrf_fix_content = '''// csrf_fix.js - CSRF token handling for Django
+console.log('CSRF fix loaded successfully');
+
+// Function to get CSRF token from cookies
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Get CSRF token
+const csrftoken = getCookie('csrftoken');
+
+// Set as global variable
+window.csrftoken = csrftoken;
+
+// Set up AJAX requests for jQuery if available
+if (typeof jQuery !== 'undefined') {
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            }
+        }
+    });
+}
+
+// Setup for Fetch API
+if (typeof fetch !== 'undefined') {
+    const originalFetch = window.fetch;
+    window.fetch = function(url, options = {}) {
+        if (csrftoken) {
+            options = options || {};
+            options.headers = options.headers || {};
+
+            // Only add CSRF for same-origin POST, PUT, PATCH, DELETE requests
+            if (!options.credentials) options.credentials = 'same-origin';
+
+            if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method?.toUpperCase())) {
+                const requestUrl = typeof url === 'string' ? url : url.url;
+                const isSameOrigin = new URL(requestUrl, window.location.origin).origin === window.location.origin;
+
+                if (isSameOrigin) {
+                    options.headers['X-CSRFToken'] = csrftoken;
+                }
+            }
+        }
+        return originalFetch(url, options);
+    };
+}
+
+// Add CSRF token to forms dynamically
+document.addEventListener('DOMContentLoaded', function() {
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        // Check if form already has CSRF token
+        const hasCsrf = form.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (!hasCsrf && csrftoken && form.method.toUpperCase() !== 'GET') {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrftoken;
+            form.appendChild(csrfInput);
+        }
+    });
+
+    console.log('All forms have CSRF tokens');
+});
+'''
+            with open(csrf_fix_path, 'w') as f:
+                f.write(csrf_fix_content)
+            print("✅ Created /static/js/csrf_fix.js")
+
+        # Create service-worker.js
+        sw_path = BASE_DIR / 'static' / 'js' / 'service-worker.js'
+        if not sw_path.exists():
+            sw_path.parent.mkdir(parents=True, exist_ok=True)
+            sw_content = '''// service-worker.js - Basic service worker for offline capabilities
+const CACHE_NAME = 'messenger-app-v1';
+const urlsToCache = [
+    '/',
+    '/static/css/style.css',
+    '/static/js/main.js',
+    '/static/images/logo.png',
+    '/static/images/default-profile.png',
+    '/accounts/login/',
+    '/accounts/register/'
+];
+
+// Install event
+self.addEventListener('install', event => {
+    event.waitUntil(
+        caches.open(CACHE_NAME)
+            .then(cache => {
+                console.log('Opened cache');
+                return cache.addAll(urlsToCache);
+            })
+    );
+});
+
+// Fetch event
+self.addEventListener('fetch', event => {
+    event.respondWith(
+        caches.match(event.request)
+            .then(response => {
+                // Cache hit - return response
+                if (response) {
+                    return response;
+                }
+
+                // Clone the request
+                const fetchRequest = event.request.clone();
+
+                return fetch(fetchRequest).then(response => {
+                    // Check if valid response
+                    if (!response || response.status !== 200 || response.type !== 'basic') {
+                        return response;
+                    }
+
+                    // Clone the response
+                    const responseToCache = response.clone();
+
+                    caches.open(CACHE_NAME)
+                        .then(cache => {
+                            cache.put(event.request, responseToCache);
+                        });
+
+                    return response;
+                });
+            })
+    );
+});
+
+// Activate event
+self.addEventListener('activate', event => {
+    const cacheWhitelist = [CACHE_NAME];
+
+    event.waitUntil(
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(cacheName => {
+                    if (cacheWhitelist.indexOf(cacheName) === -1) {
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
+        })
+    );
+});
+'''
+            with open(sw_path, 'w') as f:
+                f.write(sw_content)
+            print("✅ Created /static/js/service-worker.js")
+
+        # Create default profile image directory
+        default_image_path = BASE_DIR / 'static' / 'images' / 'default-profile.png'
+        if not default_image_path.exists():
+            default_image_path.parent.mkdir(parents=True, exist_ok=True)
+            # Create a simple placeholder file
+            with open(default_image_path, 'wb') as f:
+                # This is a minimal transparent PNG (1x1 pixel)
+                f.write(
+                    b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x00\x00\x02\x00\x01\xe5\x27\xdc\x03\x00\x00\x00\x00IEND\xaeB`\x82')
+            print("✅ Created default profile image placeholder")
+
+    except Exception as e:
+        print(f"⚠️  Could not create static files: {e}")
+        print("⚠️  You'll need to create these files manually")

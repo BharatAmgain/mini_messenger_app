@@ -1,4 +1,4 @@
-# accounts/models.py - COMPLETE FIXED VERSION WITH ALL VALIDATION
+# accounts/models.py - COMPLETE FIXED VERSION WITH UUID FIX
 import secrets
 import string
 from datetime import timedelta
@@ -13,7 +13,8 @@ import re
 
 class CustomUser(AbstractUser):
     """Extended User model with additional fields"""
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # DON'T override the id field! Let Django handle it
+    # The id field is automatically created by AbstractUser
 
     # Profile fields
     profile_picture = models.ImageField(
@@ -103,7 +104,6 @@ class CustomUser(AbstractUser):
     # Additional metadata
     email_verified = models.BooleanField(default=False)
     phone_verified = models.BooleanField(default=False)
-    date_joined = models.DateTimeField(default=timezone.now)
     last_updated = models.DateTimeField(auto_now=True)
 
     # Social auth fields
@@ -183,9 +183,7 @@ class CustomUser(AbstractUser):
         return Friendship.get_friend_count(self)
 
     def clean(self):
-        """Custom validation with PostgreSQL UUID fix"""
-        super().clean()  # Run parent validation first
-
+        """Custom validation"""
         errors = {}
 
         # Email validation - case-insensitive check
@@ -197,10 +195,10 @@ class CustomUser(AbstractUser):
             if not re.match(email_pattern, self.email):
                 errors['email'] = 'Please enter a valid email address.'
 
-            # Email uniqueness validation
+            # Email uniqueness validation - FIXED FOR POSTGRES
             query = CustomUser.objects.filter(email__iexact=self.email)
             if self.pk:  # For existing users
-                query = query.exclude(pk=self.pk)
+                query = query.exclude(id=self.id)  # Use id, not pk
 
             if query.exists():
                 errors['email'] = 'This email is already registered.'
@@ -210,19 +208,19 @@ class CustomUser(AbstractUser):
             self.phone_number = self.phone_number.strip()
 
             # Basic phone validation
-            if not self.phone_number.startswith('+'):
+            if self.phone_number and not self.phone_number.startswith('+'):
                 errors['phone_number'] = 'Phone number must start with + for international format.'
-            else:
+            elif self.phone_number:
                 # Remove + and check if rest contains only digits and spaces
                 cleaned = self.phone_number[1:].replace(' ', '').replace('-', '')
-                if not cleaned.isdigit():
+                if cleaned and not cleaned.isdigit():
                     errors['phone_number'] = 'Phone number can only contain digits, spaces, and hyphens after +.'
 
             # Phone uniqueness validation (only if valid format)
-            if 'phone_number' not in errors:
+            if self.phone_number and 'phone_number' not in errors:
                 query = CustomUser.objects.filter(phone_number=self.phone_number)
                 if self.pk:  # For existing users
-                    query = query.exclude(pk=self.pk)
+                    query = query.exclude(id=self.id)  # Use id, not pk
 
                 if query.exists():
                     errors['phone_number'] = 'This phone number is already registered.'
@@ -317,21 +315,18 @@ class CustomUser(AbstractUser):
         # Run full validation before saving
         self.full_clean()
 
-        # Set date_joined for new users
-        if not self.pk:
-            self.date_joined = timezone.now()
-
-            # Set verification_date if user is verified on creation
-            if self.is_verified and not self.verification_date:
-                self.verification_date = timezone.now()
+        # Set verification_date if user is verified on creation
+        if self.is_verified and not self.verification_date:
+            self.verification_date = timezone.now()
         else:
             # If is_verified changed from False to True, set verification_date
-            try:
-                old_user = CustomUser.objects.get(pk=self.pk)
-                if not old_user.is_verified and self.is_verified and not self.verification_date:
-                    self.verification_date = timezone.now()
-            except CustomUser.DoesNotExist:
-                pass
+            if self.pk:
+                try:
+                    old_user = CustomUser.objects.get(id=self.id)
+                    if not old_user.is_verified and self.is_verified and not self.verification_date:
+                        self.verification_date = timezone.now()
+                except CustomUser.DoesNotExist:
+                    pass
 
         # Ensure email is lowercase for consistency
         if self.email:
