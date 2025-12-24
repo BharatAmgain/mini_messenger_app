@@ -166,12 +166,10 @@ USE_L10N = True
 USE_TZ = True
 
 # ========== STATIC FILES FIXED SECTION ==========
-# Static files
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
-]
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 
 # WhiteNoise for static files
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
@@ -671,7 +669,8 @@ print("=" * 60)
 print("\n==> Creating necessary directories...")
 for directory in [STATIC_ROOT, MEDIA_ROOT, BASE_DIR / 'logs', BASE_DIR / 'static' / 'images',
                   BASE_DIR / 'static' / 'js']:
-    directory.mkdir(exist_ok=True, parents=True)
+
+    Path(directory).mkdir(exist_ok=True, parents=True)
     print(f"    Created directory: {directory}")
 
 # ========== RUN DATABASE SETUP ==========
