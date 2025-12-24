@@ -1,4 +1,4 @@
-# accounts/models.py - COMPLETE FIXED VERSION WITH UUID FIX
+# accounts/models.py - COMPLETE FIXED VERSION
 import secrets
 import string
 from datetime import timedelta
@@ -13,8 +13,7 @@ import re
 
 class CustomUser(AbstractUser):
     """Extended User model with additional fields"""
-    # DON'T override the id field! Let Django handle it
-    # The id field is automatically created by AbstractUser
+    # DO NOT add an id field here - AbstractUser already provides it!
 
     # Profile fields
     profile_picture = models.ImageField(
@@ -142,46 +141,6 @@ class CustomUser(AbstractUser):
             return (timezone.now() - self.last_seen) < timedelta(minutes=5)
         return False
 
-    def get_friend_status(self, other_user):
-        """Get friendship status with another user"""
-        if self == other_user:
-            return 'self'
-
-        if Friendship.are_friends(self, other_user):
-            return 'friends'
-
-        sent_request = FriendRequest.objects.filter(
-            from_user=self,
-            to_user=other_user,
-            status='pending'
-        ).exists()
-
-        if sent_request:
-            return 'request_sent'
-
-        received_request = FriendRequest.objects.filter(
-            from_user=other_user,
-            to_user=self,
-            status='pending'
-        ).exists()
-
-        if received_request:
-            return 'request_received'
-
-        return 'not_friends'
-
-    def get_mutual_friends(self, other_user):
-        """Get mutual friends between two users"""
-        user_friends = Friendship.get_friends(self)
-        other_friends = Friendship.get_friends(other_user)
-
-        mutual_friends = set(user_friends) & set(other_friends)
-        return list(mutual_friends)
-
-    def get_friend_count(self):
-        """Get number of friends"""
-        return Friendship.get_friend_count(self)
-
     def clean(self):
         """Custom validation"""
         errors = {}
@@ -195,10 +154,10 @@ class CustomUser(AbstractUser):
             if not re.match(email_pattern, self.email):
                 errors['email'] = 'Please enter a valid email address.'
 
-            # Email uniqueness validation - FIXED FOR POSTGRES
+            # Email uniqueness validation
             query = CustomUser.objects.filter(email__iexact=self.email)
             if self.pk:  # For existing users
-                query = query.exclude(id=self.id)  # Use id, not pk
+                query = query.exclude(id=self.id)
 
             if query.exists():
                 errors['email'] = 'This email is already registered.'
@@ -220,7 +179,7 @@ class CustomUser(AbstractUser):
             if self.phone_number and 'phone_number' not in errors:
                 query = CustomUser.objects.filter(phone_number=self.phone_number)
                 if self.pk:  # For existing users
-                    query = query.exclude(id=self.id)  # Use id, not pk
+                    query = query.exclude(id=self.id)
 
                 if query.exists():
                     errors['phone_number'] = 'This phone number is already registered.'
@@ -262,49 +221,6 @@ class CustomUser(AbstractUser):
                 errors['website'] = 'Website must start with http:// or https://'
             elif len(self.website) > 200:
                 errors['website'] = 'Website URL is too long.'
-
-        # Quiet hours validation
-        if self.quiet_hours_enabled:
-            if not self.quiet_hours_start or not self.quiet_hours_end:
-                errors['quiet_hours_enabled'] = 'Both start and end times are required for quiet hours.'
-            elif self.quiet_hours_start >= self.quiet_hours_end:
-                errors['quiet_hours_start'] = 'Start time must be before end time.'
-                errors['quiet_hours_end'] = 'End time must be after start time.'
-
-        # Social media URL validation
-        social_fields = {
-            'facebook_url': 'Facebook',
-            'twitter_url': 'Twitter',
-            'instagram_url': 'Instagram',
-            'linkedin_url': 'LinkedIn'
-        }
-
-        for field, platform in social_fields.items():
-            url = getattr(self, field, '')
-            if url:
-                if not url.startswith(('http://', 'https://')):
-                    errors[field] = f'{platform} URL must start with http:// or https://'
-                elif len(url) > 200:
-                    errors[field] = f'{platform} URL is too long.'
-
-        # Gender validation
-        if self.gender and self.gender not in ['male', 'female', 'other', 'prefer_not_to_say']:
-            errors['gender'] = 'Please select a valid gender option.'
-
-        # Location validation
-        if self.location and len(self.location) > 100:
-            errors['location'] = 'Location cannot be longer than 100 characters.'
-
-        # First name and last name validation
-        if self.first_name and len(self.first_name) > 50:
-            errors['first_name'] = 'First name cannot be longer than 50 characters.'
-
-        if self.last_name and len(self.last_name) > 50:
-            errors['last_name'] = 'Last name cannot be longer than 50 characters.'
-
-        # Google ID validation (if provided)
-        if self.google_id and len(self.google_id) > 100:
-            errors['google_id'] = 'Google ID is too long.'
 
         # Raise validation errors if any
         if errors:

@@ -5,6 +5,11 @@ from pathlib import Path
 from decouple import config, Csv
 import dj_database_url
 import logging.config
+import codecs
+
+# Fix Unicode output on Windows
+if sys.platform == "win32":
+    sys.stdout = codecs.getwriter("utf-8")(sys.stdout.buffer, 'replace')
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -116,7 +121,7 @@ if DATABASE_URL.startswith('sqlite:///'):
             }
         }
     }
-    print("✅ Using SQLite database for local development")
+    print("==> Using SQLite database for local development")
 else:
     # PostgreSQL configuration (for Render)
     DATABASES = {
@@ -128,7 +133,7 @@ else:
         )
     }
     DATABASES['default']['ENGINE'] = 'django.db.backends.postgresql'
-    print("✅ Using PostgreSQL database for production")
+    print("==> Using PostgreSQL database for production")
 
 # Password Validators
 AUTH_PASSWORD_VALIDATORS = [
@@ -187,7 +192,7 @@ if DEBUG and 'RENDER' not in os.environ:
             'BACKEND': 'channels.layers.InMemoryChannelLayer',
         },
     }
-    print("✅ Using InMemoryChannelLayer for local development")
+    print("==> Using InMemoryChannelLayer for local development")
 else:
     # Use Redis for production
     CHANNEL_LAYERS = {
@@ -201,7 +206,7 @@ else:
             },
         },
     }
-    print("✅ Using Redis ChannelLayer")
+    print("==> Using Redis ChannelLayer")
 
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.CustomUser'
@@ -222,28 +227,28 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@connect.io')
 EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=30, cast=int)
 EMAIL_SUBJECT_PREFIX = config('EMAIL_SUBJECT_PREFIX', default='[Connect.io] ')
 
-print(f"\n📧 EMAIL CONFIGURATION:")
-print(f"   Backend: {EMAIL_BACKEND}")
-print(f"   Host: {EMAIL_HOST}")
-print(f"   User: {EMAIL_HOST_USER}")
+print(f"\n==> EMAIL CONFIGURATION:")
+print(f"    Backend: {EMAIL_BACKEND}")
+print(f"    Host: {EMAIL_HOST}")
+print(f"    User: {EMAIL_HOST_USER}")
 
 # Check SendGrid configuration
 if 'sendgrid' in EMAIL_HOST:
     if EMAIL_HOST_PASSWORD and EMAIL_HOST_PASSWORD.startswith('SG.'):
-        print("✅ SendGrid API Key configured")
-        print(f"   Password: {'*' * 20}...{EMAIL_HOST_PASSWORD[-4:]}")
+        print("==> SendGrid API Key configured")
+        print(f"    Password: {'*' * 20}...{EMAIL_HOST_PASSWORD[-4:]}")
     else:
-        print("❌ SENDGRID ERROR: Invalid API Key!")
-        print("💡 Your API key should start with 'SG.'")
+        print("==> SENDGRID ERROR: Invalid API Key!")
+        print("    Your API key should start with 'SG.'")
         if not EMAIL_HOST_PASSWORD:
-            print("💡 EMAIL_HOST_PASSWORD is empty!")
+            print("    EMAIL_HOST_PASSWORD is empty!")
         elif EMAIL_HOST_USER != 'apikey':
-            print("💡 EMAIL_HOST_USER must be 'apikey' (literal)")
+            print("    EMAIL_HOST_USER must be 'apikey' (literal)")
 elif DEBUG and 'console' in EMAIL_BACKEND:
-    print("✅ Development: Using console backend")
-    print("   Emails will print to terminal")
+    print("==> Development: Using console backend")
+    print("    Emails will print to terminal")
 else:
-    print("⚠️  Unknown email configuration")
+    print("==> Unknown email configuration")
 
 # Site Information
 SITE_NAME = config('SITE_NAME', default='Connect.io')
@@ -291,11 +296,11 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config('GOOGLE_OAUTH2_SECRET', default='')
 if 'RENDER' in os.environ or not DEBUG:
     # Production - ALWAYS use https://connect-io-0cql.onrender.com/complete/google-oauth2/
     SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI = 'https://connect-io-0cql.onrender.com/complete/google-oauth2/'
-    print(f"🚨 GOOGLE OAUTH: Using HARDCODED production redirect URI: {SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}")
+    print(f"==> GOOGLE OAUTH: Using HARDCODED production redirect URI: {SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}")
 else:
     # Development
     SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI = 'http://127.0.0.1:8000/complete/google-oauth2/'
-    print(f"🚨 GOOGLE OAUTH: Using HARDCODED local redirect URI: {SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}")
+    print(f"==> GOOGLE OAUTH: Using HARDCODED local redirect URI: {SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}")
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'https://www.googleapis.com/auth/userinfo.email',
@@ -369,16 +374,16 @@ print("\n" + "=" * 60)
 print("TWILIO CONFIGURATION STATUS")
 print("=" * 60)
 print(f"Account SID: {TWILIO_ACCOUNT_SID}")
-print(f"Auth Token: {'✅ SET' if TWILIO_AUTH_TOKEN else '❌ MISSING - SMS verification disabled'}")
+print(f"Auth Token: {'[SET]' if TWILIO_AUTH_TOKEN else '[MISSING - SMS verification disabled]'}")
 print(f"Verify Service SID: {TWILIO_VERIFY_SERVICE_SID}")
 print(f"Phone Number: {TWILIO_PHONE_NUMBER}")
 
 if not TWILIO_AUTH_TOKEN:
-    print("⚠️  SMS verification disabled (no auth token)")
+    print("==> SMS verification disabled (no auth token)")
     OTP_TWILIO_NO_DELIVERY = True
-    print("✅ OTP_TWILIO_NO_DELIVERY set to True")
+    print("==> OTP_TWILIO_NO_DELIVERY set to True")
 else:
-    print("✅ Twilio credentials configured")
+    print("==> Twilio credentials configured")
 print("=" * 60 + "\n")
 
 # File Upload Limits
@@ -515,7 +520,7 @@ ENABLE_PUSH_NOTIFICATIONS = config('ENABLE_PUSH_NOTIFICATIONS', default=False, c
 ENABLE_EMAIL_NOTIFICATIONS = config('ENABLE_EMAIL_NOTIFICATIONS', default=True, cast=bool)
 
 
-# ========== DATABASE SETUP FUNCTION - UPDATED FIX ==========
+# ========== DATABASE SETUP FUNCTION ==========
 def ensure_migrations_and_user():
     """Run migrations and create test user automatically"""
     try:
@@ -530,32 +535,21 @@ def ensure_migrations_and_user():
         # Try to connect to database
         try:
             connections['default'].ensure_connection()
-            print("✅ Database connection successful")
+            print("==> Database connection successful")
         except OperationalError as e:
-            print(f"⚠️  Cannot connect to database: {e}")
-            print("⚠️  Please check your database configuration")
+            print(f"==> Cannot connect to database: {e}")
+            print("==> Please check your database configuration")
             return
 
-        # Run migrations - FIXED TO HANDLE UUID ISSUE
+        # Run migrations - SIMPLIFIED VERSION
         print("1. Running database migrations...")
         try:
-            # First, make migrations for accounts app specifically to fix UUID issue
-            execute_from_command_line(['manage.py', 'makemigrations', 'accounts', '--no-input'])
-            print("✅ Made migrations for accounts app")
-
             # Apply all migrations
             execute_from_command_line(['manage.py', 'migrate', '--no-input'])
-            print("✅ Migrations completed")
+            print("==> Migrations completed")
         except Exception as e:
-            print(f"❌ Migration error: {e}")
-            print("⚠️ Trying to continue anyway...")
-
-            # Try to apply migrations without making new ones
-            try:
-                execute_from_command_line(['manage.py', 'migrate', '--no-input'])
-                print("✅ Applied existing migrations")
-            except Exception as e2:
-                print(f"❌ Could not apply migrations: {e2}")
+            print(f"==> Migration error: {e}")
+            print("==> Trying to continue anyway...")
 
         # Create test user
         print("2. Creating test user...")
@@ -563,40 +557,39 @@ def ensure_migrations_and_user():
         User = get_user_model()
 
         try:
-            # Check if test user exists by username
             if not User.objects.filter(username='testuser').exists():
-                user = User.objects.create_user(
+                User.objects.create_user(
                     username='testuser',
                     email='test@example.com',
                     password='TestPass123!',
                     phone_number='+9779866399895',
                     is_verified=True
                 )
-                print("✅ Created test user: testuser / TestPass123!")
-                print("✅ Email: test@example.com")
-                print("✅ Phone number: +9779866399895")
+                print("==> Created test user: testuser / TestPass123!")
+                print("==> Email: test@example.com")
+                print("==> Phone number: +9779866399895")
             else:
-                print("✅ Test user already exists (username: testuser)")
+                print("==> Test user already exists (username: testuser)")
 
         except Exception as e:
-            print(f"❌ Error creating test user: {e}")
-            print("⚠️ This is okay if the user already exists")
+            print(f"==> Error creating test user: {e}")
+            print("==> This is okay if the user already exists")
 
         print("=" * 50)
         print("DATABASE SETUP COMPLETE")
         print("=" * 50)
 
     except ImportError as e:
-        print(f"❌ Import error: {e}")
-        print("⚠️  Django might not be properly installed")
+        print(f"==> Import error: {e}")
+        print("==> Django might not be properly installed")
     except Exception as e:
-        print(f"❌ Database setup error: {e}")
-        print("⚠️  Continuing anyway...")
+        print(f"==> Database setup error: {e}")
+        print("==> Continuing anyway...")
 
 
 # ========== RENDER-SPECIFIC CONFIGURATION ==========
 if 'RENDER' in os.environ:
-    print("🌐 Running on Render - Applying production settings...")
+    print("==> Running on Render - Applying production settings...")
 
     # Force production settings
     DEBUG = False
@@ -610,86 +603,54 @@ if 'RENDER' in os.environ:
     if render_host:
         ALLOWED_HOSTS.append(render_host)
         CSRF_TRUSTED_ORIGINS.append(f'https://{render_host}')
-        print(f"✅ Added {render_host} to allowed hosts")
+        print(f"==> Added {render_host} to allowed hosts")
 
     # Use environment DATABASE_URL if available
     if os.environ.get('DATABASE_URL'):
         DATABASE_URL = os.environ['DATABASE_URL']
-        print("✅ Using Render PostgreSQL database from environment")
+        print("==> Using Render PostgreSQL database from environment")
 
     # Force HTTPS for OAuth redirects on Render
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SOCIAL_AUTH_REDIRECT_IS_HTTPS = True
 
-    # CRITICAL: Check SendGrid configuration for Render
-    print("\n📧 Checking SendGrid configuration for Render...")
-
-    if 'sendgrid' in EMAIL_HOST:
-        if EMAIL_HOST_PASSWORD and EMAIL_HOST_PASSWORD.startswith('SG.'):
-            print("✅ SendGrid properly configured for Render")
-            print("✅ Password reset emails will work!")
-        else:
-            print("❌ SENDGRID CONFIGURATION ERROR!")
-            print("💡 Add these to Render Environment Variables:")
-            print("   EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend")
-            print("   EMAIL_HOST=smtp.sendgrid.net")
-            print("   EMAIL_PORT=587")
-            print("   EMAIL_USE_TLS=True")
-            print("   EMAIL_HOST_USER=apikey")
-            print("   EMAIL_HOST_PASSWORD=YOUR_SENDGRID_API_KEY_HERE")
-            print("   DEFAULT_FROM_EMAIL=noreply@connect.io")
-    else:
-        print("⚠️  Not using SendGrid - password reset may fail")
-
 # Local development
 else:
-    print("💻 Running in local development mode...")
+    print("==> Running in local development mode...")
 
     # Development settings
     if DEBUG:
-        print("🔧 DEBUG mode enabled - showing detailed errors")
+        print("==> DEBUG mode enabled - showing detailed errors")
         if 'console' in EMAIL_BACKEND:
-            print("📧 Development: Using console backend - emails print to terminal")
+            print("==> Development: Using console backend - emails print to terminal")
         CORS_ALLOW_ALL_ORIGINS = True
 
 # Security settings
 SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
 SECURE_HSTS_SECONDS = 0 if DEBUG else 31536000
 
-print(f"\n✅ Settings loaded: DEBUG={DEBUG}, DATABASE={DATABASES['default']['ENGINE']}")
-print(f"✅ Email Backend: {EMAIL_BACKEND}")
-
-# Final password reset status
-if 'RENDER' in os.environ:
-    if 'sendgrid' in EMAIL_HOST and EMAIL_HOST_PASSWORD and EMAIL_HOST_PASSWORD.startswith('SG.'):
-        print("✅ PASSWORD RESET: Will work on production with SendGrid!")
-    else:
-        print("❌ PASSWORD RESET: Will fail - SendGrid not configured")
-else:
-    if 'console' in EMAIL_BACKEND:
-        print("✅ PASSWORD RESET: Will work locally (emails to console)")
-    elif 'sendgrid' in EMAIL_HOST:
-        print("✅ PASSWORD RESET: Using SendGrid for local testing")
+print(f"\n==> Settings loaded: DEBUG={DEBUG}, DATABASE={DATABASES['default']['ENGINE']}")
+print(f"==> Email Backend: {EMAIL_BACKEND}")
 
 # ========== DEBUG OUTPUT FOR GOOGLE OAUTH ==========
 print("\n" + "=" * 80)
-print("GOOGLE OAUTH CONFIGURATION STATUS - FIXED VERSION")
+print("GOOGLE OAUTH CONFIGURATION STATUS")
 print("=" * 80)
-print(f"🎯 Client ID: {'✅ SET' if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY else '❌ MISSING'}")
-print(f"🔑 Client Secret: {'✅ SET' if SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET else '❌ MISSING'}")
-print(f"🔄 Redirect URI: {SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}")
-print(f"🌍 Environment: {'Render (Production)' if 'RENDER' in os.environ else 'Local (Development)'}")
-print(f"🔗 Expected Google Console URI: https://connect-io-0cql.onrender.com/complete/google-oauth2/")
+print(f"Client ID: {'[SET]' if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY else '[MISSING]'}")
+print(f"Client Secret: {'[SET]' if SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET else '[MISSING]'}")
+print(f"Redirect URI: {SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}")
+print(f"Environment: {'Render (Production)' if 'RENDER' in os.environ else 'Local (Development)'}")
+print(f"Expected Google Console URI: https://connect-io-0cql.onrender.com/complete/google-oauth2/")
 print("=" * 80)
 
 # ========== SOCIAL AUTH DEBUGGING ==========
 if DEBUG:
     # Enable social auth debugging in development
     SOCIAL_AUTH_LOG_LEVEL = 'DEBUG'
-    print("\n🔧 Social Auth debugging enabled")
+    print("\n==> Social Auth debugging enabled")
 
 # ========== ERROR HANDLERS CONFIGURATION ==========
-# Add these error handlers (CRITICAL FIX for your current issue)
+# Add these error handlers
 handler404 = 'messenger.views.page_not_found'
 handler500 = 'messenger.views.server_error'
 handler403 = 'messenger.views.permission_denied'
@@ -698,20 +659,20 @@ handler400 = 'messenger.views.bad_request'
 print("\n" + "=" * 60)
 print("ERROR HANDLERS CONFIGURATED")
 print("=" * 60)
-print("✅ 404 Handler: messenger.views.page_not_found")
-print("✅ 500 Handler: messenger.views.server_error")
-print("✅ 403 Handler: messenger.views.permission_denied")
-print("✅ 400 Handler: messenger.views.bad_request")
-print("✅ CSRF Failure: messenger.views.csrf_failure")
+print("==> 404 Handler: messenger.views.page_not_found")
+print("==> 500 Handler: messenger.views.server_error")
+print("==> 403 Handler: messenger.views.permission_denied")
+print("==> 400 Handler: messenger.views.bad_request")
+print("==> CSRF Failure: messenger.views.csrf_failure")
 print("=" * 60)
 
 # ========== CREATE DIRECTORIES ON STARTUP ==========
 # Create necessary directories
-print("\n📁 Creating necessary directories...")
+print("\n==> Creating necessary directories...")
 for directory in [STATIC_ROOT, MEDIA_ROOT, BASE_DIR / 'logs', BASE_DIR / 'static' / 'images',
                   BASE_DIR / 'static' / 'js']:
     directory.mkdir(exist_ok=True, parents=True)
-    print(f"✅ Created directory: {directory}")
+    print(f"    Created directory: {directory}")
 
 # ========== RUN DATABASE SETUP ==========
 # Run database setup on startup
@@ -721,7 +682,7 @@ if __name__ == 'messenger.settings':
     # ========== CRITICAL FIX FOR RENDER ==========
     if 'RENDER' in os.environ:
         # Force production settings for Render
-        print("🚨 RENDER DETECTED - APPLYING PRODUCTION SETTINGS")
+        print("==> RENDER DETECTED - APPLYING PRODUCTION SETTINGS")
 
         # Security settings
         DEBUG = False
@@ -738,35 +699,35 @@ if __name__ == 'messenger.settings':
             ALLOWED_HOSTS = list(set(ALLOWED_HOSTS))
             if RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
                 ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
-                print(f"✅ Added {RENDER_EXTERNAL_HOSTNAME} to allowed hosts")
+                print(f"==> Added {RENDER_EXTERNAL_HOSTNAME} to allowed hosts")
 
             # Remove duplicates from CSRF_TRUSTED_ORIGINS
             CSRF_TRUSTED_ORIGINS = list(set(CSRF_TRUSTED_ORIGINS))
             new_origin = f'https://{RENDER_EXTERNAL_HOSTNAME}'
             if new_origin not in CSRF_TRUSTED_ORIGINS:
                 CSRF_TRUSTED_ORIGINS.append(new_origin)
-                print(f"✅ Added {new_origin} to CSRF trusted origins")
+                print(f"==> Added {new_origin} to CSRF trusted origins")
 
         # Static files on Render
         STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
         STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
-        print(f"✅ Configured for Render with hostname: {RENDER_EXTERNAL_HOSTNAME}")
+        print(f"==> Configured for Render with hostname: {RENDER_EXTERNAL_HOSTNAME}")
     else:
-        print("💻 Running in local development mode")
+        print("==> Running in local development mode")
 
     print("\n" + "=" * 60)
     print("DEPLOYMENT CONFIGURATION COMPLETE")
     print("=" * 60)
-    print(f"🔧 DEBUG: {DEBUG}")
-    print(f"🌍 ALLOWED_HOSTS: {ALLOWED_HOSTS}")
-    print(f"🛡️ CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}")
-    print(f"💾 DATABASE: {DATABASES['default']['ENGINE']}")
-    print(f"📧 EMAIL: {EMAIL_BACKEND}")
+    print(f"==> DEBUG: {DEBUG}")
+    print(f"==> ALLOWED_HOSTS: {ALLOWED_HOSTS}")
+    print(f"==> CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}")
+    print(f"==> DATABASE: {DATABASES['default']['ENGINE']}")
+    print(f"==> EMAIL: {EMAIL_BACKEND}")
     print("=" * 60)
 
     # Create missing static files automatically
-    print("\n📁 Creating missing static files...")
+    print("\n==> Creating missing static files...")
     try:
         # Create csrf_fix.js
         csrf_fix_path = BASE_DIR / 'static' / 'js' / 'csrf_fix.js'
@@ -850,102 +811,9 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('All forms have CSRF tokens');
 });
 '''
-            with open(csrf_fix_path, 'w') as f:
+            with open(csrf_fix_path, 'w', encoding='utf-8') as f:
                 f.write(csrf_fix_content)
-            print("✅ Created /static/js/csrf_fix.js")
-
-        # Create service-worker.js
-        sw_path = BASE_DIR / 'static' / 'js' / 'service-worker.js'
-        if not sw_path.exists():
-            sw_path.parent.mkdir(parents=True, exist_ok=True)
-            sw_content = '''// service-worker.js - Basic service worker for offline capabilities
-const CACHE_NAME = 'messenger-app-v1';
-const urlsToCache = [
-    '/',
-    '/static/css/style.css',
-    '/static/js/main.js',
-    '/static/images/logo.png',
-    '/static/images/default-profile.png',
-    '/accounts/login/',
-    '/accounts/register/'
-];
-
-// Install event
-self.addEventListener('install', event => {
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => {
-                console.log('Opened cache');
-                return cache.addAll(urlsToCache);
-            })
-    );
-});
-
-// Fetch event
-self.addEventListener('fetch', event => {
-    event.respondWith(
-        caches.match(event.request)
-            .then(response => {
-                // Cache hit - return response
-                if (response) {
-                    return response;
-                }
-
-                // Clone the request
-                const fetchRequest = event.request.clone();
-
-                return fetch(fetchRequest).then(response => {
-                    // Check if valid response
-                    if (!response || response.status !== 200 || response.type !== 'basic') {
-                        return response;
-                    }
-
-                    // Clone the response
-                    const responseToCache = response.clone();
-
-                    caches.open(CACHE_NAME)
-                        .then(cache => {
-                            cache.put(event.request, responseToCache);
-                        });
-
-                    return response;
-                });
-            })
-    );
-});
-
-// Activate event
-self.addEventListener('activate', event => {
-    const cacheWhitelist = [CACHE_NAME];
-
-    event.waitUntil(
-        caches.keys().then(cacheNames => {
-            return Promise.all(
-                cacheNames.map(cacheName => {
-                    if (cacheWhitelist.indexOf(cacheName) === -1) {
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        })
-    );
-});
-'''
-            with open(sw_path, 'w') as f:
-                f.write(sw_content)
-            print("✅ Created /static/js/service-worker.js")
-
-        # Create default profile image directory
-        default_image_path = BASE_DIR / 'static' / 'images' / 'default-profile.png'
-        if not default_image_path.exists():
-            default_image_path.parent.mkdir(parents=True, exist_ok=True)
-            # Create a simple placeholder file
-            with open(default_image_path, 'wb') as f:
-                # This is a minimal transparent PNG (1x1 pixel)
-                f.write(
-                    b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x00\x00\x02\x00\x01\xe5\x27\xdc\x03\x00\x00\x00\x00IEND\xaeB`\x82')
-            print("✅ Created default profile image placeholder")
+            print("    Created /static/js/csrf_fix.js")
 
     except Exception as e:
-        print(f"⚠️  Could not create static files: {e}")
-        print("⚠️  You'll need to create these files manually")
+        print(f"    Could not create static files: {e}")
