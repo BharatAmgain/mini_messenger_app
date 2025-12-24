@@ -34,7 +34,7 @@ class CustomUser(AbstractUser):
     ], blank=True)
 
     # Social media links
-    facebook_url = models.URLField(max_length=200, blank=True)
+    facebook_url = models.URLField(max_length=255, blank=True, null=True)  # Check this line
     twitter_url = models.URLField(max_length=200, blank=True)
     instagram_url = models.URLField(max_length=200, blank=True)
     linkedin_url = models.URLField(max_length=200, blank=True)

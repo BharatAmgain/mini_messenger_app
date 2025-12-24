@@ -1129,6 +1129,7 @@ def password_reset_request(request):
             if email_or_phone['type'] == 'email':
                 email = email_or_phone['value']
                 try:
+                    # In accounts/views.py around line 1132
                     user = CustomUser.objects.get(email__iexact=email, is_active=True)
 
                     # CREATE OTP RECORD
