@@ -1,12 +1,13 @@
+# accounts/views.py - COMPLETE FIXED IMPORTS
 import json
 import traceback
 import base64
 import requests
 from datetime import timedelta
 import urllib.parse
-
 import io
-# In accounts/views.py, at the top where imports are:
+
+# QR Code and OTP imports with error handling
 try:
     import qrcode
     import pyotp
@@ -14,8 +15,12 @@ try:
 except ImportError:
     QRCODE_AVAILABLE = False
     print("⚠️ QRcode and/or pyotp not installed. OTP functionality will be limited.")
+
+# Django OTP imports
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django_otp import devices_for_user
+
+# Django core imports
 from django.core.exceptions import ValidationError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
@@ -29,8 +34,11 @@ from django.views.decorators.http import require_http_methods
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.conf import settings
+
+# Social auth imports
 from social_core.backends.google import GoogleOAuth2
 
+# Local forms imports
 from .forms import (
     CustomUserCreationForm,
     OTPVerificationForm,
@@ -40,6 +48,8 @@ from .forms import (
     VerifyOTPForm,
     SendOTPForm
 )
+
+# Local models imports
 from .models import CustomUser, Notification, FriendRequest, Friendship, OTPVerification, PasswordResetOTP
 
 

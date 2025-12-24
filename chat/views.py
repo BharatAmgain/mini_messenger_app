@@ -1,21 +1,27 @@
-# chat/views.py
+# chat/views.py - COMPLETE FIXED IMPORTS
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Q
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-# TO:
-from .models import Conversation, Message, UserStatus, ChatNotification, GroupInvitation
-from accounts.models import CustomUser, Notification, Friendship, FriendRequest, BlockedUser
-import uuid
-import json
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from django.utils import timezone
+import json
 import os
 from django.conf import settings
-from .utils import EmojiManager
 import emoji
+import uuid
+
+# Local chat models imports
+from .models import Conversation, Message, UserStatus, ChatNotification, GroupInvitation
+
+# Local accounts models imports
+from accounts.models import CustomUser, Notification, Friendship, FriendRequest, BlockedUser
+
+# Local utils imports
+from .utils import EmojiManager
 
 
 @login_required(login_url='/accounts/login/')

@@ -5,7 +5,7 @@ from . import views
 # NO NAMESPACE - app_name = 'accounts' REMOVED
 
 urlpatterns = [
-    # Root URL redirects to login or chat_home based on authentication
+    # Root URL redirects to login or chat_home based on authentication status
     path('', views.root_redirect, name='root_redirect'),
 
     # Authentication

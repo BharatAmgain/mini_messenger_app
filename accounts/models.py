@@ -1,4 +1,4 @@
-# accounts/models.py - FINAL COMPLETE VERSION WITH IMAGEFIELD
+# accounts/models.py - COMPLETE FIXED IMPORTS
 import secrets
 import string
 from datetime import timedelta
@@ -8,6 +8,12 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 import uuid
 from django.db.models import Q
+
+# Signal imports (MUST be at the end after model definitions)
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+# Your models continue here...
 
 
 class CustomUser(AbstractUser):

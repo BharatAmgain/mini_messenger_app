@@ -1,4 +1,4 @@
-<!-- templates/accounts/register.html -->
+<!-- templates/accounts/register.html - FIXED SYNTAX -->
 {% extends 'base.html' %}
 {% load static %}
 
@@ -9,7 +9,19 @@
     <div class="max-w-4xl w-full space-y-8">
         <!-- Header Section -->
         <div class="text-center">
-            {% include 'accounts/logo.html' %}
+            <!-- Logo section -->
+            <div class="flex justify-center mb-4">
+                <div class="floating">
+                    <div class="relative">
+                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                            <i class="fas fa-comments text-white text-2xl"></i>
+                        </div>
+                        <div class="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center">
+                            <i class="fas fa-bolt text-white text-xs"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
                 Join Connect.io Today
             </h2>
