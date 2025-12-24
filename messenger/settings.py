@@ -539,10 +539,14 @@ def ensure_migrations_and_user():
         # Run migrations
         print("1. Running database migrations...")
         try:
+            # First make migrations
+            execute_from_command_line(['manage.py', 'makemigrations', '--no-input'])
+            # Then apply migrations
             execute_from_command_line(['manage.py', 'migrate', '--no-input'])
             print("✅ Migrations completed")
         except Exception as e:
             print(f"❌ Migration error: {e}")
+            # Try to continue anyway
             return
 
         # Create test user

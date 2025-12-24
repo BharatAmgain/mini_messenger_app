@@ -1,4 +1,4 @@
-# accounts/models.py - COMPLETE FIXED VERSION WITH IMAGEFIELD AND POSTGRESQL UUID FIX
+# accounts/models.py - COMPLETE FIXED VERSION WITH VALIDATION
 import secrets
 import string
 from datetime import timedelta
@@ -10,31 +10,9 @@ import uuid
 from django.db.models import Q
 
 
-class UUIDCustomUserManager(models.Manager):
-    """Custom manager for UUID fields in PostgreSQL"""
-
-    def filter_excluding_self(self, email=None, phone_number=None, user_id=None):
-        """Filter excluding the current user, handling UUID properly"""
-        queryset = self.get_queryset()
-
-        if email:
-            queryset = queryset.filter(email=email)
-        if phone_number:
-            queryset = queryset.filter(phone_number=phone_number)
-
-        # Only exclude if user_id is provided
-        if user_id:
-            queryset = queryset.exclude(id=user_id)
-
-        return queryset
-
-
 class CustomUser(AbstractUser):
     """Extended User model with additional fields"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-
-    # Add custom manager
-    objects = UUIDCustomUserManager()
 
     # Profile fields
     profile_picture = models.ImageField(
@@ -204,34 +182,41 @@ class CustomUser(AbstractUser):
         return Friendship.get_friend_count(self)
 
     def clean(self):
-        """Custom validation - FIXED for PostgreSQL UUID"""
-        # Get existing instance if it exists
-        existing_user = None
-        if self.pk:
-            try:
-                existing_user = CustomUser.objects.get(pk=self.pk)
-            except CustomUser.DoesNotExist:
-                pass
+        """Custom validation - FIXED FOR POSTGRESQL UUID"""
+        # For new users (self.pk is None)
+        if not self.pk:
+            # Check if email already exists (for new users)
+            if self.email and CustomUser.objects.filter(email__iexact=self.email).exists():
+                raise ValidationError({'email': 'This email is already registered.'})
 
-        # Check for duplicate email
-        if self.email:
-            # For new users, check if email exists
-            # For existing users, check if email exists for other users
-            if self.pk:  # Existing user
-                if CustomUser.objects.filter(email=self.email).exclude(pk=self.pk).exists():
-                    raise ValidationError({'email': 'This email is already registered.'})
-            else:  # New user
-                if CustomUser.objects.filter(email=self.email).exists():
+            # Check if phone number already exists (for new users)
+            if self.phone_number and CustomUser.objects.filter(phone_number=self.phone_number).exists():
+                raise ValidationError({'phone_number': 'This phone number is already registered.'})
+
+        # For existing users (self.pk is not None)
+        else:
+            # Convert self.pk to string for proper comparison with UUID
+            current_id_str = str(self.pk)
+
+            # Check if email already exists for other users
+            if self.email:
+                # Get users with same email excluding current user
+                duplicate_emails = CustomUser.objects.filter(
+                    email__iexact=self.email
+                ).exclude(
+                    pk=self.pk  # This works because Django handles UUID comparison internally
+                )
+                if duplicate_emails.exists():
                     raise ValidationError({'email': 'This email is already registered.'})
 
-        # Check for duplicate phone number
-        if self.phone_number:
-            # Same logic for phone number
-            if self.pk:  # Existing user
-                if CustomUser.objects.filter(phone_number=self.phone_number).exclude(pk=self.pk).exists():
-                    raise ValidationError({'phone_number': 'This phone number is already registered.'})
-            else:  # New user
-                if CustomUser.objects.filter(phone_number=self.phone_number).exists():
+            # Check if phone number already exists for other users
+            if self.phone_number:
+                duplicate_phones = CustomUser.objects.filter(
+                    phone_number=self.phone_number
+                ).exclude(
+                    pk=self.pk  # This works because Django handles UUID comparison internally
+                )
+                if duplicate_phones.exists():
                     raise ValidationError({'phone_number': 'This phone number is already registered.'})
 
         # Validate quiet hours
@@ -239,13 +224,81 @@ class CustomUser(AbstractUser):
             if not self.quiet_hours_start or not self.quiet_hours_end:
                 raise ValidationError('Both start and end times are required for quiet hours.')
 
+            if self.quiet_hours_start >= self.quiet_hours_end:
+                raise ValidationError('Start time must be before end time for quiet hours.')
+
+        # Validate date of birth
+        if self.date_of_birth:
+            if self.date_of_birth > timezone.now().date():
+                raise ValidationError({'date_of_birth': 'Date of birth cannot be in the future.'})
+
+            # Check if user is at least 13 years old
+            age = (timezone.now().date() - self.date_of_birth).days / 365.25
+            if age < 13:
+                raise ValidationError({'date_of_birth': 'You must be at least 13 years old to register.'})
+
+        # Validate username
+        if self.username:
+            if len(self.username) < 3:
+                raise ValidationError({'username': 'Username must be at least 3 characters long.'})
+            if len(self.username) > 30:
+                raise ValidationError({'username': 'Username cannot be longer than 30 characters.'})
+            if not self.username.replace('_', '').replace('.', '').isalnum():
+                raise ValidationError(
+                    {'username': 'Username can only contain letters, numbers, underscores, and periods.'})
+
+        # Validate email
+        if self.email:
+            if '@' not in self.email or '.' not in self.email.split('@')[-1]:
+                raise ValidationError({'email': 'Please enter a valid email address.'})
+
+        # Validate phone number
+        if self.phone_number:
+            # Basic phone validation - allow international numbers
+            if not self.phone_number.startswith('+'):
+                raise ValidationError({'phone_number': 'Phone number must start with + for international format.'})
+            if not self.phone_number[1:].replace(' ', '').replace('-', '').isdigit():
+                raise ValidationError(
+                    {'phone_number': 'Phone number can only contain digits, spaces, and hyphens after +.'})
+
+        # Validate bio length
+        if self.bio and len(self.bio) > 500:
+            raise ValidationError({'bio': 'Bio cannot be longer than 500 characters.'})
+
+        # Validate website URL
+        if self.website and not self.website.startswith(('http://', 'https://')):
+            raise ValidationError({'website': 'Website must start with http:// or https://'})
+
         super().clean()
 
     def save(self, *args, **kwargs):
         """Override save to handle validation and updates"""
+        # Run full validation before saving
         self.full_clean()
+
         if not self.pk:
             self.date_joined = timezone.now()
+
+            # Set verification_date if user is verified on creation
+            if self.is_verified and not self.verification_date:
+                self.verification_date = timezone.now()
+        else:
+            # If is_verified changed from False to True, set verification_date
+            try:
+                old_user = CustomUser.objects.get(pk=self.pk)
+                if not old_user.is_verified and self.is_verified and not self.verification_date:
+                    self.verification_date = timezone.now()
+            except CustomUser.DoesNotExist:
+                pass
+
+        # Ensure email is lowercase for consistency
+        if self.email:
+            self.email = self.email.lower()
+
+        # Remove whitespace from phone number
+        if self.phone_number:
+            self.phone_number = self.phone_number.strip()
+
         super().save(*args, **kwargs)
 
 
@@ -579,7 +632,7 @@ class BlockedUser(models.Model):
         ).exists()
 
 
-# Signal handlers - MUST BE AT THE END OF THE FILE
+# Signal handlers at the bottom to avoid circular imports
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
