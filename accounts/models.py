@@ -1,4 +1,4 @@
-# accounts/models.py - COMPLETE FIXED VERSION WITH VALIDATION
+# accounts/models.py - COMPLETE FIXED VERSION WITH ALL VALIDATION
 import secrets
 import string
 from datetime import timedelta
@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 import uuid
 from django.db.models import Q
+import re
 
 
 class CustomUser(AbstractUser):
@@ -182,100 +183,141 @@ class CustomUser(AbstractUser):
         return Friendship.get_friend_count(self)
 
     def clean(self):
-        """Custom validation - FIXED FOR POSTGRESQL UUID"""
-        # For new users (self.pk is None)
-        if not self.pk:
-            # Check if email already exists (for new users)
-            if self.email and CustomUser.objects.filter(email__iexact=self.email).exists():
-                raise ValidationError({'email': 'This email is already registered.'})
+        """Custom validation with PostgreSQL UUID fix"""
+        super().clean()  # Run parent validation first
 
-            # Check if phone number already exists (for new users)
-            if self.phone_number and CustomUser.objects.filter(phone_number=self.phone_number).exists():
-                raise ValidationError({'phone_number': 'This phone number is already registered.'})
+        errors = {}
 
-        # For existing users (self.pk is not None)
-        else:
-            # Convert self.pk to string for proper comparison with UUID
-            current_id_str = str(self.pk)
+        # Email validation - case-insensitive check
+        if self.email:
+            self.email = self.email.strip().lower()
 
-            # Check if email already exists for other users
-            if self.email:
-                # Get users with same email excluding current user
-                duplicate_emails = CustomUser.objects.filter(
-                    email__iexact=self.email
-                ).exclude(
-                    pk=self.pk  # This works because Django handles UUID comparison internally
-                )
-                if duplicate_emails.exists():
-                    raise ValidationError({'email': 'This email is already registered.'})
+            # Email format validation
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            if not re.match(email_pattern, self.email):
+                errors['email'] = 'Please enter a valid email address.'
 
-            # Check if phone number already exists for other users
-            if self.phone_number:
-                duplicate_phones = CustomUser.objects.filter(
-                    phone_number=self.phone_number
-                ).exclude(
-                    pk=self.pk  # This works because Django handles UUID comparison internally
-                )
-                if duplicate_phones.exists():
-                    raise ValidationError({'phone_number': 'This phone number is already registered.'})
+            # Email uniqueness validation
+            query = CustomUser.objects.filter(email__iexact=self.email)
+            if self.pk:  # For existing users
+                query = query.exclude(pk=self.pk)
 
-        # Validate quiet hours
-        if self.quiet_hours_enabled:
-            if not self.quiet_hours_start or not self.quiet_hours_end:
-                raise ValidationError('Both start and end times are required for quiet hours.')
+            if query.exists():
+                errors['email'] = 'This email is already registered.'
 
-            if self.quiet_hours_start >= self.quiet_hours_end:
-                raise ValidationError('Start time must be before end time for quiet hours.')
+        # Phone number validation
+        if self.phone_number:
+            self.phone_number = self.phone_number.strip()
 
-        # Validate date of birth
+            # Basic phone validation
+            if not self.phone_number.startswith('+'):
+                errors['phone_number'] = 'Phone number must start with + for international format.'
+            else:
+                # Remove + and check if rest contains only digits and spaces
+                cleaned = self.phone_number[1:].replace(' ', '').replace('-', '')
+                if not cleaned.isdigit():
+                    errors['phone_number'] = 'Phone number can only contain digits, spaces, and hyphens after +.'
+
+            # Phone uniqueness validation (only if valid format)
+            if 'phone_number' not in errors:
+                query = CustomUser.objects.filter(phone_number=self.phone_number)
+                if self.pk:  # For existing users
+                    query = query.exclude(pk=self.pk)
+
+                if query.exists():
+                    errors['phone_number'] = 'This phone number is already registered.'
+
+        # Username validation
+        if self.username:
+            self.username = self.username.strip()
+
+            if len(self.username) < 3:
+                errors['username'] = 'Username must be at least 3 characters long.'
+            elif len(self.username) > 30:
+                errors['username'] = 'Username cannot be longer than 30 characters.'
+            elif not re.match(r'^[a-zA-Z0-9._]+$', self.username):
+                errors['username'] = 'Username can only contain letters, numbers, underscores, and periods.'
+            elif self.username.startswith('.') or self.username.endswith('.'):
+                errors['username'] = 'Username cannot start or end with a period.'
+            elif '..' in self.username:
+                errors['username'] = 'Username cannot contain consecutive periods.'
+
+        # Date of birth validation
         if self.date_of_birth:
             if self.date_of_birth > timezone.now().date():
-                raise ValidationError({'date_of_birth': 'Date of birth cannot be in the future.'})
+                errors['date_of_birth'] = 'Date of birth cannot be in the future.'
+            else:
+                # Check if user is at least 13 years old
+                age = (timezone.now().date() - self.date_of_birth).days / 365.25
+                if age < 13:
+                    errors['date_of_birth'] = 'You must be at least 13 years old to register.'
+                elif age > 150:
+                    errors['date_of_birth'] = 'Please enter a valid date of birth.'
 
-            # Check if user is at least 13 years old
-            age = (timezone.now().date() - self.date_of_birth).days / 365.25
-            if age < 13:
-                raise ValidationError({'date_of_birth': 'You must be at least 13 years old to register.'})
-
-        # Validate username
-        if self.username:
-            if len(self.username) < 3:
-                raise ValidationError({'username': 'Username must be at least 3 characters long.'})
-            if len(self.username) > 30:
-                raise ValidationError({'username': 'Username cannot be longer than 30 characters.'})
-            if not self.username.replace('_', '').replace('.', '').isalnum():
-                raise ValidationError(
-                    {'username': 'Username can only contain letters, numbers, underscores, and periods.'})
-
-        # Validate email
-        if self.email:
-            if '@' not in self.email or '.' not in self.email.split('@')[-1]:
-                raise ValidationError({'email': 'Please enter a valid email address.'})
-
-        # Validate phone number
-        if self.phone_number:
-            # Basic phone validation - allow international numbers
-            if not self.phone_number.startswith('+'):
-                raise ValidationError({'phone_number': 'Phone number must start with + for international format.'})
-            if not self.phone_number[1:].replace(' ', '').replace('-', '').isdigit():
-                raise ValidationError(
-                    {'phone_number': 'Phone number can only contain digits, spaces, and hyphens after +.'})
-
-        # Validate bio length
+        # Bio validation
         if self.bio and len(self.bio) > 500:
-            raise ValidationError({'bio': 'Bio cannot be longer than 500 characters.'})
+            errors['bio'] = 'Bio cannot be longer than 500 characters.'
 
-        # Validate website URL
-        if self.website and not self.website.startswith(('http://', 'https://')):
-            raise ValidationError({'website': 'Website must start with http:// or https://'})
+        # Website validation
+        if self.website:
+            if not self.website.startswith(('http://', 'https://')):
+                errors['website'] = 'Website must start with http:// or https://'
+            elif len(self.website) > 200:
+                errors['website'] = 'Website URL is too long.'
 
-        super().clean()
+        # Quiet hours validation
+        if self.quiet_hours_enabled:
+            if not self.quiet_hours_start or not self.quiet_hours_end:
+                errors['quiet_hours_enabled'] = 'Both start and end times are required for quiet hours.'
+            elif self.quiet_hours_start >= self.quiet_hours_end:
+                errors['quiet_hours_start'] = 'Start time must be before end time.'
+                errors['quiet_hours_end'] = 'End time must be after start time.'
+
+        # Social media URL validation
+        social_fields = {
+            'facebook_url': 'Facebook',
+            'twitter_url': 'Twitter',
+            'instagram_url': 'Instagram',
+            'linkedin_url': 'LinkedIn'
+        }
+
+        for field, platform in social_fields.items():
+            url = getattr(self, field, '')
+            if url:
+                if not url.startswith(('http://', 'https://')):
+                    errors[field] = f'{platform} URL must start with http:// or https://'
+                elif len(url) > 200:
+                    errors[field] = f'{platform} URL is too long.'
+
+        # Gender validation
+        if self.gender and self.gender not in ['male', 'female', 'other', 'prefer_not_to_say']:
+            errors['gender'] = 'Please select a valid gender option.'
+
+        # Location validation
+        if self.location and len(self.location) > 100:
+            errors['location'] = 'Location cannot be longer than 100 characters.'
+
+        # First name and last name validation
+        if self.first_name and len(self.first_name) > 50:
+            errors['first_name'] = 'First name cannot be longer than 50 characters.'
+
+        if self.last_name and len(self.last_name) > 50:
+            errors['last_name'] = 'Last name cannot be longer than 50 characters.'
+
+        # Google ID validation (if provided)
+        if self.google_id and len(self.google_id) > 100:
+            errors['google_id'] = 'Google ID is too long.'
+
+        # Raise validation errors if any
+        if errors:
+            raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
         """Override save to handle validation and updates"""
         # Run full validation before saving
         self.full_clean()
 
+        # Set date_joined for new users
         if not self.pk:
             self.date_joined = timezone.now()
 
@@ -293,7 +335,7 @@ class CustomUser(AbstractUser):
 
         # Ensure email is lowercase for consistency
         if self.email:
-            self.email = self.email.lower()
+            self.email = self.email.lower().strip()
 
         # Remove whitespace from phone number
         if self.phone_number:
@@ -333,6 +375,24 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.title}"
+
+    def clean(self):
+        """Validate notification data"""
+        errors = {}
+
+        if not self.title:
+            errors['title'] = 'Title is required.'
+        elif len(self.title) > 200:
+            errors['title'] = 'Title cannot be longer than 200 characters.'
+
+        if not self.message:
+            errors['message'] = 'Message is required.'
+
+        if self.related_url and len(self.related_url) > 500:
+            errors['related_url'] = 'Related URL is too long.'
+
+        if errors:
+            raise ValidationError(errors)
 
     def mark_as_read(self):
         """Mark notification as read"""
@@ -382,6 +442,35 @@ class FriendRequest(models.Model):
     def __str__(self):
         return f"{self.from_user} -> {self.to_user}: {self.status}"
 
+    def clean(self):
+        """Validate friend request"""
+        errors = {}
+
+        # Cannot send friend request to self
+        if self.from_user == self.to_user:
+            errors['to_user'] = 'You cannot send a friend request to yourself.'
+
+        # Check if friendship already exists
+        if self.pk is None:  # Only check for new requests
+            if Friendship.are_friends(self.from_user, self.to_user):
+                errors['to_user'] = 'You are already friends with this user.'
+
+            # Check for existing pending request
+            existing_request = FriendRequest.objects.filter(
+                from_user=self.from_user,
+                to_user=self.to_user,
+                status='pending'
+            ).exists()
+            if existing_request:
+                errors['to_user'] = 'A pending friend request already exists.'
+
+        # Validate message length
+        if self.message and len(self.message) > 1000:
+            errors['message'] = 'Message cannot be longer than 1000 characters.'
+
+        if errors:
+            raise ValidationError(errors)
+
     def accept(self):
         """Accept friend request"""
         self.status = 'accepted'
@@ -426,6 +515,12 @@ class Friendship(models.Model):
 
     def __str__(self):
         return f"{self.user1} <-> {self.user2}"
+
+    def clean(self):
+        """Validate friendship"""
+        # Cannot be friends with self
+        if self.user1 == self.user2:
+            raise ValidationError('A user cannot be friends with themselves.')
 
     @classmethod
     def create_friendship(cls, user1, user2):
@@ -507,6 +602,14 @@ class OTPVerification(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.verification_type} - {self.otp_code}"
 
+    def clean(self):
+        """Validate OTP data"""
+        if not self.otp_code or len(self.otp_code) != 6:
+            raise ValidationError({'otp_code': 'OTP code must be exactly 6 digits.'})
+
+        if not self.otp_code.isdigit():
+            raise ValidationError({'otp_code': 'OTP code must contain only digits.'})
+
     @classmethod
     def create_otp(cls, user, verification_type, email=None, phone_number=None):
         """Create a new OTP"""
@@ -559,6 +662,14 @@ class PasswordResetOTP(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - Password Reset OTP"
+
+    def clean(self):
+        """Validate password reset OTP"""
+        if not self.otp_code or len(self.otp_code) != 6:
+            raise ValidationError({'otp_code': 'OTP code must be exactly 6 digits.'})
+
+        if not self.otp_code.isdigit():
+            raise ValidationError({'otp_code': 'OTP code must contain only digits.'})
 
     @classmethod
     def create_password_reset_otp(cls, user, email=None, phone_number=None):
@@ -622,6 +733,16 @@ class BlockedUser(models.Model):
 
     def __str__(self):
         return f"{self.blocker.username} blocked {self.blocked.username}"
+
+    def clean(self):
+        """Validate blocked user"""
+        # Cannot block self
+        if self.blocker == self.blocked:
+            raise ValidationError('You cannot block yourself.')
+
+        # Validate reason length
+        if self.reason and len(self.reason) > 500:
+            raise ValidationError({'reason': 'Reason cannot be longer than 500 characters.'})
 
     @classmethod
     def is_blocked(cls, user1, user2):

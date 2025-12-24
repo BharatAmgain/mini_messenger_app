@@ -1,4 +1,4 @@
-# messenger/settings.py - COMPLETE FIXED VERSION
+# messenger/settings.py - COMPLETE FIXED VERSION WITH VALIDATION
 import os
 import sys
 from pathlib import Path
