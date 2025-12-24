@@ -1,4 +1,4 @@
-# accounts/models.py - COMPLETE FIXED IMPORTS
+# accounts/models.py - COMPLETE FIXED VERSION WITH IMAGEFIELD AND POSTGRESQL UUID FIX
 import secrets
 import string
 from datetime import timedelta
@@ -9,16 +9,32 @@ from django.core.exceptions import ValidationError
 import uuid
 from django.db.models import Q
 
-# Signal imports (MUST be at the end after model definitions)
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 
-# Your models continue here...
+class UUIDCustomUserManager(models.Manager):
+    """Custom manager for UUID fields in PostgreSQL"""
+
+    def filter_excluding_self(self, email=None, phone_number=None, user_id=None):
+        """Filter excluding the current user, handling UUID properly"""
+        queryset = self.get_queryset()
+
+        if email:
+            queryset = queryset.filter(email=email)
+        if phone_number:
+            queryset = queryset.filter(phone_number=phone_number)
+
+        # Only exclude if user_id is provided
+        if user_id:
+            queryset = queryset.exclude(id=user_id)
+
+        return queryset
 
 
 class CustomUser(AbstractUser):
     """Extended User model with additional fields"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Add custom manager
+    objects = UUIDCustomUserManager()
 
     # Profile fields
     profile_picture = models.ImageField(
@@ -40,7 +56,7 @@ class CustomUser(AbstractUser):
     ], blank=True)
 
     # Social media links
-    facebook_url = models.URLField(max_length=255, blank=True, null=True)  # Check this line
+    facebook_url = models.URLField(max_length=255, blank=True, null=True)
     twitter_url = models.URLField(max_length=200, blank=True)
     instagram_url = models.URLField(max_length=200, blank=True)
     linkedin_url = models.URLField(max_length=200, blank=True)
@@ -188,16 +204,35 @@ class CustomUser(AbstractUser):
         return Friendship.get_friend_count(self)
 
     def clean(self):
-        """Custom validation"""
+        """Custom validation - FIXED for PostgreSQL UUID"""
+        # Get existing instance if it exists
+        existing_user = None
+        if self.pk:
+            try:
+                existing_user = CustomUser.objects.get(pk=self.pk)
+            except CustomUser.DoesNotExist:
+                pass
+
         # Check for duplicate email
-        if self.email and CustomUser.objects.filter(email=self.email).exclude(id=self.id).exists():
-            raise ValidationError({'email': 'This email is already registered.'})
+        if self.email:
+            # For new users, check if email exists
+            # For existing users, check if email exists for other users
+            if self.pk:  # Existing user
+                if CustomUser.objects.filter(email=self.email).exclude(pk=self.pk).exists():
+                    raise ValidationError({'email': 'This email is already registered.'})
+            else:  # New user
+                if CustomUser.objects.filter(email=self.email).exists():
+                    raise ValidationError({'email': 'This email is already registered.'})
 
         # Check for duplicate phone number
-        if self.phone_number and CustomUser.objects.filter(
-                phone_number=self.phone_number
-        ).exclude(id=self.id).exists():
-            raise ValidationError({'phone_number': 'This phone number is already registered.'})
+        if self.phone_number:
+            # Same logic for phone number
+            if self.pk:  # Existing user
+                if CustomUser.objects.filter(phone_number=self.phone_number).exclude(pk=self.pk).exists():
+                    raise ValidationError({'phone_number': 'This phone number is already registered.'})
+            else:  # New user
+                if CustomUser.objects.filter(phone_number=self.phone_number).exists():
+                    raise ValidationError({'phone_number': 'This phone number is already registered.'})
 
         # Validate quiet hours
         if self.quiet_hours_enabled:
@@ -544,7 +579,7 @@ class BlockedUser(models.Model):
         ).exists()
 
 
-# Signal handlers at the bottom to avoid circular imports
+# Signal handlers - MUST BE AT THE END OF THE FILE
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
