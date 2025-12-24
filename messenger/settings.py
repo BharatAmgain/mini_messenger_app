@@ -817,3 +817,45 @@ document.addEventListener('DOMContentLoaded', function() {
 
     except Exception as e:
         print(f"    Could not create static files: {e}")
+
+
+        def create_static_files():
+            """Create missing static files"""
+            try:
+                import os
+                from pathlib import Path
+
+                # Create csrf_fix.js
+                csrf_content = '''// csrf_fix.js - CSRF token handling
+        console.log('CSRF fix loaded');
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+        window.csrftoken = csrftoken;'''
+
+                csrf_path = BASE_DIR / 'static' / 'js' / 'csrf_fix.js'
+                csrf_path.parent.mkdir(parents=True, exist_ok=True)
+
+                if not csrf_path.exists():
+                    with open(csrf_path, 'w') as f:
+                        f.write(csrf_content)
+                    print(f"Created {csrf_path}")
+
+            except Exception as e:
+                print(f"Could not create static files: {e}")
+
+
+        # Call the function
+        create_static_files()
