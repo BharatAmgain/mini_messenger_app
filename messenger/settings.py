@@ -22,17 +22,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-development-key-chang
 # Debug Mode
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-# Allowed Hosts - Load from environment
-ALLOWED_HOSTS = config('ALLOWED_HOSTS',
-                       default='localhost,127.0.0.1,connect-io-0cql.onrender.com',
-                       cast=Csv()
-                       )
-
-# CSRF Trusted Origins - Load from environment
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS',
-                              default='https://connect-io-0cql.onrender.com,http://localhost:8000,http://127.0.0.1:8000',
-                              cast=Csv()
-                              )
+ALLOWED_HOSTS = ['*']
 
 # Installed Apps
 INSTALLED_APPS = [
