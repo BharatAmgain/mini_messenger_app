@@ -1,4 +1,4 @@
-# messenger/settings.py - COMPLETE FIXED VERSION
+# messenger/settings.py - COMPLETE FIXED VERSION WITH RENDER DOMAIN
 import os
 import sys
 from pathlib import Path
@@ -22,7 +22,11 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-development-key-chang
 # Debug Mode
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = ['*']
+# ALLOWED HOSTS - ADDED YOUR RENDER DOMAIN
+ALLOWED_HOSTS = config('ALLOWED_HOSTS',
+                       default='localhost,127.0.0.1,.onrender.com,mini-messenger-app.onrender.com',
+                       cast=Csv()
+                       )
 
 # Installed Apps
 INSTALLED_APPS = [
@@ -108,10 +112,12 @@ if DATABASE_URL.startswith('sqlite:///'):
             'NAME': BASE_DIR / 'db.sqlite3',
             'OPTIONS': {
                 'timeout': 20,
+                'init_command': 'PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA cache_size=10000; PRAGMA foreign_keys=ON;',
             }
         }
     }
     print("==> Using SQLite database for local development")
+    print("==> SQLite configured with WAL mode to prevent database locking")
 else:
     # PostgreSQL configuration (for Render)
     DATABASES = {
@@ -158,10 +164,7 @@ USE_TZ = True
 # ========== STATIC FILES FIXED SECTION ==========
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-
-# WhiteNoise for static files
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # Media files
@@ -240,13 +243,13 @@ else:
 
 # Site Information
 SITE_NAME = config('SITE_NAME', default='Connect.io')
-SITE_DOMAIN = config('SITE_DOMAIN', default='connect-io-0cql.onrender.com')
+SITE_DOMAIN = config('SITE_DOMAIN', default='mini-messenger-app.onrender.com')
 ADMIN_EMAIL = config('ADMIN_EMAIL', default='admin@connect.io')
 SUPPORT_EMAIL = config('SUPPORT_EMAIL', default='support@connect.io')
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS',
-                              default='http://localhost:3000,http://localhost:8000,http://127.0.0.1:3000,http://127.0.0.1:8000',
+                              default='http://localhost:3000,http://localhost:8000,http://127.0.0.1:3000,http://127.0.0.1:8000,https://mini-messenger-app.onrender.com',
                               cast=Csv()
                               )
 CORS_ALLOW_CREDENTIALS = True
@@ -257,17 +260,17 @@ CORS_ALLOW_HEADERS = config('CORS_ALLOW_HEADERS',
                             default='accept,accept-encoding,authorization,content-type,dnt,origin,user-agent,x-csrftoken,x-requested-with',
                             cast=Csv())
 
-# CSRF Configuration
+# CSRF Configuration - ADDED YOUR RENDER DOMAIN
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS',
+                              default='https://mini-messenger-app.onrender.com,https://*.onrender.com,http://localhost:8000,http://127.0.0.1:8000',
+                              cast=Csv()
+                              )
 CSRF_COOKIE_HTTPONLY = config('CSRF_COOKIE_HTTPONLY', default=False, cast=bool)
 CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='Lax')
 CSRF_USE_SESSIONS = False
 CSRF_FAILURE_VIEW = 'messenger.views.csrf_failure'
 CSRF_COOKIE_NAME = 'csrftoken'
 CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS',
-                              default='https://connect-io-0cql.onrender.com,http://localhost:8000,http://127.0.0.1:8000',
-                              cast=Csv()
-                              )
 
 # Social Auth Configuration
 AUTHENTICATION_BACKENDS = (
@@ -282,8 +285,8 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config('GOOGLE_OAUTH2_SECRET', default='')
 
 # CRITICAL FIX: FORCE CORRECT REDIRECT URI
 if 'RENDER' in os.environ or not DEBUG:
-    # Production - ALWAYS use https://connect-io-0cql.onrender.com/complete/google-oauth2/
-    SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI = 'https://connect-io-0cql.onrender.com/complete/google-oauth2/'
+    # Production - ALWAYS use https://mini-messenger-app.onrender.com/complete/google-oauth2/
+    SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI = 'https://mini-messenger-app.onrender.com/complete/google-oauth2/'
     print(f"==> GOOGLE OAUTH: Using HARDCODED production redirect URI: {SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}")
 else:
     # Development
@@ -388,13 +391,6 @@ SESSION_COOKIE_SAMESITE = config('SESSION_COOKIE_SAMESITE', default='Lax')
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_EXPIRE_AT_BROWSER_CLOSE = config('SESSION_EXPIRE_AT_BROWSER_CLOSE', default=False, cast=bool)
 SESSION_SAVE_EVERY_REQUEST = True
-
-# CSRF Configuration
-CSRF_COOKIE_AGE = config('CSRF_COOKIE_AGE', default=31449600, cast=int)
-CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
-CSRF_COOKIE_HTTPONLY = config('CSRF_COOKIE_HTTPONLY', default=False, cast=bool)
-CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='Lax')
-CSRF_FAILURE_VIEW = 'messenger.views.csrf_failure'
 
 # Cache Configuration
 CACHE_BACKEND = config('CACHE_BACKEND', default='django.core.cache.backends.locmem.LocMemCache')
@@ -585,13 +581,29 @@ if 'RENDER' in os.environ:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
     # Auto-add Render URL to allowed hosts
-    render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+    render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'mini-messenger-app.onrender.com')
     if render_host:
-        ALLOWED_HOSTS.append(render_host)
-        CSRF_TRUSTED_ORIGINS.append(f'https://{render_host}')
+        # Ensure mini-messenger-app.onrender.com is in ALLOWED_HOSTS
+        if render_host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(render_host)
+        if 'mini-messenger-app.onrender.com' not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append('mini-messenger-app.onrender.com')
         print(f"==> Added {render_host} to allowed hosts")
+        print(f"==> Added mini-messenger-app.onrender.com to allowed hosts")
+
+    # Update CSRF trusted origins
+    csrf_origins = list(CSRF_TRUSTED_ORIGINS)
+    if 'https://mini-messenger-app.onrender.com' not in csrf_origins:
+        csrf_origins.append('https://mini-messenger-app.onrender.com')
+    if 'https://*.onrender.com' not in csrf_origins:
+        csrf_origins.append('https://*.onrender.com')
+    CSRF_TRUSTED_ORIGINS = csrf_origins
+    print(f"==> CSRF trusted origins: {CSRF_TRUSTED_ORIGINS}")
 
     # Use environment DATABASE_URL if available
     if os.environ.get('DATABASE_URL'):
@@ -628,7 +640,7 @@ print(f"Client ID: {'[SET]' if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY else '[MISSING]'}")
 print(f"Client Secret: {'[SET]' if SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET else '[MISSING]'}")
 print(f"Redirect URI: {SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI}")
 print(f"Environment: {'Render (Production)' if 'RENDER' in os.environ else 'Local (Development)'}")
-print(f"Expected Google Console URI: https://connect-io-0cql.onrender.com/complete/google-oauth2/")
+print(f"Production Redirect URI: https://mini-messenger-app.onrender.com/complete/google-oauth2/")
 print("=" * 80)
 
 # ========== SOCIAL AUTH DEBUGGING ==========
@@ -659,7 +671,6 @@ print("=" * 60)
 print("\n==> Creating necessary directories...")
 for directory in [STATIC_ROOT, MEDIA_ROOT, BASE_DIR / 'logs', BASE_DIR / 'static' / 'images',
                   BASE_DIR / 'static' / 'js']:
-
     Path(directory).mkdir(exist_ok=True, parents=True)
     print(f"    Created directory: {directory}")
 
@@ -682,7 +693,7 @@ if __name__ == 'messenger.settings':
         SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
         # Auto-detect Render hostname
-        RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+        RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'mini-messenger-app.onrender.com')
         if RENDER_EXTERNAL_HOSTNAME:
             # Remove duplicates from ALLOWED_HOSTS
             ALLOWED_HOSTS = list(set(ALLOWED_HOSTS))
@@ -690,12 +701,21 @@ if __name__ == 'messenger.settings':
                 ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
                 print(f"==> Added {RENDER_EXTERNAL_HOSTNAME} to allowed hosts")
 
+            # Ensure mini-messenger-app.onrender.com is in ALLOWED_HOSTS
+            if 'mini-messenger-app.onrender.com' not in ALLOWED_HOSTS:
+                ALLOWED_HOSTS.append('mini-messenger-app.onrender.com')
+                print(f"==> Added mini-messenger-app.onrender.com to allowed hosts")
+
             # Remove duplicates from CSRF_TRUSTED_ORIGINS
             CSRF_TRUSTED_ORIGINS = list(set(CSRF_TRUSTED_ORIGINS))
             new_origin = f'https://{RENDER_EXTERNAL_HOSTNAME}'
             if new_origin not in CSRF_TRUSTED_ORIGINS:
                 CSRF_TRUSTED_ORIGINS.append(new_origin)
                 print(f"==> Added {new_origin} to CSRF trusted origins")
+
+            if 'https://mini-messenger-app.onrender.com' not in CSRF_TRUSTED_ORIGINS:
+                CSRF_TRUSTED_ORIGINS.append('https://mini-messenger-app.onrender.com')
+                print(f"==> Added https://mini-messenger-app.onrender.com to CSRF trusted origins")
 
         # Static files on Render
         STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
@@ -808,52 +828,43 @@ document.addEventListener('DOMContentLoaded', function() {
         print(f"    Could not create static files: {e}")
 
 
-        def create_static_files():
-            """Create missing static files"""
-            try:
-                import os
-                from pathlib import Path
+def create_static_files():
+    """Create missing static files"""
+    try:
+        import os
+        from pathlib import Path
 
-                # Create csrf_fix.js
-                csrf_content = '''// csrf_fix.js - CSRF token handling
-        console.log('CSRF fix loaded');
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
+        # Create csrf_fix.js
+        csrf_content = '''// csrf_fix.js - CSRF token handling
+console.log('CSRF fix loaded');
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
             }
-            return cookieValue;
         }
-        const csrftoken = getCookie('csrftoken');
-        window.csrftoken = csrftoken;'''
+    }
+    return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+window.csrftoken = csrftoken;'''
 
-                csrf_path = BASE_DIR / 'static' / 'js' / 'csrf_fix.js'
-                csrf_path.parent.mkdir(parents=True, exist_ok=True)
+        csrf_path = BASE_DIR / 'static' / 'js' / 'csrf_fix.js'
+        csrf_path.parent.mkdir(parents=True, exist_ok=True)
 
-                if not csrf_path.exists():
-                    with open(csrf_path, 'w') as f:
-                        f.write(csrf_content)
-                    print(f"Created {csrf_path}")
+        if not csrf_path.exists():
+            with open(csrf_path, 'w') as f:
+                f.write(csrf_content)
+            print(f"Created {csrf_path}")
 
-            except Exception as e:
-                print(f"Could not create static files: {e}")
+    except Exception as e:
+        print(f"Could not create static files: {e}")
 
 
-        # Call the function
-        create_static_files()
-
-        # Add this near your DATABASES configuration
-        if 'sqlite' in DATABASES['default']['ENGINE']:
-            # Add timeout and other settings to prevent database locking
-            DATABASES['default']['OPTIONS'] = {
-                'timeout': 30,  # Increase timeout to 30 seconds
-                'init_command': 'PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA cache_size=10000; PRAGMA foreign_keys=ON;',
-            }
-            print("==> SQLite configured with WAL mode to prevent database locking")
+# Call the function
+create_static_files()
