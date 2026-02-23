@@ -1,78 +1,77 @@
-# chat/urls.py - COMPLETE FIXED VERSION (NO NAMESPACE)
-from django.urls import path
+# chat/urls.py
+from django.urls import path, re_path
 from . import views
 
-# DO NOT USE: app_name = 'chat'  # REMOVE THIS LINE IF IT EXISTS
+print("\n" + "=" * 60)
+print("CHAT URLS.PY LOADED")
+print("=" * 60)
 
 urlpatterns = [
-    # Chat home and main pages
+    # Basic pages
     path('', views.chat_home, name='chat_home'),
-    path('home/', views.chat_home, name='chat_home_alt'),  # Alternative URL
-
-    # Conversations
-    path('conversation/<uuid:conversation_id>/', views.conversation, name='conversation'),
-    path('start-chat/', views.start_chat, name='start_chat'),
-    path('quick-chat/<int:user_id>/', views.quick_chat, name='quick_chat'),
-
-    # Groups
+    path('start/', views.start_chat, name='start_chat'),
     path('create-group/', views.create_group, name='create_group'),
-    path('group/', views.group_chat, name='group_chat'),  # For creating new group
-    path('group/<uuid:conversation_id>/', views.group_chat, name='group_chat_view'),  # View existing group
-    path('group/<uuid:conversation_id>/settings/', views.group_settings, name='group_settings'),
-    path('group/<uuid:conversation_id>/leave/', views.leave_group, name='leave_group'),
-    path('group/<uuid:conversation_id>/invite/', views.invite_to_group, name='invite_to_group'),
-
-    # Messages
-    path('send-message/<uuid:conversation_id>/', views.send_message_ajax, name='send_message_ajax'),
-    path('get-messages/<uuid:conversation_id>/', views.get_messages_ajax, name='get_messages_ajax'),
-    path('get-new-messages/<uuid:conversation_id>/', views.get_new_messages, name='get_new_messages'),
-    path('edit-message/<uuid:message_id>/', views.edit_message, name='edit_message'),
-    path('unsend-message/<uuid:message_id>/', views.unsend_message, name='unsend_message'),
-    path('react-to-message/<uuid:message_id>/', views.react_to_message, name='react_to_message'),
-    path('pin-message/<uuid:message_id>/', views.pin_message, name='pin_message'),
-    path('star-message/<uuid:message_id>/', views.star_message, name='star_message'),
-
-    # Message management
-    path('search/', views.message_search, name='message_search'),
-    path('search/<uuid:conversation_id>/', views.message_search, name='conversation_message_search'),
-    path('bulk-delete/<uuid:conversation_id>/', views.bulk_delete_messages, name='bulk_delete_messages'),
-
-    # Typing indicators
-    path('typing/<uuid:conversation_id>/', views.typing_indicator, name='typing_indicator'),
-    path('typing-status/<uuid:conversation_id>/', views.get_typing_status, name='get_typing_status'),
-    path('typing-ws/<uuid:conversation_id>/', views.typing_status_ws, name='typing_status_ws'),
-
-    # Online status - FIXED (no login_required decorator in view)
-    path('update-online-status/', views.update_online_status, name='update_online_status'),
-
-    # Discover and search users
     path('discover/', views.discover_users, name='discover_users'),
-    path('search-users/', views.search_users, name='search_users'),
+    path('blocked/', views.blocked_users, name='blocked_users'),
+    path('stats/', views.message_stats, name='message_stats'),
+    path('archived/', views.archived_conversations, name='archived_conversations'),
+    path('debug-conversations/', views.debug_conversations, name='debug_conversations'),
 
-    # Block users
-    path('block-user/<int:user_id>/', views.block_user, name='block_user'),
-    path('unblock-user/<int:user_id>/', views.unblock_user, name='unblock_user'),
-    path('blocked-users/', views.blocked_users, name='blocked_users'),
+    # Search
+    path('search/', views.message_search, name='message_search'),
+    path('search/users/', views.search_users, name='chat_search_users'),
 
-    # Video/Audio chat
-    path('video-chat/<uuid:conversation_id>/', views.video_chat, name='video_chat'),
-    path('audio-chat/<uuid:conversation_id>/', views.audio_chat, name='audio_chat'),
+    # User actions
+    re_path(r'^block/(?P<user_id>[^/]+)/$', views.block_user, name='block_user'),
+    re_path(r'^unblock/(?P<user_id>[^/]+)/$', views.unblock_user, name='unblock_user'),
+    re_path(r'^quick-chat/(?P<user_id>[^/]+)/$', views.quick_chat, name='quick_chat'),
 
-    # Conversation management
-    path('delete-conversation/<uuid:conversation_id>/', views.delete_conversation, name='delete_conversation'),
-    path('restore-conversation/<uuid:conversation_id>/', views.restore_conversation, name='restore_conversation'),
-    path('archived-conversations/', views.archived_conversations, name='archived_conversations'),
-    path('clear-conversation/<uuid:conversation_id>/', views.clear_conversation, name='clear_conversation'),
-    path('export-conversation/<uuid:conversation_id>/', views.export_conversation, name='export_conversation'),
-    path('conversation-info/<uuid:conversation_id>/', views.conversation_info, name='conversation_info'),
+    # Emoji
+    path('emojis/search/', views.search_emojis, name='search_emojis'),
+    path('emojis/categories/', views.get_emoji_categories, name='get_emoji_categories'),
 
     # Notifications
-    path('notifications/', views.get_notifications, name='get_notifications_chat'),
+    path('notifications/', views.get_notifications, name='get_notifications'),
 
-    # Emojis
-    path('search-emojis/', views.search_emojis, name='search_emojis'),
-    path('emoji-categories/', views.get_emoji_categories, name='get_emoji_categories'),
+    # Online status
+    path('update-online-status/', views.update_online_status, name='update_online_status'),
 
-    # Statistics
-    path('message-stats/', views.message_stats, name='message_stats'),
+    # Group chat
+    path('group/<uuid:conversation_id>/', views.group_chat, name='group_chat'),
+
+    # Message actions
+    path('message/<uuid:message_id>/edit/', views.edit_message, name='edit_message'),
+    path('message/<uuid:message_id>/unsend/', views.unsend_message, name='unsend_message'),
+    path('message/<uuid:message_id>/react/', views.react_to_message, name='react_to_message'),
+    path('message/<uuid:message_id>/pin/', views.pin_message, name='pin_message'),
+    path('message/<uuid:message_id>/star/', views.star_message, name='star_message'),
+
+    # ===== CONVERSATION-SPECIFIC URLS - ORDER IS CRITICAL =====
+    # These must come BEFORE the catch-all conversation URL
+    path('<uuid:conversation_id>/settings/', views.group_settings, name='group_settings'),
+    path('<uuid:conversation_id>/leave/', views.leave_group, name='leave_group'),
+    path('<uuid:conversation_id>/invite/', views.invite_to_group, name='invite_to_group'),
+    path('<uuid:conversation_id>/typing/', views.typing_indicator, name='typing_indicator'),
+    path('<uuid:conversation_id>/typing-status/', views.get_typing_status, name='get_typing_status'),
+    path('<uuid:conversation_id>/new-messages/', views.get_new_messages, name='get_new_messages'),
+    path('<uuid:conversation_id>/send-message/', views.send_message_ajax, name='send_message_ajax'),
+    path('<uuid:conversation_id>/messages/', views.get_messages_ajax, name='get_messages_ajax'),
+    path('<uuid:conversation_id>/delete/', views.delete_conversation, name='delete_conversation'),
+    path('<uuid:conversation_id>/clear/', views.clear_conversation, name='clear_conversation'),
+    path('<uuid:conversation_id>/export/', views.export_conversation, name='export_conversation'),
+    path('<uuid:conversation_id>/info/', views.conversation_info, name='conversation_info'),
+    path('<uuid:conversation_id>/video/', views.video_chat, name='video_chat'),
+    path('<uuid:conversation_id>/audio/', views.audio_chat, name='audio_chat'),
+    path('<uuid:conversation_id>/restore/', views.restore_conversation, name='restore_conversation'),
+    path('<uuid:conversation_id>/typing-ws/', views.typing_status_ws, name='typing_status_ws'),
+    path('<uuid:conversation_id>/bulk-delete/', views.bulk_delete_messages, name='bulk_delete_messages'),
+
+    # ===== THIS MUST BE LAST =====
+    path('<uuid:conversation_id>/', views.conversation, name='conversation'),
 ]
+
+# Print all URLs for verification
+print("\n✅ CHAT URLS REGISTERED:")
+for url in urlpatterns:
+    print(f"  - {url.pattern}")
+print("=" * 60 + "\n")

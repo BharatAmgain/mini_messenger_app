@@ -7,7 +7,7 @@
     <div class="bg-white rounded-lg shadow">
         <div class="px-6 py-4 border-b border-gray-200">
             <h1 class="text-2xl font-bold text-gray-800">Blocked Users</h1>
-            <p class="text-gray-600 mt-1">{{ blocked_users|length }} users blocked</p>
+            <p class="text-gray-600 mt-1">{{ blocked_users|length }} user{% if blocked_users|length != 1 %}s{% endif %} blocked</p>
 
             <!-- Navigation Tabs -->
             <div class="flex space-x-4 mt-4">
@@ -26,20 +26,20 @@
             {% if blocked_users %}
             <div class="space-y-4">
                 {% for blocked in blocked_users %}
-                <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:shadow-md transition duration-200">
+                <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:shadow-md transition duration-200" id="blocked-{{ blocked.blocked.id }}">
                     <div class="flex items-center space-x-4">
-                        {% if blocked.blocked_user.profile_picture %}
+                        {% if blocked.blocked.profile_picture %}
                         <img class="h-12 w-12 rounded-full object-cover border-2 border-gray-300"
-                             src="{{ blocked.blocked_user.profile_picture.url }}"
-                             alt="{{ blocked.blocked_user.username }}">
+                             src="{{ blocked.blocked.profile_picture.url }}"
+                             alt="{{ blocked.blocked.username }}">
                         {% else %}
                         <div class="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center border-2 border-gray-300">
-                            <span class="text-white font-semibold text-sm">{{ blocked.blocked_user.username|first|upper }}</span>
+                            <span class="text-white font-semibold text-sm">{{ blocked.blocked.username|first|upper }}</span>
                         </div>
                         {% endif %}
                         <div>
-                            <h3 class="font-semibold text-gray-800">{{ blocked.blocked_user.username }}</h3>
-                            <p class="text-sm text-gray-600">{{ blocked.blocked_user.email }}</p>
+                            <h3 class="font-semibold text-gray-800">{{ blocked.blocked.username }}</h3>
+                            <p class="text-sm text-gray-600">{{ blocked.blocked.email }}</p>
                             {% if blocked.reason %}
                             <p class="text-xs text-gray-500 mt-1">Reason: {{ blocked.reason }}</p>
                             {% endif %}
@@ -47,11 +47,11 @@
                         </div>
                     </div>
 
-                    <form method="post" action="{% url 'unblock_user' blocked.blocked_user.id %}" class="unblock-form">
+                    <form method="post" action="{% url 'unblock_user' blocked.blocked.id %}" class="unblock-form">
                         {% csrf_token %}
                         <button type="submit"
                                 class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200 flex items-center space-x-2"
-                                onclick="return confirm('Are you sure you want to unblock {{ blocked.blocked_user.username }}?')">
+                                onclick="return confirm('Are you sure you want to unblock {{ blocked.blocked.username }}?')">
                             <i class="fas fa-unlock"></i>
                             <span>Unblock</span>
                         </button>
@@ -78,73 +78,6 @@
 
 {% block scripts %}
 <script>
-    // Handle unblock form submissions with AJAX
-    document.addEventListener('DOMContentLoaded', function() {
-        const unblockForms = document.querySelectorAll('.unblock-form');
-
-        unblockForms.forEach(form => {
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-
-                const formData = new FormData(this);
-                const url = this.action;
-                const button = this.querySelector('button');
-                const originalText = button.innerHTML;
-
-                // Show loading state
-                button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Unblocking...';
-                button.disabled = true;
-
-                fetch(url, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Remove the blocked user from the DOM
-                        const userCard = this.closest('.flex.items-center');
-                        userCard.style.opacity = '0';
-                        userCard.style.transition = 'opacity 0.3s ease';
-
-                        setTimeout(() => {
-                            userCard.remove();
-
-                            // Show success message
-                            showToast(data.message || 'User unblocked successfully', 'success');
-
-                            // Update blocked users count
-                            const blockedCount = document.querySelector('.text-gray-600.mt-1');
-                            if (blockedCount) {
-                                const currentCount = parseInt(blockedCount.textContent.match(/\d+/)[0]);
-                                blockedCount.textContent = blockedCount.textContent.replace(currentCount, currentCount - 1);
-                            }
-
-                            // If no more blocked users, show empty state
-                            if (document.querySelectorAll('.unblock-form').length === 0) {
-                                location.reload(); // Reload to show empty state
-                            }
-                        }, 300);
-                    } else {
-                        showToast(data.error || 'Error unblocking user', 'error');
-                        button.innerHTML = originalText;
-                        button.disabled = false;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showToast('Error unblocking user', 'error');
-                    button.innerHTML = originalText;
-                    button.disabled = false;
-                });
-            });
-        });
-    });
-
     // Helper function to get CSRF token
     function getCookie(name) {
         let cookieValue = null;
@@ -185,5 +118,82 @@
             }, 300);
         }, 3000);
     }
+
+    // Handle unblock form submissions with AJAX
+    document.addEventListener('DOMContentLoaded', function() {
+        const unblockForms = document.querySelectorAll('.unblock-form');
+
+        unblockForms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const formData = new FormData(this);
+                const url = this.action;
+                const button = this.querySelector('button');
+                const originalText = button.innerHTML;
+
+                // Show loading state
+                button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Unblocking...';
+                button.disabled = true;
+
+                fetch(url, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Get the user card
+                        const userCard = this.closest('[id^="blocked-"]');
+
+                        // Fade out
+                        userCard.style.opacity = '0';
+                        userCard.style.transition = 'opacity 0.3s ease';
+
+                        setTimeout(() => {
+                            // Remove the card
+                            userCard.remove();
+
+                            // Show success message
+                            showToast(data.message || 'User unblocked successfully', 'success');
+
+                            // Update blocked users count
+                            const blockedCount = document.querySelector('.text-gray-600.mt-1');
+                            if (blockedCount) {
+                                const match = blockedCount.textContent.match(/\d+/);
+                                if (match) {
+                                    const currentCount = parseInt(match[0]);
+                                    const newCount = currentCount - 1;
+                                    blockedCount.textContent = blockedCount.textContent.replace(currentCount, newCount);
+                                }
+                            }
+
+                            // If no more blocked users, reload to show empty state
+                            const remainingCards = document.querySelectorAll('[id^="blocked-"]').length;
+                            if (remainingCards === 0) {
+                                setTimeout(() => {
+                                    location.reload();
+                                }, 500);
+                            }
+                        }, 300);
+                    } else {
+                        showToast(data.error || 'Error unblocking user', 'error');
+                        button.innerHTML = originalText;
+                        button.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error unblocking user', 'error');
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                });
+            });
+        });
+    });
 </script>
 {% endblock %}

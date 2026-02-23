@@ -83,7 +83,7 @@
                                 <i class="fas fa-chevron-right text-gray-400"></i>
                             </a>
 
-                            <!-- Password Change Section - UPDATED -->
+                            <!-- Password Change Section -->
                             <div class="bg-white shadow rounded-lg p-4">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center space-x-3">
@@ -139,7 +139,7 @@
                         </div>
                     </div>
 
-                    <!-- Notification Settings -->
+                    <!-- Notification Settings - FIXED: Changed URL name to match urls.py -->
                     <div class="border border-gray-200 rounded-lg p-6">
                         <h2 class="text-lg font-semibold text-gray-900 mb-4">Notification Preferences</h2>
                         <form method="POST" action="{% url 'update_notification_settings' %}">
@@ -184,9 +184,33 @@
                                         <p class="text-sm text-gray-600">Receive updates about new features</p>
                                     </div>
                                     <label class="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" name="marketing_emails" class="sr-only peer" {% if user.marketing_emails %}checked{% endif %}>
+                                        <input type="checkbox" name="marketing_notifications" class="sr-only peer" {% if user.marketing_notifications %}checked{% endif %}>
                                         <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                     </label>
+                                </div>
+
+                                <!-- Quiet Hours Section -->
+                                <div class="p-4 border border-gray-200 rounded-lg">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div>
+                                            <p class="font-medium text-gray-900">Quiet Hours</p>
+                                            <p class="text-sm text-gray-600">Mute notifications during specific hours</p>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" name="quiet_hours_enabled" class="sr-only peer" {% if user.quiet_hours_enabled %}checked{% endif %}>
+                                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        </label>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4 quiet-hours-inputs" style="{% if not user.quiet_hours_enabled %}display: none;{% endif %}">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                                            <input type="time" name="quiet_hours_start" value="{{ user.quiet_hours_start|time:'H:i' }}" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                                            <input type="time" name="quiet_hours_end" value="{{ user.quiet_hours_end|time:'H:i' }}" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -324,17 +348,17 @@
     </div>
 </div>
 
-<!-- Password Change Modal (OLD - Keep for reference but not used with OTP) -->
+<!-- Password Change Modal -->
 <div id="passwordModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
     <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
         <div class="mt-3">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-medium text-gray-900">Change Password (Legacy)</h3>
+                <h3 class="text-lg font-medium text-gray-900">Change Password</h3>
                 <button onclick="closePasswordModal()" class="text-gray-400 hover:text-gray-600">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <p class="text-sm text-gray-500 mb-4">Note: For enhanced security, please use the OTP-based password change option above.</p>
+            <p class="text-sm text-gray-500 mb-4">For enhanced security, please use the OTP-based password change option above.</p>
             <div class="flex justify-end">
                 <a href="{% url 'password_change_with_otp' %}" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200">
                     Use OTP Password Change
@@ -556,8 +580,13 @@ function closeDeactivateModal() {
 }
 
 // Enable deactivate button when confirmation is checked
-document.getElementById('deactivateConfirm').addEventListener('change', function() {
-    document.getElementById('deactivateButton').disabled = !this.checked;
+document.addEventListener('DOMContentLoaded', function() {
+    const deactivateConfirm = document.getElementById('deactivateConfirm');
+    if (deactivateConfirm) {
+        deactivateConfirm.addEventListener('change', function() {
+            document.getElementById('deactivateButton').disabled = !this.checked;
+        });
+    }
 });
 
 // Account Deletion Functions
@@ -573,18 +602,22 @@ function closeDeleteModal() {
 }
 
 // Enable delete button when both confirmation text and checkbox are correct
-const deleteConfirmText = document.getElementById('deleteConfirmText');
-const deleteConfirm = document.getElementById('deleteConfirm');
-const deleteButton = document.getElementById('deleteButton');
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteConfirmText = document.getElementById('deleteConfirmText');
+    const deleteConfirm = document.getElementById('deleteConfirm');
+    const deleteButton = document.getElementById('deleteButton');
 
-function updateDeleteButtonState() {
-    const textMatches = deleteConfirmText.value === 'DELETE';
-    const checkboxChecked = deleteConfirm.checked;
-    deleteButton.disabled = !(textMatches && checkboxChecked);
-}
+    if (deleteConfirmText && deleteConfirm && deleteButton) {
+        function updateDeleteButtonState() {
+            const textMatches = deleteConfirmText.value === 'DELETE';
+            const checkboxChecked = deleteConfirm.checked;
+            deleteButton.disabled = !(textMatches && checkboxChecked);
+        }
 
-deleteConfirmText.addEventListener('input', updateDeleteButtonState);
-deleteConfirm.addEventListener('change', updateDeleteButtonState);
+        deleteConfirmText.addEventListener('input', updateDeleteButtonState);
+        deleteConfirm.addEventListener('change', updateDeleteButtonState);
+    }
+});
 
 // Clear Chat History Functions
 function openClearChatModal() {
@@ -598,8 +631,25 @@ function closeClearChatModal() {
 }
 
 // Enable clear chat button when confirmation is checked
-document.getElementById('clearChatConfirm').addEventListener('change', function() {
-    document.getElementById('clearChatButton').disabled = !this.checked;
+document.addEventListener('DOMContentLoaded', function() {
+    const clearChatConfirm = document.getElementById('clearChatConfirm');
+    if (clearChatConfirm) {
+        clearChatConfirm.addEventListener('change', function() {
+            document.getElementById('clearChatButton').disabled = !this.checked;
+        });
+    }
+});
+
+// Show/hide quiet hours inputs based on checkbox
+document.addEventListener('DOMContentLoaded', function() {
+    const quietHoursCheckbox = document.querySelector('input[name="quiet_hours_enabled"]');
+    const quietHoursInputs = document.querySelector('.quiet-hours-inputs');
+
+    if (quietHoursCheckbox && quietHoursInputs) {
+        quietHoursCheckbox.addEventListener('change', function() {
+            quietHoursInputs.style.display = this.checked ? 'grid' : 'none';
+        });
+    }
 });
 
 // Close modals when clicking outside

@@ -1,4 +1,4 @@
-# accounts/views.py - COMPLETE FIXED IMPORTS
+# accounts/views.py - COMPLETE FIXED VERSION
 import json
 import traceback
 import base64
@@ -160,6 +160,14 @@ def register(request):
             try:
                 user = form.save()
 
+                # Ensure is_verified is set correctly (should be False for new users)
+                user.is_verified = False
+                user.save(update_fields=['is_verified'])
+
+                # Create UserStatus for the new user
+                from chat.models import UserStatus
+                UserStatus.objects.get_or_create(user=user)
+
                 # Import ModelBackend correctly
                 from django.contrib.auth.backends import ModelBackend
 
@@ -196,6 +204,11 @@ def update_profile(request):
         else:
             data = request.POST.dict()
 
+        # CRITICAL FIX: Remove is_verified from data if it exists
+        # This field should NEVER be updated by users
+        if 'is_verified' in data:
+            del data['is_verified']
+
         # Handle profile picture separately if it's base64 encoded
         if 'profile_picture_base64' in data and data['profile_picture_base64']:
             try:
@@ -218,20 +231,16 @@ def update_profile(request):
                 }, status=400)
 
         # Update other fields - EXCLUDE is_verified from user input
-        # Only allow updating specific fields
         allowed_fields = [
             'username', 'email', 'first_name', 'last_name',
             'phone_number', 'bio', 'date_of_birth',
-            'facebook_url', 'twitter_url', 'instagram_url'
+            'facebook_url', 'twitter_url', 'instagram_url',
+            'location', 'website', 'gender'
         ]
 
         for field in allowed_fields:
             if field in data and data[field] is not None:
-                # Special handling for boolean fields
-                if field in ['email_notifications', 'push_notifications']:
-                    setattr(user, field, bool(data[field]))
-                else:
-                    setattr(user, field, data[field])
+                setattr(user, field, data[field])
 
         # Validate and save
         user.full_clean()
@@ -248,11 +257,25 @@ def update_profile(request):
                 'first_name': user.first_name,
                 'last_name': user.last_name,
                 'profile_picture_url': user.get_profile_picture_url(),
-                'is_verified': user.is_verified,
+                'is_verified': user.is_verified,  # This is a boolean field
                 'phone_number': user.phone_number,
                 'bio': user.bio
             }
         })
+
+    except ValidationError as e:
+        error_dict = {}
+        if hasattr(e, 'error_dict'):
+            error_dict = e.error_dict
+        elif hasattr(e, 'messages'):
+            error_dict = {'error': e.messages}
+        else:
+            error_dict = {'error': str(e)}
+
+        return JsonResponse({
+            'success': False,
+            'error': error_dict
+        }, status=400)
 
     except Exception as e:
         return JsonResponse({
@@ -311,6 +334,12 @@ def profile_edit(request):
 
     if request.method == 'POST':
         try:
+            # CRITICAL FIX: Remove is_verified from POST data if it exists
+            # Create a mutable copy of POST data
+            post_data = request.POST.copy()
+            if 'is_verified' in post_data:
+                del post_data['is_verified']
+
             # Handle profile picture separately
             if 'profile_picture' in request.FILES and request.FILES['profile_picture']:
                 profile_picture = request.FILES['profile_picture']
@@ -330,8 +359,8 @@ def profile_edit(request):
                            'bio', 'location', 'website', 'gender']
 
             for field in safe_fields:
-                if field in request.POST:
-                    value = request.POST.get(field, '').strip()
+                if field in post_data:
+                    value = post_data.get(field, '').strip()
                     old_value = getattr(user, field)
 
                     if field == 'email':
@@ -356,10 +385,10 @@ def profile_edit(request):
                             updated_fields.append(field)
 
             # Handle date_of_birth separately
-            if 'date_of_birth' in request.POST and request.POST['date_of_birth']:
+            if 'date_of_birth' in post_data and post_data['date_of_birth']:
                 try:
                     from datetime import datetime
-                    dob_str = request.POST['date_of_birth']
+                    dob_str = post_data['date_of_birth']
                     new_dob = datetime.strptime(dob_str, '%Y-%m-%d').date()
                     if new_dob != user.date_of_birth:
                         user.date_of_birth = new_dob
@@ -367,29 +396,14 @@ def profile_edit(request):
                 except ValueError:
                     messages.error(request, 'Invalid date format. Use YYYY-MM-DD')
 
-            # CRITICAL FIX: Ensure is_verified is always a boolean and not touched by form
-            # Remove is_verified if it exists in POST data
-            if 'is_verified' in request.POST:
-                del request.POST['is_verified']
-
             # Ensure is_verified is explicitly set to current value (boolean)
+            # This ensures it's never accidentally changed
             user.is_verified = bool(user.is_verified)
 
             # Only save if there are changes
             if updated_fields:
                 # Force save with specific fields to ensure database update
                 user.save(update_fields=updated_fields)
-
-                # CRITICAL: Get fresh user instance from database to ensure data is updated
-                fresh_user = CustomUser.objects.get(id=user.id)
-
-                # Debug output
-                print(f"PROFILE EDIT: Updated fields: {updated_fields}")
-                print(f"  New First Name: '{fresh_user.first_name}'")
-                print(f"  New Last Name: '{fresh_user.last_name}'")
-                print(f"  New Email: {fresh_user.email}")
-                print(f"  New Phone: {fresh_user.phone_number}")
-
                 messages.success(request, 'Profile updated successfully!')
             else:
                 messages.info(request, 'No changes were made to your profile.')
@@ -421,10 +435,11 @@ def profile_edit(request):
 
     return render(request, 'accounts/profile_edit.html', context)
 
+
 def root_redirect(request):
     """Redirect root URL based on authentication status"""
     if request.user.is_authenticated:
-        return redirect('chat:chat_home')  # Use chat namespace
+        return redirect('chat_home')
     else:
         return redirect('login')
 
@@ -442,17 +457,34 @@ def privacy_settings(request):
 
 @login_required
 def update_privacy_settings(request):
-    """Update privacy settings"""
+    """Update privacy settings - FIXED VERSION"""
     if request.method == 'POST':
         user = request.user
+
+        # Update privacy settings
         user.show_online_status = request.POST.get('show_online_status') == 'on'
         user.allow_message_requests = request.POST.get('allow_message_requests') == 'on'
         user.allow_calls = request.POST.get('allow_calls') == 'on'
         user.allow_invitations = request.POST.get('allow_invitations') == 'on'
         user.show_last_seen = request.POST.get('show_last_seen') == 'on'
         user.show_profile_picture = request.POST.get('show_profile_picture') == 'on'
-        user.save()
+
+        # CRITICAL FIX: Ensure is_verified is not being modified
+        # Keep the existing value and ensure it's a boolean
+        if hasattr(user, 'is_verified'):
+            if callable(user.is_verified):
+                user.is_verified = user.is_verified()
+            else:
+                user.is_verified = bool(user.is_verified)
+
+        # Save only the fields we updated (excluding is_verified)
+        user.save(update_fields=[
+            'show_online_status', 'allow_message_requests', 'allow_calls',
+            'allow_invitations', 'show_last_seen', 'show_profile_picture'
+        ])
+
         messages.success(request, 'Privacy settings updated successfully!')
+        return redirect('privacy_settings')
 
     return redirect('privacy_settings')
 
@@ -506,10 +538,16 @@ def notifications(request):
 
 @login_required
 def mark_notification_read(request, notification_id):
-    """Mark single notification as read"""
+    """Mark single notification as read - FIXED to handle UUID"""
     if request.method == 'POST':
         try:
-            notification = Notification.objects.get(id=notification_id, user=request.user)
+            # Try to get by UUID first
+            try:
+                notification = Notification.objects.get(id=notification_id, user=request.user)
+            except (ValueError, ValidationError):
+                # If that fails, try as integer
+                notification = Notification.objects.get(id=int(notification_id), user=request.user)
+
             notification.is_read = True
             notification.save()
 
@@ -517,7 +555,7 @@ def mark_notification_read(request, notification_id):
                 return JsonResponse({'success': True})
 
             messages.success(request, 'Notification marked as read.')
-        except Notification.DoesNotExist:
+        except (Notification.DoesNotExist, ValueError, TypeError):
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'success': False, 'error': 'Notification not found'})
             messages.error(request, 'Notification not found.')
@@ -527,10 +565,16 @@ def mark_notification_read(request, notification_id):
 
 @login_required
 def mark_notification_unread(request, notification_id):
-    """Mark single notification as unread"""
+    """Mark single notification as unread - FIXED to handle UUID"""
     if request.method == 'POST':
         try:
-            notification = Notification.objects.get(id=notification_id, user=request.user)
+            # Try to get by UUID first
+            try:
+                notification = Notification.objects.get(id=notification_id, user=request.user)
+            except (ValueError, ValidationError):
+                # If that fails, try as integer
+                notification = Notification.objects.get(id=int(notification_id), user=request.user)
+
             notification.is_read = False
             notification.save()
 
@@ -538,7 +582,7 @@ def mark_notification_unread(request, notification_id):
                 return JsonResponse({'success': True})
 
             messages.success(request, 'Notification marked as unread.')
-        except Notification.DoesNotExist:
+        except (Notification.DoesNotExist, ValueError, TypeError):
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'success': False, 'error': 'Notification not found'})
             messages.error(request, 'Notification not found.')
@@ -588,10 +632,16 @@ def mark_all_notifications_unread(request):
 
 @login_required
 def archive_notification(request, notification_id):
-    """Archive a single notification"""
+    """Archive a single notification - FIXED to handle UUID"""
     if request.method == 'POST':
         try:
-            notification = Notification.objects.get(id=notification_id, user=request.user)
+            # Try to get by UUID first
+            try:
+                notification = Notification.objects.get(id=notification_id, user=request.user)
+            except (ValueError, ValidationError):
+                # If that fails, try as integer
+                notification = Notification.objects.get(id=int(notification_id), user=request.user)
+
             notification.is_archived = True
             notification.save()
 
@@ -599,7 +649,7 @@ def archive_notification(request, notification_id):
                 return JsonResponse({'success': True})
 
             messages.success(request, 'Notification archived.')
-        except Notification.DoesNotExist:
+        except (Notification.DoesNotExist, ValueError, TypeError):
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'success': False, 'error': 'Notification not found'})
             messages.error(request, 'Notification not found.')
@@ -628,17 +678,23 @@ def archive_all_notifications(request):
 
 @login_required
 def delete_notification(request, notification_id):
-    """Delete a single notification"""
+    """Delete a single notification - FIXED to handle UUID"""
     if request.method == 'POST':
         try:
-            notification = Notification.objects.get(id=notification_id, user=request.user)
+            # Try to get by UUID first
+            try:
+                notification = Notification.objects.get(id=notification_id, user=request.user)
+            except (ValueError, ValidationError):
+                # If that fails, try as integer
+                notification = Notification.objects.get(id=int(notification_id), user=request.user)
+
             notification.delete()
 
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'success': True})
 
             messages.success(request, 'Notification deleted.')
-        except Notification.DoesNotExist:
+        except (Notification.DoesNotExist, ValueError, TypeError):
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'success': False, 'error': 'Notification not found'})
             messages.error(request, 'Notification not found.')
@@ -668,57 +724,6 @@ def clear_all_notifications(request):
 def notification_settings(request):
     """Notification settings page"""
     return render(request, 'accounts/notification_settings.html', {'user': request.user})
-
-
-@login_required
-def update_notification_preferences(request):
-    """Update notification preferences - FIXED: Handle quiet hours properly"""
-    if request.method == 'POST':
-        user = request.user
-
-        # Message notifications
-        user.message_notifications = request.POST.get('message_notifications') == 'on'
-        user.message_sound = request.POST.get('message_sound') == 'on'
-        user.message_preview = request.POST.get('message_preview') == 'on'
-
-        # Group notifications
-        user.group_notifications = request.POST.get('group_notifications') == 'on'
-        user.group_mentions_only = request.POST.get('group_mentions_only') == 'on'
-
-        # Friend notifications
-        user.friend_request_notifications = request.POST.get('friend_request_notifications') == 'on'
-        user.friend_online_notifications = request.POST.get('friend_online_notifications') == 'on'
-
-        # System notifications
-        user.system_notifications = request.POST.get('system_notifications') == 'on'
-        user.marketing_notifications = request.POST.get('marketing_notifications') == 'on'
-
-        # Delivery methods
-        user.push_notifications = request.POST.get('push_notifications') == 'on'
-        user.email_notifications = request.POST.get('email_notifications') == 'on'
-        user.desktop_notifications = request.POST.get('desktop_notifications') == 'on'
-
-        # Quiet hours - FIXED: Only update time fields if quiet hours are enabled
-        user.quiet_hours_enabled = request.POST.get('quiet_hours_enabled') == 'on'
-
-        if user.quiet_hours_enabled:
-            # Only set time values if quiet hours are enabled
-            quiet_hours_start = request.POST.get('quiet_hours_start')
-            quiet_hours_end = request.POST.get('quiet_hours_end')
-
-            if quiet_hours_start:
-                user.quiet_hours_start = quiet_hours_start
-            if quiet_hours_end:
-                user.quiet_hours_end = quiet_hours_end
-        else:
-            # If quiet hours are disabled, set times to None
-            user.quiet_hours_start = None
-            user.quiet_hours_end = None
-
-        user.save()
-        messages.success(request, 'Notification preferences updated successfully!')
-
-    return redirect('notification_settings')
 
 
 @login_required
@@ -767,16 +772,59 @@ def logout_view(request):
 
 @login_required
 def update_notification_settings(request):
-    """Update notification settings"""
+    """Update notification settings - FIXED VERSION"""
     if request.method == 'POST':
         user = request.user
-        user.email_notifications = request.POST.get('email_notifications') == 'on'
-        user.push_notifications = request.POST.get('push_notifications') == 'on'
+
+        # Message notifications
         user.message_notifications = request.POST.get('message_notifications') == 'on'
-        user.marketing_emails = request.POST.get('marketing_emails') == 'on'
+        user.message_sound = request.POST.get('message_sound') == 'on'
+        user.message_preview = request.POST.get('message_preview') == 'on'
+
+        # Group notifications
+        user.group_notifications = request.POST.get('group_notifications') == 'on'
+        user.group_mentions_only = request.POST.get('group_mentions_only') == 'on'
+
+        # Friend notifications
+        user.friend_request_notifications = request.POST.get('friend_request_notifications') == 'on'
+        user.friend_online_notifications = request.POST.get('friend_online_notifications') == 'on'
+
+        # System notifications
+        user.system_notifications = request.POST.get('system_notifications') == 'on'
+        user.marketing_notifications = request.POST.get('marketing_notifications') == 'on'
+
+        # Delivery methods
+        user.push_notifications = request.POST.get('push_notifications') == 'on'
+        user.email_notifications = request.POST.get('email_notifications') == 'on'
+        user.desktop_notifications = request.POST.get('desktop_notifications') == 'on'
+
+        # Quiet hours
+        user.quiet_hours_enabled = request.POST.get('quiet_hours_enabled') == 'on'
+
+        if user.quiet_hours_enabled:
+            quiet_hours_start = request.POST.get('quiet_hours_start')
+            quiet_hours_end = request.POST.get('quiet_hours_end')
+
+            if quiet_hours_start:
+                user.quiet_hours_start = quiet_hours_start
+            if quiet_hours_end:
+                user.quiet_hours_end = quiet_hours_end
+        else:
+            user.quiet_hours_start = None
+            user.quiet_hours_end = None
+
+        # Ensure is_verified is not affected
+        if hasattr(user, 'is_verified'):
+            if callable(user.is_verified):
+                user.is_verified = user.is_verified()
+            else:
+                user.is_verified = bool(user.is_verified)
+
         user.save()
         messages.success(request, 'Notification settings updated successfully!')
-    return redirect('settings_main')
+        return redirect('notification_settings')
+
+    return redirect('notification_settings')
 
 
 @login_required
@@ -858,10 +906,22 @@ def toggle_two_factor(request):
 
 @login_required
 def send_friend_request(request, user_id):
-    """Send a friend request to another user"""
+    """Send a friend request to another user - FIXED to handle both int and UUID"""
     if request.method == 'POST':
         try:
-            to_user = CustomUser.objects.get(id=user_id)
+            # Try to get user by ID (handles both int and UUID)
+            try:
+                # First try as UUID
+                to_user = CustomUser.objects.get(id=user_id)
+            except (ValueError, ValidationError):
+                try:
+                    # If that fails, try as integer
+                    to_user = CustomUser.objects.get(id=int(user_id))
+                except (ValueError, TypeError):
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({'success': False, 'error': 'Invalid user ID format'})
+                    messages.error(request, 'Invalid user ID format')
+                    return redirect('discover_users')
 
             # Can't send request to yourself
             if to_user == request.user:
@@ -980,10 +1040,20 @@ def send_friend_request(request, user_id):
 
 @login_required
 def cancel_friend_request(request, user_id):
-    """Cancel a sent friend request"""
+    """Cancel a sent friend request - FIXED to handle both int and UUID"""
     if request.method == 'POST':
         try:
-            to_user = CustomUser.objects.get(id=user_id)
+            # Try to get user by ID (handles both int and UUID)
+            try:
+                to_user = CustomUser.objects.get(id=user_id)
+            except (ValueError, ValidationError):
+                try:
+                    to_user = CustomUser.objects.get(id=int(user_id))
+                except (ValueError, TypeError):
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({'success': False, 'error': 'Invalid user ID format'})
+                    messages.error(request, 'Invalid user ID format')
+                    return redirect('discover_users')
 
             # Find any pending friend request
             friend_request = FriendRequest.objects.filter(
@@ -1014,17 +1084,27 @@ def cancel_friend_request(request, user_id):
         return JsonResponse({'success': False, 'error': 'Invalid request'})
     return redirect('discover_users')
 
+# Add/modify these functions in your accounts/views.py
 
 @login_required
 def accept_friend_request(request, request_id):
-    """Accept a friend request"""
+    """Accept a friend request - FIXED to handle UUID"""
     if request.method == 'POST':
         try:
-            friend_request = FriendRequest.objects.get(
-                id=request_id,
-                to_user=request.user,
-                status='pending'
-            )
+            # Try to get by UUID first
+            try:
+                friend_request = FriendRequest.objects.get(
+                    id=request_id,
+                    to_user=request.user,
+                    status='pending'
+                )
+            except (ValueError, ValidationError):
+                # If that fails, try as integer
+                friend_request = FriendRequest.objects.get(
+                    id=int(request_id),
+                    to_user=request.user,
+                    status='pending'
+                )
 
             friend_request.accept()
             Friendship.create_friendship(friend_request.from_user, friend_request.to_user)
@@ -1038,31 +1118,61 @@ def accept_friend_request(request, request_id):
                 related_url=f"/accounts/profile/{request.user.id}/"
             )
 
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': f'You are now friends with {friend_request.from_user.username}!'
+                })
+
             messages.success(request, f'You are now friends with {friend_request.from_user.username}!')
 
-        except FriendRequest.DoesNotExist:
+        except (FriendRequest.DoesNotExist, ValueError, TypeError):
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Friend request not found.'})
             messages.error(request, 'Friend request not found.')
 
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': False, 'error': 'Invalid request'})
     return redirect('friend_requests')
 
 
 @login_required
 def reject_friend_request(request, request_id):
-    """Reject a friend request"""
+    """Reject a friend request - FIXED to handle UUID"""
     if request.method == 'POST':
         try:
-            friend_request = FriendRequest.objects.get(
-                id=request_id,
-                to_user=request.user,
-                status='pending'
-            )
+            # Try to get by UUID first
+            try:
+                friend_request = FriendRequest.objects.get(
+                    id=request_id,
+                    to_user=request.user,
+                    status='pending'
+                )
+            except (ValueError, ValidationError):
+                # If that fails, try as integer
+                friend_request = FriendRequest.objects.get(
+                    id=int(request_id),
+                    to_user=request.user,
+                    status='pending'
+                )
 
             friend_request.reject()
+
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Friend request from {friend_request.from_user.username} rejected.'
+                })
+
             messages.success(request, f'Friend request from {friend_request.from_user.username} rejected.')
 
-        except FriendRequest.DoesNotExist:
+        except (FriendRequest.DoesNotExist, ValueError, TypeError):
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Friend request not found.'})
             messages.error(request, 'Friend request not found.')
 
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': False, 'error': 'Invalid request'})
     return redirect('friend_requests')
 
 
@@ -1101,10 +1211,23 @@ def friend_requests(request):
 
 @login_required
 def remove_friend(request, user_id):
-    """Remove a friend"""
+    """Remove a friend - FIXED to handle both int and UUID"""
     if request.method == 'POST':
         try:
-            friend = CustomUser.objects.get(id=user_id)
+            # Handle both integer and UUID
+            try:
+                if isinstance(user_id, str) and '-' in user_id:
+                    friend = CustomUser.objects.get(id=user_id)
+                else:
+                    friend = CustomUser.objects.get(id=int(user_id))
+            except (ValueError, TypeError):
+                try:
+                    friend = get_object_or_404(CustomUser, id=user_id)
+                except:
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({'success': False, 'error': 'Invalid user ID format'})
+                    messages.error(request, 'Invalid user ID format')
+                    return redirect('friend_requests')
 
             # Delete friendship
             Friendship.objects.filter(
@@ -1118,11 +1241,21 @@ def remove_friend(request, user_id):
                 (Q(from_user=friend) & Q(to_user=request.user))
             ).update(status='cancelled')
 
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': f'{friend.username} removed from friends.'
+                })
+
             messages.success(request, f'{friend.username} removed from friends.')
 
         except CustomUser.DoesNotExist:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'User not found.'})
             messages.error(request, 'User not found.')
 
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': False, 'error': 'Invalid request'})
     return redirect('friend_requests')
 
 
@@ -1139,7 +1272,6 @@ def password_reset_request(request):
             if email_or_phone['type'] == 'email':
                 email = email_or_phone['value']
                 try:
-                    # In accounts/views.py around line 1132
                     user = CustomUser.objects.get(email__iexact=email, is_active=True)
 
                     # CREATE OTP RECORD
@@ -1213,9 +1345,6 @@ def password_reset_verify_otp(request):
     if request.user.is_authenticated:
         return redirect('chat_home')
 
-    # ✅ FIX: Initialize form at the beginning to prevent UnboundLocalError
-    form = OTPVerificationForm()
-
     # Get session data
     user_id = request.session.get('password_reset_user_id')
     otp_id = request.session.get('password_reset_otp_id')
@@ -1240,7 +1369,7 @@ def password_reset_verify_otp(request):
         return redirect('password_reset_request')
 
     if request.method == 'POST':
-        form = OTPVerificationForm(request.POST)  # Re-initialize with POST data
+        form = OTPVerificationForm(request.POST)
         if form.is_valid():
             otp_code = form.cleaned_data['otp_code']
 
@@ -1276,6 +1405,8 @@ def password_reset_verify_otp(request):
                     messages.error(request, message)
         else:
             messages.error(request, 'Please enter a valid 6-digit verification code.')
+    else:
+        form = OTPVerificationForm()
 
     # Get contact info for display
     contact_info = None
@@ -1296,7 +1427,7 @@ def password_reset_verify_otp(request):
         contact_info = masked_phone
 
     context = {
-        'form': form,  # This variable is now guaranteed to be defined
+        'form': form,
         'contact_info': contact_info,
         'reset_method': reset_method,
         'can_resend': True,
@@ -2065,7 +2196,7 @@ def test_google_login(request):
         <title>Test Google Login</title>
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; text-align: center; }
-            .button { 
+            .button {{ 
                 background: #4285F4; 
                 color: white; 
                 padding: 15px 30px; 
@@ -2076,8 +2207,8 @@ def test_google_login(request):
                 text-decoration: none;
                 display: inline-block;
                 margin: 20px;
-            }
-            .button:hover { background: #357ae8; }
+            }}
+            .button:hover {{ background: #357ae8; }}
         </style>
     </head>
     <body>
@@ -2092,12 +2223,22 @@ def test_google_login(request):
 
 
 # ========== ADD THESE MISSING FUNCTIONS ==========
-
 @login_required
 def view_user_profile(request, user_id):
-    """View another user's profile"""
+    """View another user's profile - FIXED to handle both int and UUID"""
     try:
-        user = get_object_or_404(CustomUser, id=user_id, is_active=True)
+        # Try to get user by ID (handles both int and UUID)
+        try:
+            # First try as UUID
+            user = CustomUser.objects.get(id=user_id, is_active=True)
+        except (ValueError, ValidationError):
+            try:
+                # If that fails, try as integer
+                user = CustomUser.objects.get(id=int(user_id), is_active=True)
+            except (ValueError, TypeError):
+                messages.error(request, 'Invalid user ID format.')
+                return redirect('discover_users')
+
         context = {
             'profile_user': user,
             'is_friend': Friendship.are_friends(request.user, user),
@@ -2250,6 +2391,7 @@ def setup_otp(request):
     }
 
     return render(request, 'accounts/otp_setup.html', context)
+
 
 @login_required
 def verify_otp_setup(request):

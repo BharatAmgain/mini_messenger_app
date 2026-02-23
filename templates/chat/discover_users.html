@@ -1,4 +1,6 @@
+<!-- templates/chat/discover_users.html -->
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}{% if is_search %}Search Results{% else %}Discover People{% endif %} - Connect.io{% endblock %}
 
@@ -13,7 +15,7 @@
                 Discover People
                 {% endif %}
             </h1>
-            <p class="text-gray-600 mt-1">{{ total_users }} users found</p>
+            <p class="text-gray-600 mt-1">{{ total_users }} user{% if total_users != 1 %}s{% endif %} found</p>
 
             <!-- Navigation Tabs -->
             <div class="flex space-x-4 mt-4">
@@ -53,7 +55,7 @@
             {% if users_page %}
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {% for user_info in users_page %}
-                {% with user=user_info.user friend_status=user_info.friend_status received_request_id=user_info.received_request_id %}
+                {% with user=user_info.user friend_status=user_info.friend_status received_request_id=user_info.received_request_id sent_request_id=user_info.sent_request_id %}
                 <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition duration-200" id="user-{{ user.id }}">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center space-x-3">
@@ -68,7 +70,7 @@
                             {% endif %}
                             <div>
                                 <h3 class="font-semibold text-gray-800">{{ user.username }}</h3>
-                                <p class="text-sm text-gray-600">{{ user.email }}</p>
+                                <p class="text-sm text-gray-600">{{ user.email|truncatechars:20 }}</p>
                                 <p class="text-xs text-gray-500">
                                     {% if user_info.is_online %}
                                     <span class="text-green-600">● Online</span>
@@ -89,10 +91,14 @@
                                 <i class="fas fa-comment"></i>
                                 <span>Message</span>
                             </a>
-                            <form method="post" action="{% url 'remove_friend' user.id %}" class="flex-1">
+                            <form method="post" action="{% url 'remove_friend' user.id %}" class="flex-1 remove-friend-form">
                                 {% csrf_token %}
-                                <button type="submit" class="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition duration-200">
-                                    <i class="fas fa-user-times"></i>
+                                <button type="submit"
+                                        class="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition duration-200 flex items-center justify-center remove-friend-btn"
+                                        data-user-id="{{ user.id }}"
+                                        data-username="{{ user.username }}"
+                                        onclick="return confirm('Are you sure you want to remove {{ user.username }} from your friends?')">
+                                    <i class="fas fa-user-minus"></i>
                                 </button>
                             </form>
                         </div>
@@ -103,7 +109,9 @@
                             <form method="post" action="{% url 'block_user' user.id %}" class="block-form">
                                 {% csrf_token %}
                                 <button type="submit"
-                                        class="text-red-600 hover:text-red-700 text-xs font-medium px-2 py-1 rounded hover:bg-red-50 transition duration-200"
+                                        class="text-red-600 hover:text-red-700 text-xs font-medium px-2 py-1 rounded hover:bg-red-50 transition duration-200 block-btn"
+                                        data-user-id="{{ user.id }}"
+                                        data-username="{{ user.username }}"
                                         onclick="return confirm('Are you sure you want to block {{ user.username }}?')">
                                     <i class="fas fa-ban mr-1"></i>Block
                                 </button>
@@ -112,15 +120,16 @@
 
                         {% elif friend_status == 'request_sent' %}
                         <div class="flex space-x-2">
-                            <button class="flex-1 bg-gray-400 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center space-x-2" disabled>
+                            <button class="flex-1 bg-gray-400 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center space-x-2 cursor-not-allowed" disabled>
                                 <i class="fas fa-comment"></i>
                                 <span>Message</span>
                             </button>
                             <form method="post" action="{% url 'cancel_friend_request' user.id %}" class="flex-1 cancel-request-form">
                                 {% csrf_token %}
-                                <button type="submit" class="w-full bg-yellow-600 text-white py-2 px-4 rounded-lg hover:bg-yellow-700 transition duration-200 flex items-center justify-center space-x-2 cancel-btn">
+                                <button type="submit" class="w-full bg-yellow-600 text-white py-2 px-4 rounded-lg hover:bg-yellow-700 transition duration-200 flex items-center justify-center space-x-2 cancel-request-btn"
+                                        data-user-id="{{ user.id }}">
                                     <i class="fas fa-times"></i>
-                                    <span>Cancel Request</span>
+                                    <span>Cancel</span>
                                 </button>
                             </form>
                         </div>
@@ -131,7 +140,9 @@
                             <form method="post" action="{% url 'block_user' user.id %}" class="block-form">
                                 {% csrf_token %}
                                 <button type="submit"
-                                        class="text-red-600 hover:text-red-700 text-xs font-medium px-2 py-1 rounded hover:bg-red-50 transition duration-200"
+                                        class="text-red-600 hover:text-red-700 text-xs font-medium px-2 py-1 rounded hover:bg-red-50 transition duration-200 block-btn"
+                                        data-user-id="{{ user.id }}"
+                                        data-username="{{ user.username }}"
                                         onclick="return confirm('Are you sure you want to block {{ user.username }}?')">
                                     <i class="fas fa-ban mr-1"></i>Block
                                 </button>
@@ -140,15 +151,15 @@
 
                         {% elif friend_status == 'request_received' and received_request_id %}
                         <div class="flex space-x-2">
-                            <form method="post" action="{% url 'accept_friend_request' received_request_id %}" class="flex-1">
+                            <form method="post" action="{% url 'accept_friend_request' received_request_id %}" class="flex-1 accept-request-form">
                                 {% csrf_token %}
-                                <button type="submit" class="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition duration-200">
-                                    Accept Request
+                                <button type="submit" class="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition duration-200 accept-request-btn">
+                                    Accept
                                 </button>
                             </form>
-                            <form method="post" action="{% url 'reject_friend_request' received_request_id %}">
+                            <form method="post" action="{% url 'reject_friend_request' received_request_id %}" class="reject-request-form">
                                 {% csrf_token %}
-                                <button type="submit" class="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition duration-200">
+                                <button type="submit" class="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition duration-200 reject-request-btn">
                                     Reject
                                 </button>
                             </form>
@@ -160,7 +171,9 @@
                             <form method="post" action="{% url 'block_user' user.id %}" class="block-form">
                                 {% csrf_token %}
                                 <button type="submit"
-                                        class="text-red-600 hover:text-red-700 text-xs font-medium px-2 py-1 rounded hover:bg-red-50 transition duration-200"
+                                        class="text-red-600 hover:text-red-700 text-xs font-medium px-2 py-1 rounded hover:bg-red-50 transition duration-200 block-btn"
+                                        data-user-id="{{ user.id }}"
+                                        data-username="{{ user.username }}"
                                         onclick="return confirm('Are you sure you want to block {{ user.username }}? This will also reject their friend request.')">
                                     <i class="fas fa-ban mr-1"></i>Block
                                 </button>
@@ -169,7 +182,7 @@
 
                         {% else %}
                         <div class="flex space-x-2">
-                            <button class="flex-1 bg-gray-400 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center space-x-2" disabled>
+                            <button class="flex-1 bg-gray-400 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center space-x-2 cursor-not-allowed" disabled>
                                 <i class="fas fa-comment"></i>
                                 <span>Message</span>
                             </button>
@@ -188,7 +201,9 @@
                             <form method="post" action="{% url 'block_user' user.id %}" class="block-form">
                                 {% csrf_token %}
                                 <button type="submit"
-                                        class="text-red-600 hover:text-red-700 text-xs font-medium px-2 py-1 rounded hover:bg-red-50 transition duration-200"
+                                        class="text-red-600 hover:text-red-700 text-xs font-medium px-2 py-1 rounded hover:bg-red-50 transition duration-200 block-btn"
+                                        data-user-id="{{ user.id }}"
+                                        data-username="{{ user.username }}"
                                         onclick="return confirm('Are you sure you want to block {{ user.username }}?')">
                                     <i class="fas fa-ban mr-1"></i>Block
                                 </button>
@@ -253,309 +268,342 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
-    // Helper function to get CSRF token
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
             }
         }
-        return cookieValue;
     }
+    return cookieValue;
+}
 
-    // Toast notification function
-    function showToast(message, type = 'info') {
-        const toast = document.createElement('div');
-        toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white ${
-            type === 'success' ? 'bg-green-500' :
-            type === 'error' ? 'bg-red-500' : 'bg-blue-500'
-        } z-50 transform transition-transform duration-300 translate-x-full`;
-        toast.textContent = message;
+// Toast notification function
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 transform transition-transform duration-300 translate-x-full ${
+        type === 'success' ? 'bg-green-500' :
+        type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+    }`;
+    toast.textContent = message;
 
-        document.body.appendChild(toast);
+    document.body.appendChild(toast);
 
-        // Animate in
+    // Animate in
+    setTimeout(() => {
+        toast.classList.remove('translate-x-full');
+    }, 100);
+
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.classList.add('translate-x-full');
         setTimeout(() => {
-            toast.classList.remove('translate-x-full');
-        }, 100);
+            document.body.removeChild(toast);
+        }, 300);
+    }, 3000);
+}
 
-        // Remove after 3 seconds
-        setTimeout(() => {
-            toast.classList.add('translate-x-full');
-            setTimeout(() => {
-                document.body.removeChild(toast);
-            }, 300);
-        }, 3000);
-    }
+// Handle AJAX for friend request actions
+document.addEventListener('DOMContentLoaded', function() {
+    const csrftoken = getCookie('csrftoken');
 
-    // Handle friend request form submissions with AJAX
-    document.addEventListener('DOMContentLoaded', function() {
-        const friendRequestForms = document.querySelectorAll('.friend-request-form');
+    // Handle send friend request
+    document.querySelectorAll('.friend-request-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
 
-        friendRequestForms.forEach(form => {
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
+            const formData = new FormData(this);
+            const url = this.action;
+            const button = this.querySelector('.add-friend-btn');
+            if (!button) return;
 
-                const formData = new FormData(this);
-                const url = this.action;
-                const button = this.querySelector('.add-friend-btn');
-                const userId = button.dataset.userId;
-                const originalText = button.innerHTML;
+            const userId = button.dataset.userId;
+            const originalText = button.innerHTML;
 
-                // Show loading state
-                button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Sending...';
-                button.disabled = true;
+            // Show loading state
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Sending...';
+            button.disabled = true;
 
-                fetch(url, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Update the button to show "Cancel Request"
-                        const userCard = document.getElementById(`user-${userId}`);
-                        if (userCard) {
-                            const friendForm = userCard.querySelector('.friend-request-form');
-                            if (friendForm) {
-                                friendForm.innerHTML = `
-                                    <button type="submit" class="w-full bg-yellow-600 text-white py-2 px-4 rounded-lg hover:bg-yellow-700 transition duration-200 flex items-center justify-center space-x-2 cancel-btn" data-user-id="${userId}">
-                                        <i class="fas fa-times"></i>
-                                        <span>Cancel Request</span>
-                                    </button>
-                                `;
-                                friendForm.classList.remove('friend-request-form');
-                                friendForm.classList.add('cancel-request-form');
-
-                                // Update the action URL
-                                friendForm.action = `/accounts/cancel-friend-request/${userId}/`;
-
-                                // Add event listener to the new cancel button
-                                const newButton = friendForm.querySelector('.cancel-btn');
-                                newButton.addEventListener('click', function(e) {
-                                    e.preventDefault();
-                                    handleCancelRequest(userId, friendForm, newButton);
-                                });
-                            }
-
-                            // Update status badge
-                            const statusBadge = userCard.querySelector('.bg-gray-100');
-                            if (statusBadge) {
-                                statusBadge.className = 'inline-block px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800';
-                                statusBadge.textContent = 'Request Sent';
-                            }
-                        }
-
-                        showToast(data.message || 'Friend request sent successfully!', 'success');
-                    } else {
-                        showToast(data.error || 'Error sending friend request', 'error');
-                        button.innerHTML = originalText;
-                        button.disabled = false;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showToast('Error sending friend request', 'error');
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrftoken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message || 'Friend request sent!', 'success');
+                    // Reload the page to show updated status
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast(data.error || 'Error sending friend request', 'error');
                     button.innerHTML = originalText;
                     button.disabled = false;
-                });
-            });
-        });
-
-        // Handle cancel request form submissions
-        const cancelRequestForms = document.querySelectorAll('.cancel-request-form');
-
-        cancelRequestForms.forEach(form => {
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                const button = this.querySelector('.cancel-btn');
-                const userId = button.dataset.userId;
-                handleCancelRequest(userId, this, button);
-            });
-        });
-    });
-
-    // Function to handle canceling friend requests
-    function handleCancelRequest(userId, form, button) {
-        const url = `/accounts/cancel-friend-request/${userId}/`;
-        const originalText = button.innerHTML;
-
-        // Show loading state
-        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Canceling...';
-        button.disabled = true;
-
-        const formData = new FormData();
-        formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
-
-        fetch(url, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': getCookie('csrftoken')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Update the button back to "Add Friend"
-                const userCard = document.getElementById(`user-${userId}`);
-                if (userCard) {
-                    const cancelForm = userCard.querySelector('.cancel-request-form');
-                    if (cancelForm) {
-                        cancelForm.innerHTML = `
-                            <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200 flex items-center justify-center space-x-2 add-friend-btn" data-user-id="${userId}">
-                                <i class="fas fa-user-plus"></i>
-                                <span>Add Friend</span>
-                            </button>
-                        `;
-                        cancelForm.classList.remove('cancel-request-form');
-                        cancelForm.classList.add('friend-request-form');
-
-                        // Update the action URL
-                        cancelForm.action = `/accounts/send-friend-request/${userId}/`;
-
-                        // Add event listener to the new add friend button
-                        const newButton = cancelForm.querySelector('.add-friend-btn');
-                        newButton.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            const formData = new FormData(cancelForm);
-                            fetch(cancelForm.action, {
-                                method: 'POST',
-                                body: formData,
-                                headers: {
-                                    'X-Requested-With': 'XMLHttpRequest',
-                                    'X-CSRFToken': getCookie('csrftoken')
-                                }
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    // Convert back to cancel button
-                                    cancelForm.innerHTML = `
-                                        <button type="submit" class="w-full bg-yellow-600 text-white py-2 px-4 rounded-lg hover:bg-yellow-700 transition duration-200 flex items-center justify-center space-x-2 cancel-btn" data-user-id="${userId}">
-                                            <i class="fas fa-times"></i>
-                                            <span>Cancel Request</span>
-                                        </button>
-                                    `;
-                                    cancelForm.classList.remove('friend-request-form');
-                                    cancelForm.classList.add('cancel-request-form');
-                                    cancelForm.action = `/accounts/cancel-friend-request/${userId}/`;
-
-                                    // Update status badge
-                                    const statusBadge = userCard.querySelector('.bg-gray-100, .bg-yellow-100');
-                                    if (statusBadge) {
-                                        statusBadge.className = 'inline-block px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800';
-                                        statusBadge.textContent = 'Request Sent';
-                                    }
-
-                                    showToast(data.message || 'Friend request sent successfully!', 'success');
-                                } else {
-                                    showToast(data.error || 'Error sending friend request', 'error');
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error:', error);
-                                showToast('Error sending friend request', 'error');
-                            });
-                        });
-                    }
-
-                    // Update status badge
-                    const statusBadge = userCard.querySelector('.bg-yellow-100');
-                    if (statusBadge) {
-                        statusBadge.className = 'inline-block px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800';
-                        statusBadge.textContent = 'Not Friends';
-                    }
                 }
-
-                showToast(data.message || 'Friend request cancelled successfully!', 'success');
-            } else {
-                showToast(data.error || 'Error cancelling friend request', 'error');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error sending friend request', 'error');
                 button.innerHTML = originalText;
                 button.disabled = false;
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showToast('Error cancelling friend request', 'error');
-            button.innerHTML = originalText;
-            button.disabled = false;
-        });
-    }
-
-    // Handle block form submissions with AJAX
-    document.addEventListener('DOMContentLoaded', function() {
-        const blockForms = document.querySelectorAll('.block-form');
-
-        blockForms.forEach(form => {
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-
-                const formData = new FormData(this);
-                const url = this.action;
-                const button = this.querySelector('button');
-                const originalText = button.innerHTML;
-
-                // Show loading state
-                button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Blocking...';
-                button.disabled = true;
-
-                fetch(url, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Remove the user card from the DOM
-                        const userCard = this.closest('.bg-white.border');
-                        userCard.style.opacity = '0';
-                        userCard.style.transition = 'opacity 0.3s ease';
-
-                        setTimeout(() => {
-                            userCard.remove();
-
-                            // Show success message
-                            showToast(data.message || 'User blocked successfully', 'success');
-
-                            // Update user count if needed
-                            const userCount = document.querySelector('.text-gray-600.mt-1');
-                            if (userCount) {
-                                const currentCount = parseInt(userCount.textContent.match(/\d+/)[0]);
-                                userCount.textContent = userCount.textContent.replace(currentCount, currentCount - 1);
-                            }
-                        }, 300);
-                    } else {
-                        showToast(data.error || 'Error blocking user', 'error');
-                        button.innerHTML = originalText;
-                        button.disabled = false;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showToast('Error blocking user', 'error');
-                    button.innerHTML = originalText;
-                    button.disabled = false;
-                });
             });
         });
     });
+
+    // Handle cancel friend request
+    document.querySelectorAll('.cancel-request-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const url = this.action;
+            const button = this.querySelector('.cancel-request-btn');
+            if (!button) return;
+
+            const userId = button.dataset.userId;
+            const originalText = button.innerHTML;
+
+            // Show loading state
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Canceling...';
+            button.disabled = true;
+
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrftoken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message || 'Friend request cancelled', 'success');
+                    // Reload the page to show updated status
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast(data.error || 'Error cancelling friend request', 'error');
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error cancelling friend request', 'error');
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
+        });
+    });
+
+    // Handle accept friend request
+    document.querySelectorAll('.accept-request-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const url = this.action;
+            const button = this.querySelector('.accept-request-btn');
+            if (!button) return;
+
+            const originalText = button.innerHTML;
+
+            // Show loading state
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Accepting...';
+            button.disabled = true;
+
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrftoken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Friend request accepted!', 'success');
+                    // Reload the page to show updated status
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast(data.error || 'Error accepting friend request', 'error');
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error accepting friend request', 'error');
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
+        });
+    });
+
+    // Handle reject friend request
+    document.querySelectorAll('.reject-request-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const url = this.action;
+            const button = this.querySelector('.reject-request-btn');
+            if (!button) return;
+
+            const originalText = button.innerHTML;
+
+            // Show loading state
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Rejecting...';
+            button.disabled = true;
+
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrftoken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Friend request rejected', 'success');
+                    // Reload the page to show updated status
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast(data.error || 'Error rejecting friend request', 'error');
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error rejecting friend request', 'error');
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
+        });
+    });
+
+    // Handle remove friend
+    document.querySelectorAll('.remove-friend-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const button = this.querySelector('.remove-friend-btn');
+            if (!button) return;
+
+            const userId = button.dataset.userId;
+            const username = button.dataset.username;
+            const originalText = button.innerHTML;
+
+            if (!confirm(`Are you sure you want to remove ${username} from your friends?`)) {
+                return;
+            }
+
+            const formData = new FormData(this);
+            const url = this.action;
+
+            // Show loading state
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            button.disabled = true;
+
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrftoken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message || `${username} removed from friends`, 'success');
+                    // Reload the page to show updated status
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast(data.error || 'Error removing friend', 'error');
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error removing friend', 'error');
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
+        });
+    });
+
+    // Handle block user
+    document.querySelectorAll('.block-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const button = this.querySelector('.block-btn');
+            if (!button) return;
+
+            const userId = button.dataset.userId;
+            const username = button.dataset.username;
+            const originalText = button.innerHTML;
+
+            const confirmMessage = this.querySelector('button[onclick]')?.getAttribute('onclick')?.includes('This will also reject')
+                ? `Are you sure you want to block ${username}? This will also reject their friend request.`
+                : `Are you sure you want to block ${username}?`;
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            const formData = new FormData(this);
+            const url = this.action;
+
+            // Show loading state
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Blocking...';
+            button.disabled = true;
+
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrftoken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message || `${username} blocked successfully`, 'success');
+                    // Reload the page to show updated status
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast(data.error || 'Error blocking user', 'error');
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error blocking user', 'error');
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
+        });
+    });
+});
 </script>
 {% endblock %}

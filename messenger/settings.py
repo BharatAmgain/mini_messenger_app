@@ -858,3 +858,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         # Call the function
         create_static_files()
+
+        # Add this near your DATABASES configuration
+        if 'sqlite' in DATABASES['default']['ENGINE']:
+            # Add timeout and other settings to prevent database locking
+            DATABASES['default']['OPTIONS'] = {
+                'timeout': 30,  # Increase timeout to 30 seconds
+                'init_command': 'PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA cache_size=10000; PRAGMA foreign_keys=ON;',
+            }
+            print("==> SQLite configured with WAL mode to prevent database locking")

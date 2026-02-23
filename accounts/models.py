@@ -55,7 +55,7 @@ class CustomUser(AbstractUser):
     last_seen = models.DateTimeField(default=timezone.now)
     is_online = models.BooleanField(default=False)
 
-    # Account verification
+    # Account verification - This is a field, NOT a property
     is_verified = models.BooleanField(default=False)
     verification_date = models.DateTimeField(null=True, blank=True)
 
@@ -140,6 +140,38 @@ class CustomUser(AbstractUser):
         elif self.show_last_seen:
             return (timezone.now() - self.last_seen) < timedelta(minutes=5)
         return False
+
+    def get_friend_status(self, other_user):
+        """Get friend status with another user"""
+        from .models import FriendRequest, Friendship
+
+        if self == other_user:
+            return 'self'
+
+        # Check if friends
+        if Friendship.are_friends(self, other_user):
+            return 'friends'
+
+        # Check for pending friend requests
+        sent_request = FriendRequest.objects.filter(
+            from_user=self,
+            to_user=other_user,
+            status='pending'
+        ).exists()
+
+        if sent_request:
+            return 'request_sent'
+
+        received_request = FriendRequest.objects.filter(
+            from_user=other_user,
+            to_user=self,
+            status='pending'
+        ).exists()
+
+        if received_request:
+            return 'request_received'
+
+        return 'not_friends'
 
     def clean(self):
         """Custom validation"""
@@ -228,6 +260,13 @@ class CustomUser(AbstractUser):
 
     def save(self, *args, **kwargs):
         """Override save to handle validation and updates"""
+        # CRITICAL FIX: Ensure is_verified is always a boolean
+        if hasattr(self, 'is_verified'):
+            if callable(self.is_verified):
+                self.is_verified = self.is_verified()
+            else:
+                self.is_verified = bool(self.is_verified)
+
         # Run full validation before saving
         self.full_clean()
 
@@ -386,18 +425,51 @@ class FriendRequest(models.Model):
         """Accept friend request"""
         self.status = 'accepted'
         self.save(update_fields=['status', 'updated_at'])
+
+        # Create friendship
+        Friendship.create_friendship(self.from_user, self.to_user)
+
+        # Create notification for the requester
+        Notification.objects.create(
+            user=self.from_user,
+            notification_type='friend_request',
+            title="Friend Request Accepted",
+            message=f"{self.to_user.username} accepted your friend request",
+            related_url=f"/accounts/profile/{self.to_user.id}/"
+        )
+
         return True
 
     def reject(self):
         """Reject friend request"""
         self.status = 'rejected'
         self.save(update_fields=['status', 'updated_at'])
+
+        # Create notification for the requester
+        Notification.objects.create(
+            user=self.from_user,
+            notification_type='friend_request',
+            title="Friend Request Rejected",
+            message=f"{self.to_user.username} rejected your friend request",
+            related_url="/accounts/friend-requests/"
+        )
+
         return True
 
     def cancel(self):
         """Cancel friend request"""
         self.status = 'cancelled'
         self.save(update_fields=['status', 'updated_at'])
+
+        # Create notification for the receiver
+        Notification.objects.create(
+            user=self.to_user,
+            notification_type='friend_request',
+            title="Friend Request Cancelled",
+            message=f"{self.from_user.username} cancelled their friend request",
+            related_url="/accounts/friend-requests/"
+        )
+
         return True
 
     def is_active(self):
@@ -444,6 +516,25 @@ class Friendship(models.Model):
             user1=user1,
             user2=user2
         )
+
+        if created:
+            # Create notifications for both users
+            Notification.objects.create(
+                user=user1,
+                notification_type='system',
+                title="New Friend",
+                message=f"You are now friends with {user2.username}",
+                related_url=f"/accounts/profile/{user2.id}/"
+            )
+
+            Notification.objects.create(
+                user=user2,
+                notification_type='system',
+                title="New Friend",
+                message=f"You are now friends with {user1.username}",
+                related_url=f"/accounts/profile/{user1.id}/"
+            )
+
         return friendship, created
 
     @classmethod
@@ -484,6 +575,23 @@ class Friendship(models.Model):
             (Q(user1=user1) & Q(user2=user2)) |
             (Q(user1=user2) & Q(user2=user1))
         ).delete()
+
+        # Create notifications
+        Notification.objects.create(
+            user=user1,
+            notification_type='system',
+            title="Friend Removed",
+            message=f"You are no longer friends with {user2.username}",
+            related_url="/accounts/friend-requests/"
+        )
+
+        Notification.objects.create(
+            user=user2,
+            notification_type='system',
+            title="Friend Removed",
+            message=f"You are no longer friends with {user1.username}",
+            related_url="/accounts/friend-requests/"
+        )
 
 
 class OTPVerification(models.Model):
@@ -665,8 +773,16 @@ class BlockedUser(models.Model):
 
 
 # Signal handlers at the bottom to avoid circular imports
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+
+
+@receiver(post_save, sender=CustomUser)
+def create_user_status(sender, instance, created, **kwargs):
+    """Create UserStatus when a new user is created"""
+    if created:
+        from chat.models import UserStatus
+        UserStatus.objects.get_or_create(user=instance)
 
 
 @receiver(post_save, sender=CustomUser)
@@ -676,7 +792,10 @@ def update_last_seen_on_save(sender, instance, **kwargs):
         instance.last_seen = timezone.now()
         # Avoid infinite recursion
         if 'update_fields' not in kwargs:
-            instance.save(update_fields=['last_seen'])
+            try:
+                instance.save(update_fields=['last_seen'])
+            except:
+                pass
 
 
 @receiver(post_save, sender=FriendRequest)
@@ -712,6 +831,33 @@ def update_friend_request_notification(sender, instance, **kwargs):
             message__contains=f"{instance.from_user.username} sent you a friend request"
         ).update(is_archived=True)
 
+    elif instance.status == 'rejected':
+        # Create notification for the requester
+        Notification.objects.create(
+            user=instance.from_user,
+            notification_type='friend_request',
+            title="Friend Request Rejected",
+            message=f"{instance.to_user.username} rejected your friend request",
+            related_url="/accounts/friend-requests/"
+        )
+
+        # Archive the original notification
+        Notification.objects.filter(
+            user=instance.to_user,
+            notification_type='friend_request',
+            message__contains=f"{instance.from_user.username} sent you a friend request"
+        ).update(is_archived=True)
+
+    elif instance.status == 'cancelled':
+        # Create notification for the receiver
+        Notification.objects.create(
+            user=instance.to_user,
+            notification_type='friend_request',
+            title="Friend Request Cancelled",
+            message=f"{instance.from_user.username} cancelled their friend request",
+            related_url="/accounts/friend-requests/"
+        )
+
 
 @receiver(post_save, sender=BlockedUser)
 def create_block_notification(sender, instance, created, **kwargs):
@@ -734,3 +880,37 @@ def create_block_notification(sender, instance, created, **kwargs):
             message=f"You have blocked {instance.blocked.username}",
             related_url="/chat/blocked-users/"
         )
+
+        # Remove any existing friendship
+        if Friendship.are_friends(instance.blocker, instance.blocked):
+            Friendship.remove_friendship(instance.blocker, instance.blocked)
+
+
+@receiver(post_delete, sender=BlockedUser)
+def create_unblock_notification(sender, instance, **kwargs):
+    """Create notification when user is unblocked"""
+    # Notification for unblocked user
+    Notification.objects.create(
+        user=instance.blocked,
+        notification_type='system',
+        title="User Unblocked You",
+        message=f"{instance.blocker.username} has unblocked you",
+        related_url="/accounts/settings/"
+    )
+
+    # Notification for unblocker
+    Notification.objects.create(
+        user=instance.blocker,
+        notification_type='system',
+        title="User Unblocked",
+        message=f"You have unblocked {instance.blocked.username}",
+        related_url="/chat/discover/"
+    )
+
+
+@receiver(post_save, sender=Friendship)
+def create_friendship_notification(sender, instance, created, **kwargs):
+    """Create notification when friendship is created"""
+    if created:
+        # Notifications are already created in create_friendship method
+        pass

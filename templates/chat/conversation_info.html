@@ -1,0 +1,447 @@
+<!-- templates/chat/conversation_info.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Conversation Info - {{ conversation.get_display_name|default:"Chat" }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Conversation Information</h1>
+                    <p class="text-gray-600 mt-1">Details and statistics about this conversation</p>
+                </div>
+                <div class="flex space-x-3">
+                    <a href="{% url 'conversation' conversation.id %}"
+                       class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to Chat
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Column - Conversation Details -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Basic Info -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                        Basic Information
+                    </h2>
+
+                    <dl class="grid grid-cols-1 gap-4">
+                        <div class="flex justify-between py-2 border-b border-gray-100">
+                            <dt class="text-gray-600">Conversation ID</dt>
+                            <dd class="text-gray-900 font-mono text-sm">{{ conversation.id }}</dd>
+                        </div>
+
+                        <div class="flex justify-between py-2 border-b border-gray-100">
+                            <dt class="text-gray-600">Type</dt>
+                            <dd class="text-gray-900">
+                                {% if conversation.is_group %}
+                                    <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">Group Chat</span>
+                                {% else %}
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">Direct Chat</span>
+                                {% endif %}
+                            </dd>
+                        </div>
+
+                        <div class="flex justify-between py-2 border-b border-gray-100">
+                            <dt class="text-gray-600">Created</dt>
+                            <dd class="text-gray-900">{{ conversation.created_at|date:"F j, Y, g:i a" }}</dd>
+                        </div>
+
+                        <div class="flex justify-between py-2 border-b border-gray-100">
+                            <dt class="text-gray-600">Last Activity</dt>
+                            <dd class="text-gray-900">{{ conversation.updated_at|date:"F j, Y, g:i a" }}</dd>
+                        </div>
+
+                        {% if conversation.is_group and conversation.group_name %}
+                        <div class="flex justify-between py-2 border-b border-gray-100">
+                            <dt class="text-gray-600">Group Name</dt>
+                            <dd class="text-gray-900 font-medium">{{ conversation.group_name }}</dd>
+                        </div>
+                        {% endif %}
+
+                        {% if conversation.is_group and conversation.group_description %}
+                        <div class="flex justify-between py-2 border-b border-gray-100">
+                            <dt class="text-gray-600">Description</dt>
+                            <dd class="text-gray-900">{{ conversation.group_description }}</dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+
+                <!-- Statistics -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <i class="fas fa-chart-bar text-green-600 mr-2"></i>
+                        Statistics
+                    </h2>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="bg-blue-50 rounded-lg p-4 text-center">
+                            <div class="text-3xl font-bold text-blue-600">{{ total_messages }}</div>
+                            <div class="text-sm text-gray-600 mt-1">Total Messages</div>
+                        </div>
+
+                        <div class="bg-green-50 rounded-lg p-4 text-center">
+                            <div class="text-3xl font-bold text-green-600">{{ total_participants }}</div>
+                            <div class="text-sm text-gray-600 mt-1">Participants</div>
+                        </div>
+
+                        <div class="bg-purple-50 rounded-lg p-4 text-center">
+                            <div class="text-3xl font-bold text-purple-600">
+                                {% if total_messages > 0 %}
+                                    {{ total_messages|divisibleby:total_participants|floatformat:0 }}
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </div>
+                            <div class="text-sm text-gray-600 mt-1">Avg per Person</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Messages -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <i class="fas fa-history text-orange-600 mr-2"></i>
+                        Recent Messages
+                    </h2>
+
+                    {% if recent_messages %}
+                        <div class="space-y-3">
+                            {% for message in recent_messages %}
+                            <div class="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg transition duration-200">
+                                {% if message.sender.profile_picture %}
+                                <img src="{{ message.sender.profile_picture.url }}" alt="{{ message.sender.username }}"
+                                     class="w-8 h-8 rounded-full object-cover">
+                                {% else %}
+                                <div class="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
+                                    <i class="fas fa-user text-gray-500 text-xs"></i>
+                                </div>
+                                {% endif %}
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <p class="text-sm font-medium text-gray-900">
+                                            {{ message.sender.username }}
+                                            {% if message.sender == request.user %}
+                                                <span class="text-xs text-gray-500 ml-1">(You)</span>
+                                            {% endif %}
+                                        </p>
+                                        <p class="text-xs text-gray-500">{{ message.timestamp|timesince }} ago</p>
+                                    </div>
+                                    <p class="text-sm text-gray-600 truncate">
+                                        {% if message.is_unsent %}
+                                            <span class="italic text-gray-400">This message was unsent</span>
+                                        {% elif message.message_type == 'text' %}
+                                            {{ message.content }}
+                                        {% elif message.message_type == 'image' %}
+                                            <i class="fas fa-image text-gray-400 mr-1"></i> Shared an image
+                                        {% elif message.message_type == 'video' %}
+                                            <i class="fas fa-video text-gray-400 mr-1"></i> Shared a video
+                                        {% elif message.message_type == 'audio' %}
+                                            <i class="fas fa-music text-gray-400 mr-1"></i> Shared an audio
+                                        {% elif message.message_type == 'file' %}
+                                            <i class="fas fa-file text-gray-400 mr-1"></i> Shared a file
+                                        {% elif message.message_type == 'emoji' %}
+                                            <span class="text-lg">{{ message.content }}</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        {% if conversation.messages.count > 10 %}
+                        <div class="mt-4 text-center">
+                            <a href="{% url 'message_search' %}?conversation={{ conversation.id }}"
+                               class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                View all messages <i class="fas fa-arrow-right ml-1"></i>
+                            </a>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-8">
+                            <i class="fas fa-comment-slash text-gray-300 text-4xl mb-3"></i>
+                            <p class="text-gray-500">No messages yet in this conversation</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Right Column - Participants -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <i class="fas fa-users text-indigo-600 mr-2"></i>
+                        Participants ({{ total_participants }})
+                    </h2>
+
+                    <div class="space-y-3">
+                        {% for participant in participants %}
+                        <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition duration-200">
+                            <div class="flex items-center space-x-3">
+                                {% if participant.profile_picture %}
+                                <img src="{{ participant.profile_picture.url }}" alt="{{ participant.username }}"
+                                     class="w-10 h-10 rounded-full object-cover">
+                                {% else %}
+                                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                    <span class="text-white font-semibold text-sm">{{ participant.username|first|upper }}</span>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <p class="font-medium text-gray-900">
+                                        {{ participant.username }}
+                                        {% if participant == request.user %}
+                                            <span class="text-xs text-blue-600 ml-1">(You)</span>
+                                        {% endif %}
+                                    </p>
+                                    <p class="text-xs text-gray-500">
+                                        {% if participant.is_online %}
+                                            <span class="text-green-600">● Online</span>
+                                        {% else %}
+                                            <span class="text-gray-400">● Offline</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {% if participant != request.user %}
+                            <a href="{% url 'quick_chat' participant.id %}"
+                               class="text-gray-400 hover:text-blue-600 transition duration-200"
+                               title="Start chat">
+                                <i class="fas fa-comment"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    {% if conversation.is_group %}
+                    <div class="mt-6 pt-4 border-t border-gray-200">
+                        <h3 class="text-sm font-medium text-gray-700 mb-3">Group Admins</h3>
+                        <div class="space-y-2">
+                            {% for admin in conversation.admins.all %}
+                            <div class="flex items-center space-x-2">
+                                {% if admin.profile_picture %}
+                                <img src="{{ admin.profile_picture.url }}" alt="{{ admin.username }}"
+                                     class="w-6 h-6 rounded-full object-cover">
+                                {% else %}
+                                <div class="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
+                                    <i class="fas fa-user text-gray-500 text-xs"></i>
+                                </div>
+                                {% endif %}
+                                <span class="text-sm text-gray-600">{{ admin.username }}</span>
+                                <i class="fas fa-crown text-yellow-500 text-xs ml-auto"></i>
+                            </div>
+                            {% empty %}
+                            <p class="text-sm text-gray-500">No admins specified</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Actions -->
+                    <div class="mt-6 space-y-2">
+                        {% if conversation.is_group and request.user in conversation.admins.all %}
+                        <a href="{% url 'group_settings' conversation.id %}"
+                           class="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition duration-200">
+                            <i class="fas fa-cog mr-2"></i>
+                            Group Settings
+                        </a>
+                        {% endif %}
+
+                        <button onclick="exportConversation()"
+                                class="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition duration-200">
+                            <i class="fas fa-download mr-2"></i>
+                            Export Conversation
+                        </button>
+
+                        <button onclick="clearConversation()"
+                                class="w-full inline-flex items-center justify-center px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition duration-200">
+                            <i class="fas fa-trash-alt mr-2"></i>
+                            Clear Messages
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Modal -->
+<div id="exportModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Export Conversation</h3>
+        <p class="text-gray-600 mb-4">Choose export format:</p>
+
+        <div class="space-y-3 mb-6">
+            <label class="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                <input type="radio" name="exportFormat" value="json" class="mr-3" checked>
+                <div>
+                    <span class="font-medium text-gray-900">JSON Format</span>
+                    <p class="text-sm text-gray-500">Full conversation data including metadata</p>
+                </div>
+            </label>
+
+            <label class="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                <input type="radio" name="exportFormat" value="txt" class="mr-3">
+                <div>
+                    <span class="font-medium text-gray-900">Text Format</span>
+                    <p class="text-sm text-gray-500">Plain text readable format</p>
+                </div>
+            </label>
+
+            <label class="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                <input type="radio" name="exportFormat" value="csv" class="mr-3">
+                <div>
+                    <span class="font-medium text-gray-900">CSV Format</span>
+                    <p class="text-sm text-gray-500">Spreadsheet compatible</p>
+                </div>
+            </label>
+        </div>
+
+        <div class="flex justify-end space-x-3">
+            <button onclick="closeExportModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition duration-200">
+                Cancel
+            </button>
+            <button onclick="startExport()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200">
+                Export
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function exportConversation() {
+    document.getElementById('exportModal').classList.remove('hidden');
+}
+
+function closeExportModal() {
+    document.getElementById('exportModal').classList.add('hidden');
+}
+
+function startExport() {
+    const format = document.querySelector('input[name="exportFormat"]:checked').value;
+    const conversationId = "{{ conversation.id }}";
+
+    // Show loading toast
+    showToast('Preparing export...', 'info');
+
+    // Redirect to export URL with format parameter
+    window.location.href = `/chat/${conversationId}/export/?format=${format}`;
+
+    closeExportModal();
+}
+
+function clearConversation() {
+    if (confirm('Are you sure you want to clear all messages in this conversation? This action cannot be undone.')) {
+        const conversationId = "{{ conversation.id }}";
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        fetch(`/chat/${conversationId}/clear/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message || 'Conversation cleared successfully', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showToast(data.error || 'Error clearing conversation', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error clearing conversation', 'error');
+        });
+    }
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white ${
+        type === 'success' ? 'bg-green-500' :
+        type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+    } z-50 transform transition-transform duration-300 translate-x-full`;
+    toast.textContent = message;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.remove('translate-x-full');
+    }, 100);
+
+    setTimeout(() => {
+        toast.classList.add('translate-x-full');
+        setTimeout(() => {
+            document.body.removeChild(toast);
+        }, 300);
+    }, 3000);
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('exportModal');
+    if (e.target === modal) {
+        closeExportModal();
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeExportModal();
+    }
+});
+</script>
+
+<style>
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+    .grid {
+        gap: 1rem;
+    }
+}
+
+/* Loading animation */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.fa-spinner {
+    animation: spin 1s linear infinite;
+}
+</style>
+{% endblock %}

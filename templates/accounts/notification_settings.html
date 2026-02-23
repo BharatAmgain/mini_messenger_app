@@ -27,7 +27,7 @@
             </div>
         </div>
 
-        <form method="POST" action="{% url 'update_notification_preferences' %}">
+        <form method="POST" action="{% url 'update_notification_settings' %}">
             {% csrf_token %}
 
             <div class="space-y-6">
@@ -151,7 +151,8 @@
                                 <label class="text-sm font-medium text-gray-900">System Updates</label>
                                 <p class="text-sm text-gray-500">Important system and security updates</p>
                             </div>
-                            <label class="relative inline-flex items-center cursor-pointer">
+                            <!-- templates/accounts/notification_settings.html (continued) -->
+                                <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" name="system_notifications" class="sr-only peer" {% if user.system_notifications %}checked{% endif %}>
                                 <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                             </label>
@@ -258,4 +259,26 @@
         </form>
     </div>
 </div>
+
+<script>
+// Preview notification sound
+function previewSound() {
+    const audio = new Audio('/static/sounds/notification.mp3');
+    audio.play().catch(e => console.log('Could not play sound:', e));
+}
+
+// Add preview button next to sound setting
+document.addEventListener('DOMContentLoaded', function() {
+    const soundCheckbox = document.querySelector('input[name="message_sound"]');
+    if (soundCheckbox) {
+        const soundRow = soundCheckbox.closest('.flex.items-center.justify-between');
+        const previewBtn = document.createElement('button');
+        previewBtn.type = 'button';
+        previewBtn.className = 'ml-2 text-sm text-blue-600 hover:text-blue-800';
+        previewBtn.innerHTML = '<i class="fas fa-play"></i> Preview';
+        previewBtn.onclick = previewSound;
+        soundRow.appendChild(previewBtn);
+    }
+});
+</script>
 {% endblock %}

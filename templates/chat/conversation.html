@@ -1,7 +1,6 @@
 <!-- templates/chat/conversation.html -->
 {% extends 'base.html' %}
 {% load static %}
-{% load chat_filters %}
 
 {% block title %}{% if is_group %}{{ conversation.group_name }} - Group Chat{% else %}Chat with {{ other_user.username }}{% endif %} - Messenger{% endblock %}
 
@@ -34,26 +33,28 @@
                         <p class="text-sm text-gray-600">{{ group_members.count }} members</p>
                     </div>
                 {% else %}
-                    {% if other_user.profile_picture %}
-                    <img src="{{ other_user.profile_picture.url }}" alt="{{ other_user.username }}"
-                         class="w-10 h-10 rounded-full object-cover">
-                    {% else %}
-                    <div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-                        <i class="fas fa-user text-gray-500"></i>
-                    </div>
-                    {% endif %}
-                    <div class="flex-1 min-w-0">
-                        <h2 class="font-semibold text-gray-900 truncate">{{ other_user.username }}</h2>
-                        <div class="flex items-center space-x-1">
-                            {% if other_user.status.online %}
-                            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-                            <p class="text-sm text-gray-600">Online</p>
-                            {% else %}
-                            <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
-                            <p class="text-sm text-gray-600">Offline</p>
-                            {% endif %}
+                    {% if other_user %}
+                        {% if other_user.profile_picture %}
+                        <img src="{{ other_user.profile_picture.url }}" alt="{{ other_user.username }}"
+                             class="w-10 h-10 rounded-full object-cover">
+                        {% else %}
+                        <div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
+                            <i class="fas fa-user text-gray-500"></i>
                         </div>
-                    </div>
+                        {% endif %}
+                        <div class="flex-1 min-w-0">
+                            <h2 class="font-semibold text-gray-900 truncate">{{ other_user.username }}</h2>
+                            <div class="flex items-center space-x-1">
+                                {% if other_user.is_online %}
+                                <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <p class="text-sm text-gray-600">Online</p>
+                                {% else %}
+                                <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+                                <p class="text-sm text-gray-600">Last seen {{ other_user.last_seen|timesince }} ago</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
                 {% endif %}
             </div>
 
@@ -82,9 +83,11 @@
                             </button>
                         </form>
                         {% else %}
-                        <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 text-sm">
-                            <i class="fas fa-user-slash mr-2"></i>Block User
-                        </a>
+                            {% if other_user %}
+                            <a href="#" onclick="openBlockModal()" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 text-sm">
+                                <i class="fas fa-user-slash mr-2"></i>Block User
+                            </a>
+                            {% endif %}
                         {% endif %}
                     </div>
                 </div>
@@ -99,7 +102,8 @@
         <div class="space-y-3" id="messages-list">
             {% for message in messages %}
             <div class="message-group flex {% if message.sender == request.user %}justify-end{% else %}justify-start{% endif %}"
-                 data-message-id="{{ message.id }}">
+                 data-message-id="{{ message.id }}"
+                 data-timestamp="{{ message.timestamp.isoformat }}">
 
                 <div class="message-bubble relative group max-w-xs lg:max-w-md px-4 py-2 rounded-lg {% if message.sender == request.user %}bg-blue-600 text-white{% else %}bg-white border border-gray-200 text-gray-900{% endif %}">
 
@@ -151,9 +155,9 @@
                         <p class="text-sm message-content mt-2">{{ message.content }}</p>
                         {% endif %}
                         {% elif message.message_type == 'file' %}
-                        <div class="mb-2 p-3 bg-{% if message.sender == request.user %}white bg-opacity-20{% else %}gray-100{% endif %} rounded-lg">
+                        <div class="mb-2 p-3 {% if message.sender == request.user %}bg-white bg-opacity-20{% else %}bg-gray-100{% endif %} rounded-lg">
                             <div class="flex items-center space-x-3">
-                                <div class="flex-shrink-0 w-10 h-10 bg-{% if message.sender == request.user %}white bg-opacity-30{% else %}blue-100{% endif %} rounded-lg flex items-center justify-center">
+                                <div class="flex-shrink-0 w-10 h-10 {% if message.sender == request.user %}bg-white bg-opacity-30{% else %}bg-blue-100{% endif %} rounded-lg flex items-center justify-center">
                                     <i class="fas fa-file {% if message.sender == request.user %}text-white{% else %}text-blue-600{% endif %}"></i>
                                 </div>
                                 <div class="flex-1 min-w-0">
@@ -240,12 +244,12 @@
 
                             <!-- Reaction Picker -->
                             <div id="reactions-{{ message.id }}" class="reaction-picker absolute bottom-full left-0 bg-white border border-gray-300 rounded-lg shadow-lg p-2 hidden grid grid-cols-3 gap-1 z-50">
-                                {% for emoji in '👍,❤️,😂,😮,😢,😡'|split:',' %}
-                                <button onclick="addReaction('{{ message.id }}', '{{ emoji }}')"
-                                        class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">
-                                    {{ emoji }}
-                                </button>
-                                {% endfor %}
+                                <button onclick="addReaction('{{ message.id }}', '👍')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">👍</button>
+                                <button onclick="addReaction('{{ message.id }}', '❤️')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">❤️</button>
+                                <button onclick="addReaction('{{ message.id }}', '😂')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">😂</button>
+                                <button onclick="addReaction('{{ message.id }}', '😮')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">😮</button>
+                                <button onclick="addReaction('{{ message.id }}', '😢')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">😢</button>
+                                <button onclick="addReaction('{{ message.id }}', '😡')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">😡</button>
                             </div>
                         </div>
                     </div>
@@ -260,12 +264,12 @@
                             </button>
 
                             <div id="reactions-{{ message.id }}" class="reaction-picker absolute bottom-full left-0 bg-white border border-gray-300 rounded-lg shadow-lg p-2 hidden grid grid-cols-3 gap-1 z-50">
-                                {% for emoji in '👍,❤️,😂,😮,😢,😡'|split:',' %}
-                                <button onclick="addReaction('{{ message.id }}', '{{ emoji }}')"
-                                        class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">
-                                    {{ emoji }}
-                                </button>
-                                {% endfor %}
+                                <button onclick="addReaction('{{ message.id }}', '👍')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">👍</button>
+                                <button onclick="addReaction('{{ message.id }}', '❤️')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">❤️</button>
+                                <button onclick="addReaction('{{ message.id }}', '😂')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">😂</button>
+                                <button onclick="addReaction('{{ message.id }}', '😮')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">😮</button>
+                                <button onclick="addReaction('{{ message.id }}', '😢')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">😢</button>
+                                <button onclick="addReaction('{{ message.id }}', '😡')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">😡</button>
                             </div>
                         </div>
                     </div>
@@ -301,7 +305,7 @@
                     {% if is_group %}
                         Someone is typing...
                     {% else %}
-                        {{ other_user.username }} is typing...
+                        {% if other_user %}{{ other_user.username }}{% else %}Someone{% endif %} is typing...
                     {% endif %}
                 </p>
             </div>
@@ -310,8 +314,7 @@
 
     <!-- Enhanced Mobile Message Input -->
     <div class="bg-white border-t border-gray-200 p-3 fixed bottom-0 left-0 right-0 md:relative">
-        <form method="POST" class="flex items-end space-x-2" id="message-form"
-              action="{% url 'conversation' conversation.id %}" enctype="multipart/form-data">
+        <form class="flex items-end space-x-2" id="message-form">
             {% csrf_token %}
 
             <!-- File Upload -->
@@ -338,7 +341,7 @@
                         <textarea
                             id="message-input"
                             name="content"
-                            placeholder="{% if is_group %}Type a message...{% else %}Type a message...{% endif %}"
+                            placeholder="Type a message..."
                             class="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                             rows="1"
                             style="max-height: 120px; min-height: 48px;"
@@ -422,10 +425,866 @@
     </div>
 </div>
 
-<!-- Enhanced JavaScript for mobile and emoji support -->
+<!-- Block User Modal - FIXED: Only show if other_user exists -->
+{% if other_user %}
+<div id="blockModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-96">
+        <h3 class="text-lg font-semibold mb-4">Block User</h3>
+        <p class="text-gray-600 mb-4">Are you sure you want to block {{ other_user.username }}? They will not be able to send you messages or see your online status.</p>
+        <form method="POST" action="{% url 'block_user' other_user.id %}">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label for="blockReason" class="block text-sm font-medium text-gray-700 mb-2">Reason (optional)</label>
+                <textarea id="blockReason" name="reason" rows="2" class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Why are you blocking this user?"></textarea>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="closeBlockModal()" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-200">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-200">
+                    Block User
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- Enhanced JavaScript for real-time messaging -->
 <script>
-// Enhanced mobile functionality
-document.addEventListener('DOMContentLoaded', function() {
+    // Global variables
+    const conversationId = "{{ conversation.id }}";
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    let lastMessageTimestamp = "{{ messages.last.timestamp.isoformat|default:'' }}";
+    let typingTimer;
+    const TYPING_TIMEOUT = 3000;
+    let isTyping = false;
+
+    // DOM elements
+    const messagesContainer = document.getElementById('messages-container');
+    const messagesList = document.getElementById('messages-list');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.querySelector('button[type="submit"]');
+    const typingIndicator = document.getElementById('typing-indicator');
+    const typingText = document.getElementById('typing-text');
+    const emptyState = document.getElementById('empty-state');
+
+    // Auto-resize textarea
+    function autoResize(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    }
+
+    // Scroll to bottom function
+    function scrollToBottom() {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // Initial scroll to bottom
+    scrollToBottom();
+
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Toast notification function
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white ${
+            type === 'success' ? 'bg-green-500' :
+            type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+        } z-50 transform transition-transform duration-300 translate-x-full`;
+        toast.textContent = message;
+
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.remove('translate-x-full');
+        }, 100);
+
+        setTimeout(() => {
+            toast.classList.add('translate-x-full');
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 300);
+        }, 3000);
+    }
+
+    // Add message to UI
+    function addMessageToUI(message) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message-group flex ${message.is_own ? 'justify-end' : 'justify-start'}`;
+        messageDiv.id = `message-${message.id}`;
+        messageDiv.setAttribute('data-message-id', message.id);
+        messageDiv.setAttribute('data-timestamp', message.full_timestamp || new Date().toISOString());
+
+        const isOwn = message.is_own;
+        const isGroup = {% if is_group %}true{% else %}false{% endif %};
+
+        let messageHTML = `
+            <div class="message-bubble relative group max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isOwn ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-900'}">
+        `;
+
+        // Message header for group
+        if (isGroup && !isOwn && !message.is_unsent) {
+            messageHTML += `<p class="text-xs font-medium ${isOwn ? 'text-blue-100' : 'text-blue-600'} mb-1">${message.sender}</p>`;
+        }
+
+        // Message content
+        if (message.is_unsent) {
+            messageHTML += `<p class="text-sm italic opacity-70">This message was unsent</p>`;
+        } else {
+            if (message.message_type === 'text') {
+                messageHTML += `<p class="text-sm message-content">${message.content}</p>`;
+            } else if (message.message_type === 'emoji') {
+                messageHTML += `
+                    <div class="emoji-message text-4xl text-center py-2">
+                        ${message.content}
+                    </div>
+                `;
+            } else if (message.message_type === 'image') {
+                messageHTML += `
+                    <div class="mb-2">
+                        <img src="${message.file_url}" alt="Shared image"
+                             class="max-w-full h-auto rounded-lg cursor-pointer"
+                             onclick="openMediaModal('${message.file_url}', 'image')">
+                    </div>
+                `;
+                if (message.content) {
+                    messageHTML += `<p class="text-sm message-content mt-2">${message.content}</p>`;
+                }
+            } else if (message.message_type === 'video') {
+                messageHTML += `
+                    <div class="mb-2">
+                        <video controls class="max-w-full h-auto rounded-lg cursor-pointer"
+                               onclick="openMediaModal('${message.file_url}', 'video')">
+                            <source src="${message.file_url}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                `;
+                if (message.content) {
+                    messageHTML += `<p class="text-sm message-content mt-2">${message.content}</p>`;
+                }
+            } else if (message.message_type === 'audio') {
+                messageHTML += `
+                    <div class="mb-2">
+                        <audio controls class="w-full">
+                            <source src="${message.file_url}" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                `;
+                if (message.content) {
+                    messageHTML += `<p class="text-sm message-content mt-2">${message.content}</p>`;
+                }
+            } else if (message.message_type === 'file') {
+                messageHTML += `
+                    <div class="mb-2 p-3 ${isOwn ? 'bg-white bg-opacity-20' : 'bg-gray-100'} rounded-lg">
+                        <div class="flex items-center space-x-3">
+                            <div class="flex-shrink-0 w-10 h-10 ${isOwn ? 'bg-white bg-opacity-30' : 'bg-blue-100'} rounded-lg flex items-center justify-center">
+                                <i class="fas fa-file ${isOwn ? 'text-white' : 'text-blue-600'}"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium ${isOwn ? 'text-white' : 'text-gray-900'} truncate">
+                                    ${message.file_name || 'File'}
+                                </p>
+                                <p class="text-xs ${isOwn ? 'text-blue-100' : 'text-gray-500'}">
+                                    ${message.file_size}
+                                </p>
+                            </div>
+                            <a href="${message.file_url}" download
+                               class="flex-shrink-0 p-2 ${isOwn ? 'bg-white bg-opacity-20 hover:bg-opacity-30' : 'bg-blue-100 hover:bg-blue-200'} rounded-lg transition duration-200"
+                               title="Download file">
+                                <i class="fas fa-download ${isOwn ? 'text-white' : 'text-blue-600'} text-sm"></i>
+                            </a>
+                        </div>
+                    </div>
+                `;
+                if (message.content) {
+                    messageHTML += `<p class="text-sm message-content mt-2">${message.content}</p>`;
+                }
+            }
+        }
+
+        // Message meta
+        messageHTML += `
+            <div class="flex items-center justify-between mt-1">
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs opacity-70 ${isOwn ? 'text-blue-100' : 'text-gray-500'}">${message.timestamp}</span>
+        `;
+
+        if (message.is_edited && !message.is_unsent) {
+            messageHTML += `<span class="text-xs opacity-70 ${isOwn ? 'text-blue-100' : 'text-gray-500'}">edited</span>`;
+        }
+
+        if (isOwn && !message.is_unsent) {
+            if (message.is_read) {
+                messageHTML += `<i class="fas fa-check-double text-xs opacity-70 ${isOwn ? 'text-blue-100' : 'text-gray-500'}"></i>`;
+            } else {
+                messageHTML += `<i class="fas fa-check text-xs opacity-70 ${isOwn ? 'text-blue-100' : 'text-gray-500'}"></i>`;
+            }
+        }
+
+        messageHTML += `</div>`;
+
+        // Reactions
+        if (!message.is_unsent && message.reactions && Object.keys(message.reactions).length > 0) {
+            messageHTML += `<div class="message-reactions flex space-x-1">`;
+            for (const [emoji, count] of Object.entries(message.reactions)) {
+                messageHTML += `<span class="text-xs ${isOwn ? 'bg-white bg-opacity-20' : 'bg-gray-100'} rounded-full px-1">${emoji} ${count}</span>`;
+            }
+            messageHTML += `</div>`;
+        }
+
+        messageHTML += `</div>`;
+
+        // Message actions for own messages
+        if (isOwn && !message.is_unsent) {
+            messageHTML += `
+                <div class="message-actions absolute -top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-1 hidden group-hover:flex space-x-1">
+                    ${message.message_type === 'text' ? `
+                        <button onclick="editMessage('${message.id}')" class="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition duration-200" title="Edit message">
+                            <i class="fas fa-edit text-xs"></i>
+                        </button>
+                    ` : ''}
+                    <button onclick="unsendMessage('${message.id}')" class="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition duration-200" title="Unsend message">
+                        <i class="fas fa-trash text-xs"></i>
+                    </button>
+                    <div class="relative">
+                        <button onclick="toggleReactions('${message.id}')" class="p-1 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition duration-200" title="Add reaction">
+                            <i class="fas fa-smile text-xs"></i>
+                        </button>
+                        <div id="reactions-${message.id}" class="reaction-picker absolute bottom-full left-0 bg-white border border-gray-300 rounded-lg shadow-lg p-2 hidden grid grid-cols-3 gap-1 z-50">
+                            <button onclick="addReaction('${message.id}', '👍')" class="p-1 hover:bg-gray-100 rounded text-lg">👍</button>
+                            <button onclick="addReaction('${message.id}', '❤️')" class="p-1 hover:bg-gray-100 rounded text-lg">❤️</button>
+                            <button onclick="addReaction('${message.id}', '😂')" class="p-1 hover:bg-gray-100 rounded text-lg">😂</button>
+                            <button onclick="addReaction('${message.id}', '😮')" class="p-1 hover:bg-gray-100 rounded text-lg">😮</button>
+                            <button onclick="addReaction('${message.id}', '😢')" class="p-1 hover:bg-gray-100 rounded text-lg">😢</button>
+                            <button onclick="addReaction('${message.id}', '😡')" class="p-1 hover:bg-gray-100 rounded text-lg">😡</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (!message.is_unsent) {
+            // Message actions for others' messages
+            messageHTML += `
+                <div class="message-actions absolute -top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-1 hidden group-hover:flex">
+                    <div class="relative">
+                        <button onclick="toggleReactions('${message.id}')" class="p-1 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition duration-200" title="Add reaction">
+                            <i class="fas fa-smile text-xs"></i>
+                        </button>
+                        <div id="reactions-${message.id}" class="reaction-picker absolute bottom-full left-0 bg-white border border-gray-300 rounded-lg shadow-lg p-2 hidden grid grid-cols-3 gap-1 z-50">
+                            <button onclick="addReaction('${message.id}', '👍')" class="p-1 hover:bg-gray-100 rounded text-lg">👍</button>
+                            <button onclick="addReaction('${message.id}', '❤️')" class="p-1 hover:bg-gray-100 rounded text-lg">❤️</button>
+                            <button onclick="addReaction('${message.id}', '😂')" class="p-1 hover:bg-gray-100 rounded text-lg">😂</button>
+                            <button onclick="addReaction('${message.id}', '😮')" class="p-1 hover:bg-gray-100 rounded text-lg">😮</button>
+                            <button onclick="addReaction('${message.id}', '😢')" class="p-1 hover:bg-gray-100 rounded text-lg">😢</button>
+                            <button onclick="addReaction('${message.id}', '😡')" class="p-1 hover:bg-gray-100 rounded text-lg">😡</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        messageHTML += `</div>`;
+
+        messageDiv.innerHTML = messageHTML;
+        messagesList.appendChild(messageDiv);
+
+        // Remove empty state if it exists
+        if (emptyState) {
+            emptyState.remove();
+        }
+    }
+
+    // Send message function
+    document.getElementById('message-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const content = messageInput.value.trim();
+        const fileInput = document.getElementById('file-input');
+        const file = fileInput.files[0];
+
+        if (!content && !file) {
+            showToast('Please enter a message or select a file', 'warning');
+            return;
+        }
+
+        // Disable input and button
+        messageInput.disabled = true;
+        sendButton.disabled = true;
+        sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', csrftoken);
+        formData.append('content', content);
+
+        if (file) {
+            formData.append('file', file);
+        }
+
+        fetch(`/chat/${conversationId}/send-message/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.error || 'Server error');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Clear input and file preview
+                messageInput.value = '';
+                messageInput.disabled = false;
+                sendButton.disabled = false;
+                sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
+
+                if (file) {
+                    clearFilePreview();
+                    fileInput.value = '';
+                }
+
+                // Add message to UI
+                addMessageToUI(data);
+
+                // Update last timestamp
+                if (data.full_timestamp) {
+                    lastMessageTimestamp = data.full_timestamp;
+                } else {
+                    lastMessageTimestamp = new Date().toISOString();
+                }
+
+                // Scroll to bottom
+                scrollToBottom();
+
+                // Stop typing indicator
+                stopTyping();
+
+                // Auto-resize textarea
+                autoResize(messageInput);
+
+                showToast('Message sent', 'success');
+            } else {
+                showToast(data.error || 'Error sending message', 'error');
+                messageInput.disabled = false;
+                sendButton.disabled = false;
+                sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast(error.message || 'Error sending message', 'error');
+            messageInput.disabled = false;
+            sendButton.disabled = false;
+            sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
+        });
+    });
+
+    // Real-time message polling
+    setInterval(function() {
+        const url = lastMessageTimestamp
+            ? `/chat/${conversationId}/new-messages/?last_timestamp=${encodeURIComponent(lastMessageTimestamp)}`
+            : `/chat/${conversationId}/new-messages/`;
+
+        fetch(url, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.new_messages && data.new_messages.length > 0) {
+                let newMessagesAdded = false;
+                data.new_messages.forEach(message => {
+                    if (!document.querySelector(`[data-message-id="${message.id}"]`)) {
+                        addMessageToUI(message);
+                        newMessagesAdded = true;
+                    }
+                });
+
+                if (newMessagesAdded) {
+                    if (data.last_timestamp) {
+                        lastMessageTimestamp = data.last_timestamp;
+                    }
+                    scrollToBottom();
+                }
+            }
+        })
+        .catch(error => console.error('Error polling messages:', error));
+    }, 2000); // Poll every 2 seconds
+
+    // Typing indicator
+    messageInput.addEventListener('input', function() {
+        clearTimeout(typingTimer);
+
+        if (!isTyping && this.value.length > 0) {
+            isTyping = true;
+            fetch(`/chat/${conversationId}/typing/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({is_typing: true})
+            }).catch(error => console.error('Typing error:', error));
+        }
+
+        typingTimer = setTimeout(function() {
+            if (isTyping) {
+                isTyping = false;
+                fetch(`/chat/${conversationId}/typing/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({is_typing: false})
+                }).catch(error => console.error('Typing error:', error));
+            }
+        }, TYPING_TIMEOUT);
+    });
+
+    // Check typing status
+    setInterval(function() {
+        fetch(`/chat/${conversationId}/typing-status/`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.is_typing && data.typing_users && data.typing_users.length > 0) {
+                if (data.typing_users.length === 1) {
+                    typingText.textContent = `${data.typing_users[0]} is typing...`;
+                } else if (data.typing_users.length === 2) {
+                    typingText.textContent = `${data.typing_users[0]} and ${data.typing_users[1]} are typing...`;
+                } else {
+                    typingText.textContent = 'Several people are typing...';
+                }
+                typingIndicator.classList.remove('hidden');
+                scrollToBottom();
+            } else {
+                typingIndicator.classList.add('hidden');
+            }
+        })
+        .catch(error => console.error('Error checking typing status:', error));
+    }, 3000);
+
+    // File handling
+    document.getElementById('file-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            showFilePreview(file);
+        }
+    });
+
+    function showFilePreview(file) {
+        const filePreview = document.getElementById('file-preview');
+        const fileName = document.getElementById('file-name');
+        const fileSize = document.getElementById('file-size');
+
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        filePreview.classList.remove('hidden');
+    }
+
+    function clearFilePreview() {
+        document.getElementById('file-input').value = '';
+        document.getElementById('file-preview').classList.add('hidden');
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Emoji picker functions
+    function toggleEmojiPicker() {
+        const picker = document.getElementById('emoji-picker');
+        picker.classList.toggle('hidden');
+
+        if (!picker.classList.contains('hidden')) {
+            loadEmojiCategories();
+            loadEmojisByCategory('smileys_people');
+        }
+    }
+
+    function loadEmojiCategories() {
+        const categories = {
+            'smileys_people': '😀',
+            'animals_nature': '🐶',
+            'food_drink': '🍔',
+            'activities': '⚽',
+            'travel_places': '✈️',
+            'objects': '💡',
+            'symbols': '❤️'
+        };
+
+        const categoriesContainer = document.getElementById('emoji-categories');
+        let html = '';
+
+        for (const [category, emoji] of Object.entries(categories)) {
+            html += `
+                <button onclick="loadEmojisByCategory('${category}')"
+                        class="flex-shrink-0 px-3 py-2 text-lg hover:bg-gray-100">
+                    ${emoji}
+                </button>
+            `;
+        }
+
+        categoriesContainer.innerHTML = html;
+    }
+
+    function loadEmojisByCategory(category) {
+        const emojis = {
+            'smileys_people': ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾', '🙈', '🙉', '🙊', '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🫀', '🫁', '🦷', '🦴', '👀', '👁️', '👅', '👄', '💋', '🩸'],
+            'animals_nature': ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐻‍❄️', '🐨', '🐯', '🦁', '🐮', '🐷', '🐽', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🐺', '🐗', '🐴', '🦄', '🐝', '🪱', '🐛', '🦋', '🐌', '🐞', '🐜', '🪰', '🪲', '🪳', '🐞', '🐜', '🦟', '🦗', '🕷️', '🕸️', '🦂', '🐢', '🐍', '🦎', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🦬', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐈‍⬛', '🪶', '🐓', '🦃', '🦤', '🦚', '🦜', '🦢', '🦩', '🕊️', '🐇', '🦝', '🦨', '🦡', '🦫', '🦦', '🦥', '🐁', '🐀', '🐿️', '🦔', '🐾', '🐉', '🐲', '🌵', '🎄', '🌲', '🌳', '🌴', '🌱', '🌿', '☘️', '🍀', '🎍', '🪴', '🎋', '🍃', '🍂', '🍁', '🍄', '🐚', '🪸', '🌾', '💐', '🌷', '🌹', '🥀', '🌺', '🌸', '🌼', '🌻', '🌞', '🌝', '🌛', '🌜', '🌚', '🌕', '🌖', '🌗', '🌘', '🌑', '🌒', '🌓', '🌔', '🌙', '🌎', '🌍', '🌏', '🪐', '💫', '⭐', '🌟', '✨', '⚡', '☄️', '💥', '🔥', '🌪️', '🌈', '☀️', '🌤️', '⛅', '🌥️', '☁️', '🌦️', '🌧️', '⛈️', '🌩️', '🌨️', '❄️', '☃️', '⛄', '🌬️', '💨', '💧', '💦', '☔', '☂️', '🌊', '🌫️'],
+            'food_drink': ['🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🫑', '🌽', '🥕', '🧄', '🧅', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🦴', '🌭', '🍔', '🍟', '🍕', '🫓', '🥪', '🥙', '🧆', '🌮', '🌯', '🫔', '🥗', '🥘', '🫕', '🥫', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🦪', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '🌰', '🥜', '🍯', '🥛', '🍼', '🫗', '☕', '🫖', '🍵', '🧃', '🥤', '🧋', '🫙', '🍶', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🧉', '🍾', '🧊', '🥄', '🍴', '🍽️', '🥢', '🧂'],
+            'activities': ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🪂', '🏋️', '🤼', '🤸', '⛹️', '🤾', '🏌️', '🏇', '🧘', '🏄', '🏊', '🤽', '🚣', '🧗', '🚵', '🚴', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '🏵️', '🎗️', '🎫', '🎟️', '🎪', '🤹', '🎭', '🩰', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🪘', '🎷', '🎺', '🪗', '🎸', '🪕', '🎻', '🎲', '♟️', '🎯', '🎳', '🎮', '🎰', '🧩'],
+            'travel_places': ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🏍️', '🛵', '🚲', '🛴', '🛹', '🛼', '🚏', '🛣️', '🛤️', '⛽', '🚨', '🚥', '🚦', '🛑', '🚧', '⚓', '⛵', '🛶', '🚤', '🛳️', '⛴️', '🛥️', '🚢', '✈️', '🛩️', '🛫', '🛬', '🪂', '💺', '🚁', '🚟', '🚠', '🚡', '🛰️', '🚀', '🛸', '🛎️', '🧳', '⌛', '⏳', '⌚', '⏰', '⏱️', '⏲️', '🕰️', '🌡️', '🗺️', '🧭', '🏔️', '⛰️', '🌋', '🗻', '🏕️', '🏖️', '🏜️', '🏝️', '🏞️', '🏟️', '🏛️', '🏗️', '🧱', '🪨', '🪵', '🛖', '🏘️', '🏚️', '🏠', '🏡', '🏢', '🏣', '🏤', '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '🏯', '🏰', '💒', '🗼', '🗽', '⛪', '🕌', '🛕', '🕍', '⛩️', '🕋', '⛲', '🌆', '🌃', '🏙️', '🌇', '🌉', '🌌', '🌠', '🎆', '🎇', '🎑', '🌅', '🌄'],
+            'objects': ['⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '🕹️', '🗜️', '💽', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🪔', '🧯', '🛢️', '💸', '💵', '💴', '💶', '💷', '💰', '💳', '💎', '⚖️', '🧰', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🔩', '⚙️', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🪓', '🔪', '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '⚱️', '🏺', '🔮', '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳️', '🩹', '🩺', '💊', '💉', '🩸', '🧬', '🦠', '🧫', '🧪', '🌡️', '🧹', '🧺', '🧻', '🚽', '🚰', '🚿', '🛁', '🛀', '🧼', '🪒', '🧽', '🧴', '🛎️', '🔑', '🗝️', '🚪', '🪑', '🛋️', '🛏️', '🛌', '🧸', '🖼️', '🛍️', '🛒', '🎁', '🎈', '🎏', '🎀', '🎊', '🎉', '🎎', '🏮', '🎐', '✉️', '📩', '📨', '📧', '💌', '📥', '📤', '📦', '🏷️', '📪', '📫', '📬', '📭', '📮', '📯', '📜', '📃', '📄', '📑', '🧾', '📊', '📈', '📉', '🗒️', '🗓️', '📆', '📅', '🗑️', '📇', '🗃️', '🗳️', '🗄️', '📋', '📁', '📂', '🗂️', '🗞️', '📰', '📓', '📔', '📒', '📕', '📗', '📘', '📙', '📚', '📖', '🔖', '🧷', '🔗', '📎', '🖇️', '📐', '📏', '🧮', '📌', '📍', '✂️', '🖊️', '🖋️', '✒️', '🖌️', '🖍️', '📝', '✏️', '🔍', '🔎', '🔏', '🔐', '🔒', '🔓'],
+            'symbols': ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️', '📴', '📳', '🈶', '🈚', '🈸', '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️', '🈴', '🈵', '🈹', '🈲', '🅰️', '🅱️', '🆎', '🆑', '🅾️', '🆘', '❌', '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢', '♨️', '🚷', '🚯', '🚳', '🚱', '🔞', '📵', '🚭', '❗', '❕', '❓', '❔', '‼️', '⁉️', '🔅', '🔆', '〽️', '⚠️', '🚸', '🔱', '⚜️', '🔰', '♻️', '✅', '🈯', '💹', '❇️', '✳️', '❎', '🌐', '💠', 'Ⓜ️', '🌀', '💤', '🏧', '🚾', '♿', '🅿️', '🛗', '🈳', '🈂️', '🛂', '🛃', '🛄', '🛅', '🚹', '🚺', '🚼', '🚻', '🚮', '🎦', '📶', '🈁', '🔣', 'ℹ️', '🔤', '🔡', '🔠', '🆖', '🆗', '🆙', '🆒', '🆕', '🆓', '0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '🔢', '#️⃣', '*️⃣', '⏏️', '▶️', '⏸️', '⏯️', '⏹️', '⏺️', '⏭️', '⏮️', '⏩', '⏪', '⏫', '⏬', '◀️', '🔼', '🔽', '➡️', '⬅️', '⬆️', '⬇️', '↗️', '↘️', '↙️', '↖️', '↕️', '↔️', '↪️', '↩️', '⤴️', '⤵️', '🔀', '🔁', '🔂', '🔄', '🔃', '🎵', '🎶', '➕', '➖', '➗', '♾️', '💲', '💱', '™️', '©️', '®️', '〰️', '➰', '➿', '🔚', '🔙', '🔛', '🔝', '🔜']
+        };
+
+        const emojiGrid = document.getElementById('emoji-grid');
+        const categoryEmojis = emojis[category] || [];
+
+        let html = '<div class="grid grid-cols-8 gap-2">';
+        categoryEmojis.forEach(emojiChar => {
+            html += `
+                <button onclick="insertEmoji('${emojiChar}')"
+                        class="text-xl p-2 hover:bg-gray-100 rounded-lg transition duration-200">
+                    ${emojiChar}
+                </button>
+            `;
+        });
+        html += '</div>';
+
+        emojiGrid.innerHTML = html;
+    }
+
+    function insertEmoji(emojiChar) {
+        const cursorPosition = messageInput.selectionStart;
+        const currentValue = messageInput.value;
+
+        messageInput.value = currentValue.substring(0, cursorPosition) + emojiChar + currentValue.substring(cursorPosition);
+        messageInput.focus();
+
+        const newPosition = cursorPosition + emojiChar.length;
+        messageInput.setSelectionRange(newPosition, newPosition);
+
+        document.getElementById('emoji-picker').classList.add('hidden');
+        messageInput.dispatchEvent(new Event('input'));
+    }
+
+    // Search emojis
+    document.getElementById('emoji-search').addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        if (query.length === 0) {
+            loadEmojisByCategory('smileys_people');
+            return;
+        }
+
+        const allEmojis = [
+            '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘',
+            '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷',
+            '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭',
+            '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸',
+            '🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛',
+            '⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '🕹️', '🗜️', '💽', '💾',
+            '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞'
+        ];
+
+        const results = allEmojis.filter(emoji => {
+            return emoji.includes(query) || query.length === 0;
+        }).slice(0, 48);
+
+        const emojiGrid = document.getElementById('emoji-grid');
+
+        if (results.length === 0) {
+            emojiGrid.innerHTML = '<p class="text-center text-gray-500 py-4">No emojis found</p>';
+            return;
+        }
+
+        let html = '<div class="grid grid-cols-8 gap-2">';
+        results.forEach(emojiChar => {
+            html += `
+                <button onclick="insertEmoji('${emojiChar}')"
+                        class="text-xl p-2 hover:bg-gray-100 rounded-lg transition duration-200">
+                    ${emojiChar}
+                </button>
+            `;
+        });
+        html += '</div>';
+
+        emojiGrid.innerHTML = html;
+    });
+
+    // Media Modal Functions
+    function openMediaModal(url, type) {
+        const modal = document.getElementById('mediaModal');
+        const content = document.getElementById('media-content');
+
+        if (type === 'image') {
+            content.innerHTML = `<img src="${url}" alt="Shared image" class="w-full h-auto max-h-screen object-contain">`;
+        } else if (type === 'video') {
+            content.innerHTML = `
+                <video controls autoplay class="w-full h-auto max-h-screen">
+                    <source src="${url}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            `;
+        }
+
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeMediaModal() {
+        const modal = document.getElementById('mediaModal');
+        const content = document.getElementById('media-content');
+
+        const video = content.querySelector('video');
+        if (video) {
+            video.pause();
+        }
+
+        modal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+        content.innerHTML = '';
+    }
+
+    // Message editing functions
+    let currentEditingMessageId = null;
+
+    function editMessage(messageId) {
+        const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+        if (!messageElement) return;
+
+        const contentElement = messageElement.querySelector('.message-content');
+        if (!contentElement) return;
+
+        document.getElementById('editMessageContent').value = contentElement.textContent;
+        document.getElementById('editModal').classList.remove('hidden');
+        currentEditingMessageId = messageId;
+    }
+
+    function closeEditModal() {
+        document.getElementById('editModal').classList.add('hidden');
+        currentEditingMessageId = null;
+    }
+
+    function saveEditedMessage() {
+        if (!currentEditingMessageId) return;
+
+        const newContent = document.getElementById('editMessageContent').value.trim();
+        if (!newContent) return;
+
+        fetch(`/chat/message/${currentEditingMessageId}/edit/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({ content: newContent })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const messageElement = document.querySelector(`[data-message-id="${currentEditingMessageId}"]`);
+                if (messageElement) {
+                    const contentElement = messageElement.querySelector('.message-content');
+                    if (contentElement) {
+                        contentElement.textContent = data.new_content;
+                    }
+                }
+
+                if (!messageElement.querySelector('.edited-indicator')) {
+                    const metaElement = messageElement.querySelector('.flex.items-center.space-x-2');
+                    if (metaElement) {
+                        const editedSpan = document.createElement('span');
+                        editedSpan.className = 'text-xs opacity-70 edited-indicator';
+                        editedSpan.textContent = 'edited';
+                        metaElement.appendChild(editedSpan);
+                    }
+                }
+
+                closeEditModal();
+                showToast('Message edited successfully', 'success');
+            } else {
+                showToast(data.error || 'Error editing message', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error editing message', 'error');
+        });
+    }
+
+    function unsendMessage(messageId) {
+        if (!confirm('Are you sure you want to unsend this message? This cannot be undone.')) {
+            return;
+        }
+
+        fetch(`/chat/message/${messageId}/unsend/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrftoken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+                if (messageElement) {
+                    const bubble = messageElement.querySelector('.message-bubble');
+                    if (bubble) {
+                        bubble.innerHTML = '<p class="text-sm italic opacity-70">This message was unsent</p>';
+                    }
+
+                    const actionsElement = messageElement.querySelector('.message-actions');
+                    if (actionsElement) {
+                        actionsElement.remove();
+                    }
+
+                    const reactionsElement = messageElement.querySelector('.message-reactions');
+                    if (reactionsElement) {
+                        reactionsElement.innerHTML = '';
+                    }
+                }
+                showToast('Message unsent successfully', 'success');
+            } else {
+                showToast(data.error || 'Error unsending message', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error unsending message', 'error');
+        });
+    }
+
+    function toggleReactions(messageId) {
+        const reactionsPicker = document.getElementById(`reactions-${messageId}`);
+        if (reactionsPicker) {
+            reactionsPicker.classList.toggle('hidden');
+        }
+
+        document.querySelectorAll('.reaction-picker').forEach(picker => {
+            if (picker.id !== `reactions-${messageId}`) {
+                picker.classList.add('hidden');
+            }
+        });
+    }
+
+    function addReaction(messageId, emoji) {
+        fetch(`/chat/message/${messageId}/react/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({ reaction: emoji })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (data.reactions) {
+                    updateReactionsDisplay(messageId, data.reactions);
+                }
+                toggleReactions(messageId);
+                showToast('Reaction added', 'success');
+            } else {
+                showToast(data.error || 'Error adding reaction', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error adding reaction', 'error');
+        });
+    }
+
+    function updateReactionsDisplay(messageId, reactions) {
+        const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+        if (!messageElement) return;
+
+        const reactionsContainer = messageElement.querySelector('.message-reactions');
+        if (!reactionsContainer) return;
+
+        const isOwn = messageElement.classList.contains('justify-end');
+
+        if (Object.keys(reactions).length === 0) {
+            reactionsContainer.innerHTML = '';
+            return;
+        }
+
+        let html = '';
+        for (const [emoji, count] of Object.entries(reactions)) {
+            html += `<span class="text-xs ${isOwn ? 'bg-white bg-opacity-20' : 'bg-gray-100'} rounded-full px-1">${emoji} ${count}</span>`;
+        }
+
+        reactionsContainer.innerHTML = html;
+    }
+
+    function stopTyping() {
+        fetch(`/chat/${conversationId}/typing/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({is_typing: false})
+        }).catch(error => console.error('Stop typing error:', error));
+    }
+
+    // Block user modal
+    function openBlockModal() {
+        const modal = document.getElementById('blockModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+        }
+        const menu = document.getElementById('chat-menu');
+        if (menu) {
+            menu.classList.add('hidden');
+        }
+    }
+
+    function closeBlockModal() {
+        const modal = document.getElementById('blockModal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    }
+
     // Mobile chat menu
     const chatMenuBtn = document.getElementById('chat-menu-btn');
     const chatMenu = document.getElementById('chat-menu');
@@ -436,991 +1295,69 @@ document.addEventListener('DOMContentLoaded', function() {
             chatMenu.classList.toggle('hidden');
         });
 
-        // Close menu when clicking outside
         document.addEventListener('click', function() {
-            chatMenu.classList.add('hidden');
-        });
-    }
-
-    // Auto-resize textarea
-    function autoResize(textarea) {
-        textarea.style.height = 'auto';
-        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
-    }
-
-    // Enhanced mobile keyboard handling
-    const messageInput = document.getElementById('message-input');
-    if (messageInput) {
-        messageInput.addEventListener('focus', function() {
-            // Scroll to bottom when keyboard opens
-            setTimeout(() => {
-                scrollToBottom();
-            }, 300);
-        });
-
-        messageInput.addEventListener('input', function() {
-            autoResize(this);
-            startTyping();
-        });
-    }
-
-    // Enhanced emoji picker for mobile
-    function setupMobileEmojiPicker() {
-        const emojiPicker = document.getElementById('emoji-picker');
-        if (isMobile() && emojiPicker) {
-            // Close emoji picker when scrolling (on mobile)
-            const messagesContainer = document.getElementById('messages-container');
-            if (messagesContainer) {
-                messagesContainer.addEventListener('scroll', function() {
-                    emojiPicker.classList.add('hidden');
-                });
+            if (chatMenu) {
+                chatMenu.classList.add('hidden');
             }
+        });
+    }
+
+    // Close modals when clicking outside
+    document.addEventListener('click', function(e) {
+        const mediaModal = document.getElementById('mediaModal');
+        if (mediaModal && e.target === mediaModal) {
+            closeMediaModal();
         }
-    }
 
-    setupMobileEmojiPicker();
-
-    // Enhanced touch reactions for mobile
-    function setupTouchReactions() {
-        const messageBubbles = document.querySelectorAll('.message-bubble');
-
-        messageBubbles.forEach(bubble => {
-            let touchStartTime = 0;
-            let touchTimer = null;
-
-            bubble.addEventListener('touchstart', function(e) {
-                touchStartTime = Date.now();
-                touchTimer = setTimeout(() => {
-                    // Long press - show reaction options
-                    showReactionOptions(e.touches[0].clientX, e.touches[0].clientY, bubble);
-                }, 500);
+        if (!e.target.closest('.reaction-picker') && !e.target.closest('[onclick*="toggleReactions"]')) {
+            document.querySelectorAll('.reaction-picker').forEach(picker => {
+                picker.classList.add('hidden');
             });
+        }
 
-            bubble.addEventListener('touchend', function(e) {
-                clearTimeout(touchTimer);
+        const emojiPicker = document.getElementById('emoji-picker');
+        const emojiButton = e.target.closest('button[onclick*="toggleEmojiPicker"]');
+        if (emojiPicker && !emojiPicker.contains(e.target) && !emojiButton) {
+            emojiPicker.classList.add('hidden');
+        }
+    });
 
-                // Quick tap - toggle message actions
-                if (Date.now() - touchStartTime < 500) {
-                    const actions = this.querySelector('.message-actions');
-                    if (actions) {
-                        actions.classList.toggle('hidden');
-                    }
-                }
-            });
+    // Close modals with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeMediaModal();
+            closeEditModal();
+            closeBlockModal();
+        }
+    });
 
-            bubble.addEventListener('touchmove', function(e) {
-                clearTimeout(touchTimer);
-            });
-        });
-    }
-
-    function showReactionOptions(x, y, messageBubble) {
-        const messageId = messageBubble.closest('.message-group').dataset.messageId;
-
-        // Create reaction picker at touch position
-        const reactionPicker = document.createElement('div');
-        reactionPicker.className = 'fixed bg-white border border-gray-300 rounded-lg shadow-lg p-2 z-50';
-        reactionPicker.style.left = (x - 60) + 'px';
-        reactionPicker.style.top = (y - 60) + 'px';
-
-        const reactions = ['👍', '❤️', '😂', '😮', '😢', '😡'];
-        reactionPicker.innerHTML = `
-            <div class="grid grid-cols-3 gap-1">
-                ${reactions.map(emoji => `
-                    <button onclick="addReaction('${messageId}', '${emoji}'); this.closest('.reaction-picker').remove()"
-                            class="p-2 hover:bg-gray-100 rounded text-xl transition duration-200">
-                        ${emoji}
-                    </button>
-                `).join('')}
-            </div>
-        `;
-
-        reactionPicker.addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
-
-        document.body.appendChild(reactionPicker);
-
-        // Close on outside click
-        setTimeout(() => {
-            const closePicker = function(e) {
-                if (!reactionPicker.contains(e.target)) {
-                    reactionPicker.remove();
-                    document.removeEventListener('click', closePicker);
-                }
-            };
-            document.addEventListener('click', closePicker);
-        }, 100);
-    }
-
-    // Initialize touch reactions
-    setupTouchReactions();
-});
-
-// Enhanced mobile message sending
-function sendMessageMobile() {
-    const messageForm = document.getElementById('message-form');
-    if (messageForm) {
-        messageForm.dispatchEvent(new Event('submit', { bubbles: true }));
-    }
-}
-
-// Enhanced scroll to bottom for mobile
-function scrollToBottom() {
-    const messagesContainer = document.getElementById('messages-container');
-    if (messagesContainer) {
-        messagesContainer.scrollTo({
-            top: messagesContainer.scrollHeight,
-            behavior: 'smooth'
-        });
-    }
-}
-
-// Enhanced emoji picker functions
-let currentEmojiCategory = 'smileys_people';
-
-function toggleEmojiPicker() {
-    const emojiPicker = document.getElementById('emoji-picker');
-    emojiPicker.classList.toggle('hidden');
-
-    if (!emojiPicker.classList.contains('hidden')) {
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
         loadEmojiCategories();
         loadEmojisByCategory('smileys_people');
-    }
-}
-
-function loadEmojiCategories() {
-    // Emoji categories data
-    const categories = {
-        'smileys_people': '😀',
-        'animals_nature': '🐶',
-        'food_drink': '🍎',
-        'activities': '⚽',
-        'travel_places': '🚗',
-        'objects': '💡',
-        'symbols': '❤️'
-    };
-
-    const categoriesContainer = document.getElementById('emoji-categories');
-    let html = '';
-
-    for (const category in categories) {
-        html += `
-            <button onclick="loadEmojisByCategory('${category}')"
-                    class="flex-shrink-0 px-3 py-2 text-lg hover:bg-gray-100 ${currentEmojiCategory === category ? 'bg-blue-50 border-b-2 border-blue-500' : ''}">
-                ${categories[category]}
-            </button>
-        `;
-    }
-
-    categoriesContainer.innerHTML = html;
-}
-
-function loadEmojisByCategory(category) {
-    currentEmojiCategory = category;
-    loadEmojiCategories(); // Update active category
-
-    // Complete emoji data for all categories
-    const emojiData = {
-        'smileys_people': [
-            '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚',
-            '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣',
-            '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗',
-            '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐',
-            '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾',
-            '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾', '🙈', '🙉', '🙊'
-        ],
-        'animals_nature': [
-            '🐵', '🐒', '🦍', '🦧', '🐶', '🐕', '🦮', '🐕‍🦺', '🐩', '🐺', '🦊', '🦝', '🐱', '🐈', '🐈‍⬛', '🦁', '🐯', '🐅', '🐆', '🐴',
-            '🐎', '🦄', '🦓', '🦌', '🐮', '🐂', '🐃', '🐄', '🐷', '🐖', '🐗', '🐽', '🐏', '🐑', '🐐', '🐪', '🐫', '🦙', '🦒', '🐘',
-            '🦏', '🦛', '🐭', '🐁', '🐀', '🐹', '🐰', '🐇', '🐿️', '🦔', '🦇', '🐻', '🐻‍❄️', '🐨', '🐼', '🦥', '🦦', '🦨', '🦘', '🦡',
-            '🐾', '🦃', '🐔', '🐓', '🐣', '🐤', '🐥', '🐦', '🐧', '🕊️', '🦅', '🦆', '🦢', '🦉', '🦤', '🪶', '🦩', '🦚', '🦜', '🐸',
-            '🐊', '🐢', '🦎', '🐍', '🐲', '🐉', '🦕', '🦖', '🐳', '🐋', '🐬', '🦭', '🐟', '🐠', '🐡', '🦈', '🐙', '🐚', '🐌', '🦋',
-            '🐛', '🐜', '🐝', '🪲', '🐞', '🦗', '🪳', '🕷️', '🕸️', '🦂', '🦟', '🪰', '🪱', '🦠', '💐', '🌸', '💮', '🏵️', '🌹', '🥀',
-            '🌺', '🌻', '🌼', '🌷', '🌱', '🪴', '🌲', '🌳', '🌴', '🌵', '🌾', '🌿', '☘️', '🍀', '🍁', '🍂', '🍃'
-        ],
-        'food_drink': [
-            '🍇', '🍈', '🍉', '🍊', '🍋', '🍌', '🍍', '🥭', '🍎', '🍏', '🍐', '🍑', '🍒', '🍓', '🫐', '🥝', '🍅', '🫒', '🥥', '🥑',
-            '🍆', '🥔', '🥕', '🌽', '🌶️', '🫑', '🥒', '🥬', '🥦', '🧄', '🧅', '🍄', '🥜', '🌰', '🍞', '🥐', '🥖', '🫓', '🥨', '🥯',
-            '🥞', '🧇', '🧀', '🍖', '🍗', '🥩', '🥓', '🍔', '🍟', '🍕', '🌭', '🥪', '🌮', '🌯', '🫔', '🥙', '🧆', '🥚', '🍳', '🥘',
-            '🍲', '🫕', '🥣', '🥗', '🍿', '🧈', '🧂', '🥫', '🍱', '🍘', '🍙', '🍚', '🍛', '🍜', '🍝', '🍠', '🍢', '🍣', '🍤', '🍥',
-            '🥮', '🍡', '🥟', '🥠', '🥡', '🦀', '🦞', '🦐', '🦑', '🦪', '🍦', '🍧', '🍨', '🍩', '🍪', '🎂', '🍰', '🧁', '🥧', '🍫',
-            '🍬', '🍭', '🍮', '🍯', '🍼', '🥛', '☕', '🫖', '🍵', '🍶', '🍾', '🍷', '🍸', '🍹', '🍺', '🍻', '🥂', '🥃', '🥤', '🧋',
-            '🧃', '🧉', '🧊', '🥢', '🍽️', '🍴', '🥄', '🔪', '🏺'
-        ],
-        'activities': [
-            '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳',
-            '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🪂', '🏋️', '🤼', '🤸', '⛹️',
-            '🤾', '🏌️', '🏇', '🧘', '🏄', '🏊', '🤽', '🚣', '🧗', '🚵', '🎯', '🎮', '🕹️', '🎲', '🧩', '🧸', '♠️', '♥️', '♦️', '♣️',
-            '♟️', '🃏', '🀄', '🎴', '🎭', '🖼️', '🎨', '🧵', '🪡', '🧶', '🪢', '👓', '🕶️', '🥽', '🥼', '🦺', '👔', '👕', '👖', '🧣',
-            '🧤', '🧥', '🧦', '👗', '👘', '🥻', '🩱', '🩲', '🩳', '👙', '👚', '👛', '👜', '👝', '🎒', '🩴', '👞', '👟', '🥾', '🥿',
-            '👠', '👡', '🩰', '👢', '👑', '👒', '🎩', '🎓', '🧢', '🪖', '💄', '💍', '💼'
-        ],
-        'travel_places': [
-            '🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🏍️', '🛵', '🚲', '🛴', '🛹', '🛼',
-            '🚏', '🛣️', '🛤️', '⛽', '🚨', '🚥', '🚦', '🛑', '🚧', '⚓', '⛵', '🛶', '🚤', '🛳️', '⛴️', '🛥️', '🚢', '✈️', '🛩️', '🛫',
-            '🛬', '🪂', '💺', '🚁', '🚟', '🚠', '🚡', '🛰️', '🚀', '🛸', '🛎️', '🧳', '⌛', '⏳', '⌚', '⏰', '⏱️', '⏲️', '🕰️', '🌡️',
-            '🗺️', '🧭', '🏔️', '⛰️', '🌋', '🗻', '🏕️', '🏖️', '🏜️', '🏝️', '🏞️', '🏟️', '🏛️', '🏗️', '🧱', '🪨', '🪵', '🛖', '🏘️',
-            '🏚️', '🏠', '🏡', '🏢', '🏣', '🏤', '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '🏯', '🏰', '💒', '🗼', '🗽', '⛪',
-            '🕌', '🛕', '🕍', '⛩️', '🕋', '⚛️', '🛐', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐'
-        ],
-        'objects': [
-            '⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '🕹️', '🗜️', '💽', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥',
-            '📽️', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋',
-            '🔌', '💡', '🔦', '🕯️', '🪔', '🧯', '🛢️', '💸', '💵', '💴', '💶', '💷', '💰', '💳', '💎', '⚖️', '🧰', '🔧', '🔨', '⚒️',
-            '🛠️', '⛏️', '🔩', '⚙️', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🪓', '🔪', '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '⚱️', '🏺', '🔮',
-            '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳️', '🩹', '🩺', '💊', '💉', '🩸', '🧬', '🦠', '🧫', '🧪', '🌡️', '🧹', '🧺', '🧻',
-            '🚽', '🚰', '🚿', '🛁', '🛀', '🧼', '🪒', '🧽', '🧴', '🛎️', '🔑', '🗝️', '🚪', '🪑', '🛋️', '🛏️', '🛌', '🧸', '🖼️', '🛍️',
-            '🛒', '🎁', '🎈', '🎏', '🎀', '🎊', '🎉', '🎎', '🏮', '🎐', '✉️', '📩', '📨', '📧', '💌', '📥', '📤', '📦', '🏷️', '📪',
-            '📫', '📬', '📭', '📮', '📯', '📜', '📃', '📄', '📑', '🧾', '📊', '📈', '📉', '🗒️', '🗓️', '📆', '📅', '🗑️', '📇', '🗃️',
-            '🗳️', '🗄️', '📋', '📁', '📂', '🗂️', '🗞️', '📰', '📓', '📔', '📒', '📕', '📗', '📘', '📙', '📚', '📖', '🔖', '🧷', '🔗',
-            '📎', '🖇️', '📐', '📏', '🧮', '📌', '📍', '✂️', '🖊️', '🖋️', '✒️', '🖌️', '🖍️', '📝', '✏️', '🔍', '🔎', '🔏', '🔐', '🔒',
-            '🔓'
-        ],
-        'symbols': [
-            '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️',
-            '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑',
-            '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️', '📴', '📳', '🈶', '🈚', '🈸', '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️',
-            '🈴', '🈵', '🈹', '🈲', '🅰️', '🅱️', '🆎', '🆑', '🅾️', '🆘', '❌', '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢', '♨️', '🚷',
-            '🚯', '🚳', '🚱', '🔞', '📵', '🚭', '❗', '❕', '❓', '❔', '‼️', '⁉️', '🔅', '🔆', '〽️', '⚠️', '🚸', '🔱', '⚜️', '🔰',
-            '♻️', '✅', '🈯', '💹', '❇️', '✳️', '❎', '🌐', '💠', 'Ⓜ️', '🌀', '💤', '🏧', '🚾', '♿', '🅿️', '🛗', '🈳', '🈂️', '🛂',
-            '🛃', '🛄', '🛅', '🚹', '🚺', '🚼', '🚻', '🚮', '🎦', '📶', '🈁', '🔣', 'ℹ️', '🔤', '🔡', '🔠', '🆖', '🆗', '🆙', '🆒',
-            '🆕', '🆓', '0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '🔢', '#️⃣', '*️⃣', '⏏️', '▶️', '⏸️', '⏯️',
-            '⏹️', '⏺️', '⏭️', '⏮️', '⏩', '⏪', '⏫', '⏬', '◀️', '🔼', '🔽', '➡️', '⬅️', '⬆️', '⬇️', '↗️', '↘️', '↙️', '↖️', '↕️',
-            '↔️', '↪️', '↩️', '⤴️', '⤵️', '🔀', '🔁', '🔂', '🔄', '🔃', '🎵', '🎶', '➕', '➖', '➗', '♾️', '💲', '💱', '™️', '©️', '®️',
-            '〰️', '➰', '➿', '🔚', '🔙', '🔛', '🔝', '🔜'
-        ]
-    };
-
-    const emojiGrid = document.getElementById('emoji-grid');
-    const emojis = emojiData[category] || [];
-
-    let html = '<div class="grid grid-cols-8 gap-2">';
-    emojis.forEach(emojiChar => {
-        html += `
-            <button onclick="insertEmoji('${emojiChar}')"
-                    class="text-xl p-2 hover:bg-gray-100 rounded-lg transition duration-200">
-                ${emojiChar}
-            </button>
-        `;
+        scrollToBottom();
     });
-    html += '</div>';
-
-    emojiGrid.innerHTML = html;
-}
-
-function insertEmoji(emojiChar) {
-    const messageInput = document.getElementById('message-input');
-    const currentValue = messageInput.value;
-    const cursorPosition = messageInput.selectionStart;
-
-    messageInput.value = currentValue.substring(0, cursorPosition) + emojiChar + currentValue.substring(cursorPosition);
-    messageInput.focus();
-    messageInput.selectionStart = cursorPosition + emojiChar.length;
-    messageInput.selectionEnd = cursorPosition + emojiChar.length;
-
-    // Close emoji picker
-    document.getElementById('emoji-picker').classList.add('hidden');
-
-    // Trigger input event for typing indicator
-    messageInput.dispatchEvent(new Event('input'));
-}
-
-// Close emoji picker when clicking outside
-document.addEventListener('click', function(event) {
-    const emojiPicker = document.getElementById('emoji-picker');
-    const emojiButton = event.target.closest('button[onclick*="toggleEmojiPicker"]');
-
-    if (emojiPicker && !emojiPicker.contains(event.target) && !emojiButton) {
-        emojiPicker.classList.add('hidden');
-    }
-});
-
-// Search emojis on input
-document.getElementById('emoji-search').addEventListener('input', function() {
-    const query = this.value.toLowerCase();
-    if (query.length === 0) {
-        loadEmojisByCategory(currentEmojiCategory);
-        return;
-    }
-
-    // Simple search implementation
-    const allEmojis = Object.values({
-        'smileys_people': ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇'],
-        'animals_nature': ['🐵', '🐒', '🦍', '🦧', '🐶', '🐕', '🦮', '🐕‍🦺', '🐩', '🐺'],
-        // Add more emojis for search...
-    }).flat();
-
-    const results = allEmojis.filter(emoji => {
-        // Simple search - you can enhance this with proper emoji descriptions
-        return emoji.includes(query) || query.length === 0;
-    }).slice(0, 48);
-
-    const emojiGrid = document.getElementById('emoji-grid');
-
-    if (results.length === 0) {
-        emojiGrid.innerHTML = '<p class="text-center text-gray-500 py-4">No emojis found</p>';
-        return;
-    }
-
-    let html = '<div class="grid grid-cols-8 gap-2">';
-    results.forEach(emojiChar => {
-        html += `
-            <button onclick="insertEmoji('${emojiChar}')"
-                    class="text-xl p-2 hover:bg-gray-100 rounded-lg transition duration-200">
-                ${emojiChar}
-            </button>
-        `;
-    });
-    html += '</div>';
-
-    emojiGrid.innerHTML = html;
-});
-
-// Media Modal Functions
-function openMediaModal(url, type) {
-    const modal = document.getElementById('mediaModal');
-    const content = document.getElementById('media-content');
-
-    if (type === 'image') {
-        content.innerHTML = `<img src="${url}" alt="Shared image" class="w-full h-auto max-h-screen object-contain">`;
-    } else if (type === 'video') {
-        content.innerHTML = `
-            <video controls autoplay class="w-full h-auto max-h-screen">
-                <source src="${url}" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
-        `;
-    }
-
-    modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeMediaModal() {
-    const modal = document.getElementById('mediaModal');
-    const content = document.getElementById('media-content');
-
-    // Stop video playback
-    const video = content.querySelector('video');
-    if (video) {
-        video.pause();
-    }
-
-    modal.classList.add('hidden');
-    document.body.style.overflow = 'auto';
-    content.innerHTML = '';
-}
-
-// Close modal when clicking on background
-document.getElementById('mediaModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeMediaModal();
-    }
-});
-
-// Close modal with Escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeMediaModal();
-    }
-});
-
-// Message Action Functions
-let currentEditingMessageId = null;
-
-function editMessage(messageId) {
-    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
-    const contentElement = messageElement.querySelector('.message-content');
-
-    document.getElementById('editMessageContent').value = contentElement.textContent;
-    document.getElementById('editModal').classList.remove('hidden');
-    currentEditingMessageId = messageId;
-}
-
-function closeEditModal() {
-    document.getElementById('editModal').classList.add('hidden');
-    currentEditingMessageId = null;
-}
-
-function saveEditedMessage() {
-    if (!currentEditingMessageId) return;
-
-    const newContent = document.getElementById('editMessageContent').value.trim();
-    if (!newContent) return;
-
-    fetch(`/chat/message/${currentEditingMessageId}/edit/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({ content: newContent })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            const messageElement = document.querySelector(`[data-message-id="${currentEditingMessageId}"]`);
-            const contentElement = messageElement.querySelector('.message-content');
-            contentElement.textContent = data.new_content;
-
-            // Add edited indicator if not exists
-            const metaElement = messageElement.querySelector('.flex.items-center.space-x-2');
-            if (!metaElement.querySelector('.edited-indicator')) {
-                const editedSpan = document.createElement('span');
-                editedSpan.className = 'text-xs opacity-70 edited-indicator';
-                editedSpan.textContent = 'edited';
-                metaElement.appendChild(editedSpan);
-            }
-
-            closeEditModal();
-        } else {
-            alert('Error: ' + data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error editing message');
-    });
-}
-
-function unsendMessage(messageId) {
-    if (!confirm('Are you sure you want to unsend this message? This cannot be undone.')) {
-        return;
-    }
-
-    fetch(`/chat/message/${messageId}/unsend/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': getCookie('csrftoken')
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
-            const contentElement = messageElement.querySelector('.message-content');
-            contentElement.innerHTML = '<p class="text-sm italic opacity-70">This message was unsent</p>';
-
-            // Hide message actions
-            const actionsElement = messageElement.querySelector('.message-actions');
-            if (actionsElement) {
-                actionsElement.remove();
-            }
-
-            // Hide reactions
-            const reactionsElement = messageElement.querySelector('.message-reactions');
-            if (reactionsElement) {
-                reactionsElement.innerHTML = '';
-            }
-        } else {
-            alert('Error: ' + data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error unsending message');
-    });
-}
-
-function toggleReactions(messageId) {
-    const reactionsPicker = document.getElementById(`reactions-${messageId}`);
-    reactionsPicker.classList.toggle('hidden');
-
-    // Close other reaction pickers
-    document.querySelectorAll('.reaction-picker').forEach(picker => {
-        if (picker.id !== `reactions-${messageId}`) {
-            picker.classList.add('hidden');
-        }
-    });
-}
-
-function addReaction(messageId, emoji) {
-    fetch(`/chat/message/${messageId}/react/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({ reaction: emoji })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            updateReactionsDisplay(messageId, data.reactions);
-            toggleReactions(messageId); // Close picker
-        } else {
-            alert('Error: ' + data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error adding reaction');
-    });
-}
-
-function updateReactionsDisplay(messageId, reactions) {
-    const reactionsContainer = document.querySelector(`[data-message-id="${messageId}"] .message-reactions`);
-    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
-    const isOwn = messageElement.classList.contains('justify-end');
-
-    if (!reactionsContainer) return;
-
-    if (Object.keys(reactions).length === 0) {
-        reactionsContainer.innerHTML = '';
-        return;
-    }
-
-    let html = '';
-    for (const [emoji, count] of Object.entries(reactions)) {
-        html += `<span class="text-xs ${isOwn ? 'bg-white bg-opacity-20' : 'bg-gray-100'} rounded-full px-1">${emoji} ${count}</span>`;
-    }
-
-    reactionsContainer.innerHTML = html;
-}
-
-// Close reaction pickers when clicking outside
-document.addEventListener('click', function(event) {
-    if (!event.target.closest('.reaction-picker') && !event.target.closest('[onclick*="toggleReactions"]')) {
-        document.querySelectorAll('.reaction-picker').forEach(picker => {
-            picker.classList.add('hidden');
-        });
-    }
-});
-
-// File upload functionality
-document.getElementById('file-input').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        showFilePreview(file);
-    }
-});
-
-function showFilePreview(file) {
-    const filePreview = document.getElementById('file-preview');
-    const fileName = document.getElementById('file-name');
-    const fileSize = document.getElementById('file-size');
-
-    fileName.textContent = file.name;
-    fileSize.textContent = formatFileSize(file.size);
-    filePreview.classList.remove('hidden');
-}
-
-function clearFilePreview() {
-    document.getElementById('file-input').value = '';
-    document.getElementById('file-preview').classList.add('hidden');
-}
-
-function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-// Real-time chat functionality
-let typingTimer;
-const TYPING_TIMEOUT = 3000;
-const conversationId = '{{ conversation.id }}';
-
-function checkForUpdates() {
-    // Check for new messages
-    fetch(`/chat/${conversationId}/new-messages/`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.has_new_messages) {
-                data.new_messages.forEach(message => {
-                    // Check if message already exists
-                    if (!document.querySelector(`[data-message-id="${message.id}"]`)) {
-                        addReceivedMessage(message);
-                    }
-                });
-            }
-        });
-
-    // Check typing status
-    fetch(`/chat/${conversationId}/typing-status/`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.is_typing && data.typing_users.length > 0) {
-                showTypingIndicator(data.typing_users);
-            } else {
-                hideTypingIndicator();
-            }
-        });
-
-    // Update message status and reactions
-    fetch(`/chat/${conversationId}/get-messages/`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.messages) {
-                data.messages.forEach(message => {
-                    const existingMessage = document.querySelector(`[data-message-id="${message.id}"]`);
-                    if (existingMessage) {
-                        // Update reactions
-                        updateReactionsDisplay(message.id, message.reactions);
-
-                        // Update read status
-                        if (message.is_own && message.is_read) {
-                            const checkIcon = existingMessage.querySelector('.fa-check');
-                            if (checkIcon) {
-                                checkIcon.className = 'fas fa-check-double text-xs opacity-70 text-blue-100';
-                            }
-                        }
-                    }
-                });
-            }
-        });
-}
-
-function addReceivedMessage(message) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = 'message-group flex justify-start';
-    messageDiv.id = `message-${message.id}`;
-    messageDiv.setAttribute('data-message-id', message.id);
-
-    messageDiv.innerHTML = createMessageHTML(message, false);
-    document.getElementById('messages-list').appendChild(messageDiv);
-    scrollToBottom();
-
-    // Remove empty state
-    const emptyState = document.getElementById('empty-state');
-    if (emptyState) {
-        emptyState.remove();
-    }
-}
-
-function createMessageHTML(message, isOwn) {
-    const isGroup = {% if is_group %}true{% else %}false{% endif %};
-    const isUnsent = message.is_unsent;
-
-    let messageHTML = `
-        <div class="message-bubble relative group max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isOwn ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-900'}">
-    `;
-
-    // Message header for group
-    if (isGroup && !isOwn && !isUnsent) {
-        messageHTML += `<p class="text-xs font-medium ${isOwn ? 'text-blue-100' : 'text-blue-600'} mb-1">${message.sender}</p>`;
-    }
-
-    // Message content
-    if (isUnsent) {
-        messageHTML += `<p class="text-sm italic opacity-70">This message was unsent</p>`;
-    } else {
-        if (message.message_type === 'text') {
-            messageHTML += `<p class="text-sm message-content">${message.content}</p>`;
-        } else if (message.message_type === 'emoji') {
-            messageHTML += `
-                <div class="emoji-message text-4xl text-center py-2">
-                    ${message.content}
-                </div>
-            `;
-        } else if (message.message_type === 'image') {
-            messageHTML += `
-                <div class="mb-2">
-                    <img src="${message.file_url}" alt="Shared image"
-                         class="max-w-full h-auto rounded-lg cursor-pointer"
-                         onclick="openMediaModal('${message.file_url}', 'image')">
-                </div>
-            `;
-            if (message.content) {
-                messageHTML += `<p class="text-sm message-content mt-2">${message.content}</p>`;
-            }
-        } else if (message.message_type === 'video') {
-            messageHTML += `
-                <div class="mb-2">
-                    <video controls class="max-w-full h-auto rounded-lg cursor-pointer"
-                           onclick="openMediaModal('${message.file_url}', 'video')">
-                        <source src="${message.file_url}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                </div>
-            `;
-            if (message.content) {
-                messageHTML += `<p class="text-sm message-content mt-2">${message.content}</p>`;
-            }
-        } else if (message.message_type === 'audio') {
-            messageHTML += `
-                <div class="mb-2">
-                    <audio controls class="w-full">
-                        <source src="${message.file_url}" type="audio/mpeg">
-                        Your browser does not support the audio element.
-                    </audio>
-                </div>
-            `;
-            if (message.content) {
-                messageHTML += `<p class="text-sm message-content mt-2">${message.content}</p>`;
-            }
-        } else if (message.message_type === 'file') {
-            messageHTML += `
-                <div class="mb-2 p-3 ${isOwn ? 'bg-white bg-opacity-20' : 'bg-gray-100'} rounded-lg">
-                    <div class="flex items-center space-x-3">
-                        <div class="flex-shrink-0 w-10 h-10 ${isOwn ? 'bg-white bg-opacity-30' : 'bg-blue-100'} rounded-lg flex items-center justify-center">
-                            <i class="fas fa-file ${isOwn ? 'text-white' : 'text-blue-600'}"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-medium ${isOwn ? 'text-white' : 'text-gray-900'} truncate">
-                                ${message.file_name || 'File'}
-                            </p>
-                            <p class="text-xs ${isOwn ? 'text-blue-100' : 'text-gray-500'}">
-                                ${message.file_size}
-                            </p>
-                        </div>
-                        <a href="${message.file_url}" download
-                           class="flex-shrink-0 p-2 ${isOwn ? 'bg-white bg-opacity-20 hover:bg-opacity-30' : 'bg-blue-100 hover:bg-blue-200'} rounded-lg transition duration-200"
-                           title="Download file">
-                            <i class="fas fa-download ${isOwn ? 'text-white' : 'text-blue-600'} text-sm"></i>
-                        </a>
-                    </div>
-                </div>
-            `;
-            if (message.content) {
-                messageHTML += `<p class="text-sm message-content mt-2">${message.content}</p>`;
-            }
-        }
-    }
-
-    // Message meta
-    messageHTML += `
-        <div class="flex items-center justify-between mt-1">
-            <div class="flex items-center space-x-2">
-                <span class="text-xs opacity-70 ${isOwn ? 'text-blue-100' : 'text-gray-500'}">${message.timestamp}</span>
-    `;
-
-    if (message.is_edited && !isUnsent) {
-        messageHTML += `<span class="text-xs opacity-70 ${isOwn ? 'text-blue-100' : 'text-gray-500'}">edited</span>`;
-    }
-
-    if (isOwn && !isUnsent) {
-        messageHTML += `<i class="fas fa-check text-xs opacity-70 ${isOwn ? 'text-blue-100' : 'text-gray-500'}"></i>`;
-    }
-
-    messageHTML += `</div>`;
-
-    // Reactions
-    if (!isUnsent && message.reactions && Object.keys(message.reactions).length > 0) {
-        messageHTML += `<div class="message-reactions flex space-x-1">`;
-        for (const [emoji, count] of Object.entries(message.reactions)) {
-            messageHTML += `<span class="text-xs ${isOwn ? 'bg-white bg-opacity-20' : 'bg-gray-100'} rounded-full px-1">${emoji} ${count}</span>`;
-        }
-        messageHTML += `</div>`;
-    }
-
-    messageHTML += `</div>`;
-
-    // Message actions
-    if (isOwn && !isUnsent) {
-        messageHTML += `
-            <div class="message-actions absolute -top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-1 hidden group-hover:flex space-x-1">
-        `;
-
-        // Edit button only for text messages
-        if (message.message_type === 'text') {
-            messageHTML += `
-                <button onclick="editMessage('${message.id}')" class="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition duration-200" title="Edit message">
-                    <i class="fas fa-edit text-xs"></i>
-                </button>
-            `;
-        }
-
-        messageHTML += `
-                <button onclick="unsendMessage('${message.id}')" class="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition duration-200" title="Unsend message">
-                    <i class="fas fa-trash text-xs"></i>
-                </button>
-                <div class="relative">
-                    <button onclick="toggleReactions('${message.id}')" class="p-1 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition duration-200" title="Add reaction">
-                        <i class="fas fa-smile text-xs"></i>
-                    </button>
-                    <div id="reactions-${message.id}" class="reaction-picker absolute bottom-full left-0 bg-white border border-gray-300 rounded-lg shadow-lg p-2 hidden grid grid-cols-3 gap-1 z-50">
-                        ${createReactionButtons(message.id)}
-                    </div>
-                </div>
-            </div>
-        `;
-    } else if (!isUnsent) {
-        messageHTML += `
-            <div class="message-actions absolute -top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-1 hidden group-hover:flex">
-                <div class="relative">
-                    <button onclick="toggleReactions('${message.id}')" class="p-1 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition duration-200" title="Add reaction">
-                        <i class="fas fa-smile text-xs"></i>
-                    </button>
-                    <div id="reactions-${message.id}" class="reaction-picker absolute bottom-full left-0 bg-white border border-gray-300 rounded-lg shadow-lg p-2 hidden grid grid-cols-3 gap-1 z-50">
-                        ${createReactionButtons(message.id)}
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    messageHTML += `</div>`;
-    return messageHTML;
-}
-
-function createReactionButtons(messageId) {
-    const emojis = ['👍', '❤️', '😂', '😮', '😢', '😡'];
-    return emojis.map(emoji =>
-        `<button onclick="addReaction('${messageId}', '${emoji}')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">${emoji}</button>`
-    ).join('');
-}
-
-function showTypingIndicator(typingUsers) {
-    const typingText = document.getElementById('typing-text');
-    if (typingUsers.length === 1) {
-        typingText.textContent = `${typingUsers[0]} is typing...`;
-    } else if (typingUsers.length === 2) {
-        typingText.textContent = `${typingUsers[0]} and ${typingUsers[1]} are typing...`;
-    } else {
-        typingText.textContent = 'Several people are typing...';
-    }
-    document.getElementById('typing-indicator').classList.remove('hidden');
-    scrollToBottom();
-}
-
-function hideTypingIndicator() {
-    document.getElementById('typing-indicator').classList.add('hidden');
-}
-
-function startTyping() {
-    // Clear existing timer
-    clearTimeout(typingTimer);
-
-    fetch(`/chat/${conversationId}/typing/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({
-            is_typing: true
-        })
-    });
-
-    // Set new timer to stop typing
-    typingTimer = setTimeout(stopTyping, TYPING_TIMEOUT);
-}
-
-function stopTyping() {
-    fetch(`/chat/${conversationId}/typing/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({
-            is_typing: false
-        })
-    });
-}
-
-function updateOnlineStatus(online) {
-    fetch('/chat/update-online-status/', {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: new URLSearchParams({
-            'online': online.toString()
-        })
-    });
-}
-
-// Set up periodic updates
-setInterval(checkForUpdates, 2000);
-
-// Update online status when page loads and when user becomes active
-updateOnlineStatus(true);
-
-window.addEventListener('focus', function() {
-    updateOnlineStatus(true);
-});
-
-window.addEventListener('blur', function() {
-    updateOnlineStatus(false);
-});
-
-// Message form submission
-document.getElementById('message-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-
-    const content = document.getElementById('message-input').value.trim();
-    const fileInput = document.getElementById('file-input');
-    const file = fileInput.files[0];
-
-    if (!content && !file) return;
-
-    const formData = new FormData();
-    formData.append('content', content);
-    if (file) {
-        formData.append('file', file);
-    }
-
-    // Send message via AJAX
-    fetch(`/chat/${conversationId}/send-message/`, {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            document.getElementById('message-input').value = '';
-            clearFilePreview();
-            autoResize(document.getElementById('message-input'));
-
-            // Remove empty state
-            const emptyState = document.getElementById('empty-state');
-            if (emptyState) {
-                emptyState.remove();
-            }
-
-            // Stop typing indicator
-            stopTyping();
-        } else {
-            alert('Error: ' + data.error);
-        }
-    })
-    .catch(error => console.error('Error sending message:', error));
-});
-
-// Helper function to get CSRF token
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
-// Enhanced mobile detection
-function isMobile() {
-    return window.innerWidth <= 768;
-}
-
-// Initialize on load
-document.addEventListener('DOMContentLoaded', function() {
-    scrollToBottom();
-    loadEmojiCategories();
-    loadEmojisByCategory('smileys_people');
-});
 </script>
 
 <style>
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
 /* Mobile-specific styles */
 @media (max-width: 768px) {
     .message-bubble {
@@ -1435,7 +1372,7 @@ document.addEventListener('DOMContentLoaded', function() {
         width: auto !important;
     }
 
-    .emoji-grid {
+    #emoji-grid .grid {
         grid-template-columns: repeat(6, 1fr) !important;
     }
 
@@ -1444,15 +1381,36 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }
 
-/* Enhanced emoji styles for mobile */
-.emoji-message {
-    font-size: 2.5rem !important;
-    line-height: 1.2;
+/* Typing indicator animation */
+.typing-dot {
+    animation: typing-animation 1.5s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typing-animation {
+    0%, 60%, 100% {
+        transform: translateY(0);
+        opacity: 0.4;
+    }
+    30% {
+        transform: translateY(-5px);
+        opacity: 1;
+    }
 }
 
 /* Better touch targets */
-button,
-a {
+button, a {
     min-height: 44px;
     min-width: 44px;
 }
@@ -1460,6 +1418,22 @@ a {
 /* Smooth transitions */
 * {
     -webkit-tap-highlight-color: transparent;
+}
+
+/* Emoji message */
+.emoji-message {
+    font-size: 2.5rem !important;
+    line-height: 1.2;
+}
+
+/* Message actions visibility */
+.message-bubble:hover .message-actions {
+    display: flex !important;
+}
+
+/* Reaction picker */
+.reaction-picker {
+    min-width: 150px;
 }
 </style>
 {% endblock %}

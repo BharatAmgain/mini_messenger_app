@@ -1,4 +1,4 @@
-# chat/models.py - FINAL COMPLETE VERSION WITH IMAGEFIELD
+# chat/models.py - FINAL COMPLETE VERSION
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
@@ -213,7 +213,7 @@ class Message(models.Model):
 
     def add_reaction(self, user, emoji):
         """Add a reaction to the message"""
-        if 'reactions' not in self.reactions:
+        if not self.reactions:
             self.reactions = {}
 
         user_id_str = str(user.id)
@@ -1005,12 +1005,19 @@ def delete_media_file(sender, instance, **kwargs):
     """Delete actual media files when record is deleted"""
     instance.delete_file()
 
+# Find this signal in chat/models.py and replace it with:
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_user_status(sender, instance, created, **kwargs):
-    """Create UserStatus when a new user is created"""
+    """Create UserStatus when a new user is created - FIXED to avoid duplicates"""
     if created:
-        UserStatus.objects.create(user=instance)
+        # Check if status already exists (to avoid duplicate errors)
+        if not UserStatus.objects.filter(user=instance).exists():
+            UserStatus.objects.create(user=instance)
+            print(f"✓ Created UserStatus for user: {instance.username}")
+    # Always ensure user has a status (even if not newly created)
+    else:
+        UserStatus.objects.get_or_create(user=instance)
 
 
 @receiver(post_save, sender=Conversation)

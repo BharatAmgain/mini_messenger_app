@@ -1,14 +1,54 @@
-<!-- messenger_app/templates/accounts/profile_edit.html - COMPLETE FIXED VERSION -->
+<!-- messenger_app/templates/accounts/profile_edit.html - COMPLETE FIXED VERSION WITH CSRF FIX -->
 <!DOCTYPE html>
 <html lang="en" class="h-full bg-gray-50">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Edit Profile - Connect.io</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- CSRF Fix Script - Include this early -->
+    <script>
+        // CSRF Token Fix - This ensures CSRF token is properly handled
+        (function() {
+            // Function to get CSRF token from cookies
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            // Store CSRF token in a global variable
+            window.csrftoken = getCookie('csrftoken');
+
+            // Log CSRF token status (for debugging)
+            console.log('CSRF Token loaded:', window.csrftoken ? 'Yes' : 'No');
+
+            // Override fetch to include CSRF token for same-origin requests
+            const originalFetch = window.fetch;
+            window.fetch = function(url, options = {}) {
+                // Only add for same-origin requests
+                if (typeof url === 'string' && (url.startsWith('/') || url.startsWith(window.location.origin))) {
+                    options = options || {};
+                    options.headers = options.headers || {};
+                    options.headers['X-CSRFToken'] = window.csrftoken;
+                }
+                return originalFetch(url, options);
+            };
+        })();
+    </script>
 
     <style>
         * {
@@ -26,13 +66,13 @@
         .form-textarea,
         .form-select {
             width: 100%;
-            padding: 0.5rem 0.75rem;
+            padding: 0.75rem 0.75rem;
             font-size: 1rem;
             line-height: 1.5;
             color: #374151;
             background-color: white;
             border: 1px solid #d1d5db;
-            border-radius: 0.375rem;
+            border-radius: 0.5rem;
             transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
         }
 
@@ -66,7 +106,7 @@
             }
 
             .mobile-btn {
-                padding: 0.75rem 1rem;
+                padding: 0.875rem 1rem;
                 font-size: 1rem;
                 width: 100%;
             }
@@ -97,7 +137,7 @@
         .btn,
         input[type="submit"],
         a.btn {
-            min-height: 44px; /* Minimum touch target size */
+            min-height: 48px; /* Increased for better touch target */
             padding: 0.75rem 1.5rem;
             font-size: 1rem;
             cursor: pointer;
@@ -142,29 +182,82 @@
         .alert {
             animation: slideIn 0.3s ease-out;
         }
+
+        /* Profile image hover effect */
+        .profile-image-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .profile-image-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            cursor: pointer;
+        }
+
+        .profile-image-container:hover .profile-image-overlay {
+            opacity: 1;
+        }
+
+        /* Custom file input styling */
+        .custom-file-input {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .custom-file-input input[type="file"] {
+            position: absolute;
+            top: 0;
+            right: 0;
+            min-width: 100%;
+            min-height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
     </style>
 </head>
-<body class="min-h-screen">
-    <!-- Navigation (if any) -->
-    <nav class="bg-white shadow-sm">
+<body class="min-h-screen bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm sticky top-0 z-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
+            <div class="flex justify-between items-center h-16">
                 <div class="flex items-center">
-                    <a href="{% url 'chat_home' %}" class="text-xl font-bold text-blue-600">Connect.io</a>
+                    <a href="{% url 'chat_home' %}" class="text-xl font-bold text-blue-600 touch-target flex items-center">
+                        <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z"/>
+                            <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z"/>
+                        </svg>
+                        Connect.io
+                    </a>
                 </div>
-                <div class="flex items-center">
-                    <a href="{% url 'profile' %}" class="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Back to Profile</a>
+                <div class="flex items-center space-x-2">
+                    <a href="{% url 'profile' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 touch-target">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                        </svg>
+                        Back to Profile
+                    </a>
                 </div>
             </div>
         </div>
     </nav>
 
     <!-- Main Content -->
-    <main class="py-8 mobile-padding">
+    <main class="py-6 mobile-padding">
         <div class="max-w-4xl mx-auto">
             <!-- Header -->
-            <div class="mb-8">
-                <h1 class="text-3xl font-bold text-gray-900 mobile-text-center">Edit Profile</h1>
+            <div class="mb-6">
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mobile-text-center">Edit Profile</h1>
                 <p class="mt-2 text-gray-600 mobile-text-center">Update your personal information and profile settings.</p>
             </div>
 
@@ -175,15 +268,20 @@
                 <div class="p-4 rounded-md alert {% if message.tags == 'success' %}bg-green-50 text-green-800 border border-green-200{% else %}bg-red-50 text-red-800 border border-red-200{% endif %}">
                     <div class="flex items-center">
                         {% if message.tags == 'success' %}
-                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <svg class="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                         </svg>
                         {% else %}
-                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <svg class="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                         </svg>
                         {% endif %}
-                        <span>{{ message }}</span>
+                        <span class="flex-1">{{ message }}</span>
+                        <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-gray-400 hover:text-gray-600">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
                     </div>
                 </div>
                 {% endfor %}
@@ -191,42 +289,50 @@
             {% endif %}
 
             <!-- Profile Edit Form -->
-            <div class="bg-white shadow rounded-lg overflow-hidden mb-8">
-                <div class="px-4 py-8 sm:px-10 sm:py-10">
+            <div class="bg-white shadow rounded-lg overflow-hidden mb-6">
+                <div class="px-4 py-6 sm:px-10 sm:py-8">
                     <form method="POST" enctype="multipart/form-data" id="profileForm" class="space-y-8">
                         {% csrf_token %}
+                        <!-- Hidden input to ensure CSRF token is sent -->
+                        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 
                         <!-- Profile Picture Section -->
                         <div class="space-y-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Profile Picture</label>
-                                <div class="flex items-center mobile-flex-col-center space-y-4 sm:space-y-0 sm:space-x-6">
-                                    <div class="shrink-0">
+                                <label class="block text-sm font-medium text-gray-700 mb-3">Profile Picture</label>
+                                <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+                                    <div class="profile-image-container flex-shrink-0">
                                         <div class="relative">
-                                            <img class="h-24 w-24 object-cover rounded-full border-4 border-white shadow"
+                                            <img class="h-28 w-28 object-cover rounded-full border-4 border-white shadow-lg"
                                                  src="{{ user.get_profile_picture_url }}"
                                                  alt="Current profile picture"
                                                  id="profileImagePreview">
-                                            <div class="absolute bottom-0 right-0 h-8 w-8 bg-blue-600 rounded-full border-2 border-white flex items-center justify-center">
-                                                <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4z"/>
+                                            <div class="profile-image-overlay" onclick="document.getElementById('profile_picture').click()">
+                                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
                                                 </svg>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="flex-1 mobile-full-width">
-                                        <input type="file"
-                                               name="profile_picture"
-                                               id="profile_picture"
-                                               accept="image/*"
-                                               class="block w-full text-base text-gray-500
-                                                      file:mr-4 file:py-3 file:px-4
-                                                      file:rounded-lg file:border-0
-                                                      file:text-base file:font-semibold
-                                                      file:bg-blue-50 file:text-blue-700
-                                                      hover:file:bg-blue-100
-                                                      mobile-full-width">
-                                        <p class="mt-2 text-sm text-gray-500">JPG, PNG or GIF (Max 5MB)</p>
+                                    <div class="flex-1 w-full">
+                                        <div class="custom-file-input relative">
+                                            <input type="file"
+                                                   name="profile_picture"
+                                                   id="profile_picture"
+                                                   accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                                                   class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                            <div class="flex items-center justify-center sm:justify-start">
+                                                <div class="px-4 py-3 bg-blue-50 text-blue-700 rounded-lg border-2 border-blue-200 border-dashed hover:bg-blue-100 transition-colors duration-200 w-full sm:w-auto text-center">
+                                                    <svg class="w-5 h-5 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                                                    </svg>
+                                                    <span class="text-sm font-medium">Choose File</span>
+                                                </div>
+                                                <span id="file-name" class="ml-3 text-sm text-gray-500 hidden">No file chosen</span>
+                                            </div>
+                                        </div>
+                                        <p class="mt-2 text-sm text-gray-500">JPG, PNG, GIF or WebP (Max 5MB)</p>
                                     </div>
                                 </div>
                             </div>
@@ -237,7 +343,7 @@
                             <h3 class="text-lg font-medium text-gray-900 border-b pb-2">Personal Information</h3>
 
                             <!-- First Name & Last Name -->
-                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 mobile-grid-1">
+                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 mobile-grid-1">
                                 <div>
                                     <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
                                     <input type="text"
@@ -270,7 +376,7 @@
                                            id="username"
                                            value="{{ user.username }}"
                                            disabled
-                                           class="flex-1 form-input rounded-l-none bg-gray-50 text-gray-500">
+                                           class="flex-1 form-input rounded-l-none bg-gray-50 text-gray-500 cursor-not-allowed">
                                 </div>
                                 <p class="mt-1 text-xs text-gray-500">Username cannot be changed.</p>
                             </div>
@@ -283,7 +389,8 @@
                                        id="email"
                                        value="{{ user.email }}"
                                        class="form-input touch-target"
-                                       placeholder="your.email@example.com">
+                                       placeholder="your.email@example.com"
+                                       required>
                                 <p class="mt-1 text-xs text-gray-500">We'll send verification emails to this address</p>
                             </div>
 
@@ -309,7 +416,7 @@
                                           placeholder="Tell us about yourself...">{{ user.bio|default:'' }}</textarea>
                                 <div class="flex justify-between items-center mt-1">
                                     <p class="text-xs text-gray-500">Share a brief introduction about yourself</p>
-                                    <span id="charCount" class="text-xs text-gray-500">0/500</span>
+                                    <span id="charCount" class="text-xs font-medium">0/500</span>
                                 </div>
                             </div>
                         </div>
@@ -318,7 +425,7 @@
                         <div class="space-y-6">
                             <h3 class="text-lg font-medium text-gray-900 border-b pb-2">Additional Information</h3>
 
-                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 mobile-grid-1">
+                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 mobile-grid-1">
                                 <!-- Date of Birth -->
                                 <div>
                                     <label for="date_of_birth" class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
@@ -339,7 +446,7 @@
                                         <option value="male" {% if user.gender == 'male' %}selected{% endif %}>Male</option>
                                         <option value="female" {% if user.gender == 'female' %}selected{% endif %}>Female</option>
                                         <option value="other" {% if user.gender == 'other' %}selected{% endif %}>Other</option>
-                                        <option value="prefer_not" {% if user.gender == 'prefer_not' %}selected{% endif %}>Prefer not to say</option>
+                                        <option value="prefer_not_to_say" {% if user.gender == 'prefer_not_to_say' %}selected{% endif %}>Prefer not to say</option>
                                     </select>
                                 </div>
                             </div>
@@ -368,14 +475,17 @@
                         </div>
 
                         <!-- Form Actions -->
-                        <div class="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4 pt-8 border-t border-gray-200">
+                        <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 border-t border-gray-200">
                             <a href="{% url 'profile' %}"
-                               class="px-6 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-center touch-target mobile-btn">
+                               class="inline-flex justify-center items-center px-6 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 touch-target mobile-btn">
                                 Cancel
                             </a>
                             <button type="submit"
                                     id="submitBtn"
-                                    class="px-6 py-3 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 touch-target mobile-btn">
+                                    class="inline-flex justify-center items-center px-6 py-3 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 touch-target mobile-btn">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                                </svg>
                                 Save Changes
                             </button>
                         </div>
@@ -384,25 +494,25 @@
             </div>
 
             <!-- Account Verification Section -->
-            <div class="bg-white shadow rounded-lg overflow-hidden mb-8">
-                <div class="px-4 py-8 sm:px-10 sm:py-10">
+            <div class="bg-white shadow rounded-lg overflow-hidden mb-6">
+                <div class="px-4 py-6 sm:px-10 sm:py-8">
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Account Verification</h3>
                     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <div>
+                        <div class="flex-1">
                             <p class="text-sm text-gray-600 mb-2">
                                 {% if user.is_verified %}
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 mb-2">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                                     <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                                     </svg>
-                                    ✓ Verified Account
+                                    Verified Account
                                 </span>
                                 {% else %}
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 mb-2">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
                                     <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                                     </svg>
-                                    ⚠️ Not Verified
+                                    Not Verified
                                 </span>
                                 {% endif %}
                             </p>
@@ -411,7 +521,10 @@
                             </p>
                         </div>
                         <a href="{% url 'send_verification_otp' %}"
-                           class="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 touch-target mobile-full-width sm:w-auto">
+                           class="inline-flex justify-center items-center px-6 py-3 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 touch-target mobile-full-width sm:w-auto">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
                             {% if user.is_verified %}Re-verify Account{% else %}Verify Account{% endif %}
                         </a>
                     </div>
@@ -420,8 +533,13 @@
 
             <!-- Danger Zone -->
             <div class="bg-white shadow rounded-lg overflow-hidden border border-red-200">
-                <div class="px-4 py-8 sm:px-10 sm:py-10">
-                    <h3 class="text-lg font-medium text-red-900 mb-6">⚠️ Danger Zone</h3>
+                <div class="px-4 py-6 sm:px-10 sm:py-8">
+                    <h3 class="text-lg font-medium text-red-900 mb-6 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                        Danger Zone
+                    </h3>
                     <p class="text-sm text-gray-600 mb-6">
                         These actions are irreversible. Please proceed with caution.
                     </p>
@@ -431,11 +549,13 @@
                                 <h4 class="text-sm font-medium text-red-900">Deactivate Account</h4>
                                 <p class="mt-1 text-xs text-red-700">Your account will be disabled but not deleted.</p>
                             </div>
-                            <a href="{% url 'deactivate_account' %}"
-                               onclick="return confirm('Are you sure you want to deactivate your account? You can reactivate by logging in.');"
-                               class="px-6 py-3 border border-red-300 rounded-lg text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 text-center touch-target mobile-full-width sm:w-auto">
-                                Deactivate Account
-                            </a>
+                            <form method="POST" action="{% url 'deactivate_account' %}" class="w-full sm:w-auto" onsubmit="return confirm('Are you sure you want to deactivate your account? You can reactivate by logging in.');">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="w-full sm:w-auto px-6 py-3 border border-red-300 rounded-lg text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 text-center touch-target">
+                                    Deactivate Account
+                                </button>
+                            </form>
                         </div>
 
                         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-red-50 rounded-lg gap-4">
@@ -443,11 +563,13 @@
                                 <h4 class="text-sm font-medium text-red-900">Delete Account</h4>
                                 <p class="mt-1 text-xs text-red-700">Permanently delete your account and all data.</p>
                             </div>
-                            <a href="{% url 'delete_account' %}"
-                               onclick="return confirm('WARNING: This will permanently delete your account and all data. This action cannot be undone. Are you sure?');"
-                               class="px-6 py-3 border border-transparent rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 text-center touch-target mobile-full-width sm:w-auto">
-                                Delete Account Permanently
-                            </a>
+                            <form method="POST" action="{% url 'delete_account' %}" class="w-full sm:w-auto" onsubmit="return confirm('WARNING: This will permanently delete your account and all data. This action cannot be undone. Are you sure?');">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="w-full sm:w-auto px-6 py-3 border border-transparent rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 text-center touch-target">
+                                    Delete Account Permanently
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -465,24 +587,28 @@
         const profilePictureInput = document.getElementById('profile_picture');
         const bioTextarea = document.getElementById('bio');
         const charCount = document.getElementById('charCount');
+        const fileNameSpan = document.getElementById('file-name');
 
         // Initialize character counter
         if (bioTextarea && charCount) {
-            charCount.textContent = `${bioTextarea.value.length}/500`;
-
-            bioTextarea.addEventListener('input', function() {
-                const length = this.value.length;
+            const updateCharCount = () => {
+                const length = bioTextarea.value.length;
                 charCount.textContent = `${length}/500`;
 
                 if (length > 500) {
                     charCount.classList.add('text-red-500');
+                    charCount.classList.remove('text-gray-500');
                 } else {
                     charCount.classList.remove('text-red-500');
+                    charCount.classList.add('text-gray-500');
                 }
-            });
+            };
+
+            updateCharCount();
+            bioTextarea.addEventListener('input', updateCharCount);
         }
 
-        // Profile picture preview
+        // Profile picture preview and file name display
         if (profilePictureInput && profileImagePreview) {
             profilePictureInput.addEventListener('change', function() {
                 if (this.files && this.files[0]) {
@@ -493,6 +619,7 @@
                     if (file.size > maxSize) {
                         alert('File size exceeds 5MB limit. Please select a smaller file.');
                         this.value = '';
+                        if (fileNameSpan) fileNameSpan.classList.add('hidden');
                         return;
                     }
 
@@ -501,7 +628,14 @@
                     if (!allowedTypes.includes(file.type)) {
                         alert('Please select a valid image file (JPG, PNG, GIF, or WebP).');
                         this.value = '';
+                        if (fileNameSpan) fileNameSpan.classList.add('hidden');
                         return;
+                    }
+
+                    // Show file name
+                    if (fileNameSpan) {
+                        fileNameSpan.textContent = file.name;
+                        fileNameSpan.classList.remove('hidden');
                     }
 
                     // Preview image
@@ -510,23 +644,30 @@
                         profileImagePreview.src = e.target.result;
                     };
                     reader.readAsDataURL(file);
+                } else {
+                    if (fileNameSpan) fileNameSpan.classList.add('hidden');
                 }
             });
         }
 
-        // Form validation
+        // Form validation and submission
         if (form) {
             form.addEventListener('submit', function(e) {
-                // Show loading state
-                submitBtn.disabled = true;
-                submitBtn.classList.add('loading');
-                submitBtn.innerHTML = `
-                    <svg class="animate-spin h-5 w-5 mr-2 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Saving...
-                `;
+                // Get CSRF token from cookie as backup
+                function getCookie(name) {
+                    let cookieValue = null;
+                    if (document.cookie && document.cookie !== '') {
+                        const cookies = document.cookie.split(';');
+                        for (let i = 0; i < cookies.length; i++) {
+                            const cookie = cookies[i].trim();
+                            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                break;
+                            }
+                        }
+                    }
+                    return cookieValue;
+                }
 
                 // Validate email
                 const email = document.getElementById('email');
@@ -535,26 +676,25 @@
                     if (!emailRegex.test(email.value)) {
                         e.preventDefault();
                         alert('Please enter a valid email address.');
-                        resetSubmitButton();
                         email.focus();
                         return false;
                     }
                 }
 
-                // Validate phone number
+                // Validate phone number (if provided)
                 const phone = document.getElementById('phone_number');
                 if (phone && phone.value) {
+                    // Basic international phone format
                     const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-                    if (!phoneRegex.test(phone.value)) {
+                    if (!phoneRegex.test(phone.value.replace(/[\s-]/g, ''))) {
                         e.preventDefault();
                         alert('Please enter a valid phone number (e.g., +9779800000000).');
-                        resetSubmitButton();
                         phone.focus();
                         return false;
                     }
                 }
 
-                // Validate date of birth
+                // Validate date of birth (if provided)
                 const dob = document.getElementById('date_of_birth');
                 if (dob && dob.value) {
                     const dobDate = new Date(dob.value);
@@ -571,7 +711,6 @@
                     if (age < minAge) {
                         e.preventDefault();
                         alert(`You must be at least ${minAge} years old to use this service.`);
-                        resetSubmitButton();
                         dob.focus();
                         return false;
                     }
@@ -581,22 +720,46 @@
                 if (bioTextarea && bioTextarea.value.length > 500) {
                     e.preventDefault();
                     alert('Bio must be 500 characters or less.');
-                    resetSubmitButton();
                     bioTextarea.focus();
                     return false;
                 }
 
-                // Form is valid, allow submission
+                // Show loading state
+                submitBtn.disabled = true;
+                submitBtn.classList.add('loading');
+                submitBtn.innerHTML = `
+                    <svg class="animate-spin h-5 w-5 mr-2 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                `;
+
+                // Ensure CSRF token is included
+                const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+                if (!csrfInput) {
+                    const hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = 'csrfmiddlewaretoken';
+                    hiddenInput.value = getCookie('csrftoken') || '{{ csrf_token }}';
+                    form.appendChild(hiddenInput);
+                }
+
                 return true;
             });
         }
 
-        // Reset submit button
-        function resetSubmitButton() {
+        // Reset submit button function (called if validation fails)
+        window.resetSubmitButton = function() {
             submitBtn.disabled = false;
             submitBtn.classList.remove('loading');
-            submitBtn.innerHTML = 'Save Changes';
-        }
+            submitBtn.innerHTML = `
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                </svg>
+                Save Changes
+            `;
+        };
 
         // Add touch-friendly class to all form inputs
         const formInputs = form.querySelectorAll('input, textarea, select, button, a');
@@ -619,35 +782,17 @@
             });
         }
 
-        // Mobile menu toggle (if needed)
-        const mobileMenuButton = document.querySelector('[data-mobile-menu-button]');
-        const mobileMenu = document.querySelector('[data-mobile-menu]');
-
-        if (mobileMenuButton && mobileMenu) {
-            mobileMenuButton.addEventListener('click', function() {
-                mobileMenu.classList.toggle('hidden');
-            });
-
-            // Close mobile menu when clicking outside
-            document.addEventListener('click', function(event) {
-                if (!mobileMenu.contains(event.target) && !mobileMenuButton.contains(event.target)) {
-                    mobileMenu.classList.add('hidden');
-                }
-            });
-        }
-
-        // Auto-save draft (optional feature)
+        // Auto-save draft to localStorage (optional)
         let autoSaveTimer;
-        const formFields = form.querySelectorAll('input, textarea, select');
+        const formFields = form.querySelectorAll('input:not([type="file"]), textarea, select');
 
         formFields.forEach(field => {
             field.addEventListener('input', function() {
                 clearTimeout(autoSaveTimer);
                 autoSaveTimer = setTimeout(() => {
-                    // Save to localStorage
                     const formData = {};
                     formFields.forEach(f => {
-                        if (f.name) {
+                        if (f.name && f.type !== 'file') {
                             formData[f.name] = f.value;
                         }
                     });
@@ -660,17 +805,84 @@
         // Load draft from localStorage
         const savedDraft = localStorage.getItem('profileEditDraft');
         if (savedDraft) {
-            const draftData = JSON.parse(savedDraft);
-            formFields.forEach(field => {
-                if (field.name && draftData[field.name] !== undefined) {
-                    field.value = draftData[field.name];
-                }
-            });
+            try {
+                const draftData = JSON.parse(savedDraft);
+                let hasData = false;
 
-            // Clear draft after loading
-            localStorage.removeItem('profileEditDraft');
+                formFields.forEach(field => {
+                    if (field.name && draftData[field.name] !== undefined && draftData[field.name] !== '') {
+                        field.value = draftData[field.name];
+                        hasData = true;
+                    }
+                });
+
+                if (hasData) {
+                    // Show restore notification
+                    const notification = document.createElement('div');
+                    notification.className = 'fixed bottom-4 right-4 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 animate-slide-up';
+                    notification.innerHTML = `
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            <span>Restored unsaved changes</span>
+                            <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+                    document.body.appendChild(notification);
+
+                    // Auto-remove after 5 seconds
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.remove();
+                        }
+                    }, 5000);
+                }
+
+                // Clear draft after loading
+                localStorage.removeItem('profileEditDraft');
+            } catch (e) {
+                console.error('Error loading draft:', e);
+                localStorage.removeItem('profileEditDraft');
+            }
         }
     });
     </script>
+
+    <!-- Add animation style -->
+    <style>
+        @keyframes slide-up {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-slide-up {
+            animation: slide-up 0.3s ease-out;
+        }
+
+        /* Loading spinner animation */
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+    </style>
 </body>
 </html>

@@ -8,6 +8,7 @@
       <excludeFolder url="file://$MODULE_DIR$/new_venv/Lib" />
       <excludeFolder url="file://$MODULE_DIR$/new_venv/Scripts" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
+      <excludeFolder url="file://$MODULE_DIR$/.venv1" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.14 (messenger_app)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

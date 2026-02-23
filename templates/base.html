@@ -13,7 +13,7 @@
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Include CSRF fix script -->
+    <!-- Include CSRF fix script - UPDATED to use csrf_fix.js only -->
     <script src="{% static 'js/csrf_fix.js' %}"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -97,6 +97,23 @@
             .mobile-back-button {
                 display: flex;
             }
+
+            /* Notification badge for mobile */
+            .notification-badge {
+                position: absolute;
+                top: -8px;
+                right: -8px;
+                background-color: #ef4444;
+                color: white;
+                border-radius: 9999px;
+                padding: 2px 6px;
+                font-size: 10px;
+                min-width: 18px;
+                text-align: center;
+                font-weight: bold;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                z-index: 10;
+            }
         }
 
         @media (min-width: 769px) {
@@ -118,6 +135,23 @@
 
             .mobile-back-button {
                 display: none;
+            }
+
+            /* Desktop notification badge */
+            .notification-badge {
+                position: absolute;
+                top: -5px;
+                right: -5px;
+                background-color: #ef4444;
+                color: white;
+                border-radius: 9999px;
+                padding: 2px 6px;
+                font-size: 10px;
+                min-width: 18px;
+                text-align: center;
+                font-weight: bold;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                z-index: 10;
             }
         }
 
@@ -272,7 +306,24 @@
         .swipe-area {
             touch-action: pan-y;
         }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(3px);
+        }
     </style>
+
+    {% block extra_css %}{% endblock %}
 </head>
 <body class="h-full bg-gray-50 {% if user.is_authenticated %}user-authenticated{% endif %}">
     <!-- Mobile Top Navigation -->
@@ -300,15 +351,15 @@
             <div class="flex items-center space-x-3">
                 {% if user.is_authenticated %}
                 <!-- Notifications -->
-                <a href="/accounts/notifications/" class="relative p-2 text-gray-600">
+                <a href="{% url 'notifications' %}" class="relative p-2 text-gray-600">
                     <i class="fas fa-bell text-lg"></i>
-                    <span class="notification-badge absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">
+                    <span id="mobile-notification-badge" class="notification-badge hidden">
                         0
                     </span>
                 </a>
 
                 <!-- Profile -->
-                <a href="/accounts/profile/" class="flex items-center">
+                <a href="{% url 'profile' %}" class="flex items-center">
                     {% if user.is_authenticated and user.profile_picture and user.profile_picture.url %}
                     <div class="profile-picture">
                         <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}">
@@ -369,41 +420,39 @@
                 <span class="ml-3">Chats</span>
             </a>
 
-            <!-- Chat URLs -->
+            <!-- Discover Users -->
             <a href="{% url 'discover_users' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'discover_users' %}bg-green-50 text-green-700 border-l-4 border-green-500{% endif %}">
                 <i class="fas fa-search w-6 text-green-600"></i>
                 <span class="ml-3">Discover</span>
             </a>
 
-            <!-- Accounts URLs - USING DIRECT PATHS -->
-            <a href="/accounts/friend-requests/"
+            <!-- Friend Requests -->
+            <a href="{% url 'friend_requests' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'friend_requests' %}bg-purple-50 text-purple-700 border-l-4 border-purple-500{% endif %}">
                 <i class="fas fa-user-friends w-6 text-purple-600"></i>
                 <span class="ml-3">Friends</span>
             </a>
 
-            <!-- Accounts URLs - USING DIRECT PATHS -->
-            <a href="/accounts/profile/"
+            <!-- Profile -->
+            <a href="{% url 'profile' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}bg-yellow-50 text-yellow-700 border-l-4 border-yellow-500{% endif %}">
                 <i class="fas fa-user w-6 text-yellow-600"></i>
                 <span class="ml-3">Profile</span>
             </a>
 
-            <!-- Accounts URLs - USING DIRECT PATHS -->
-            <a href="/accounts/notifications/"
-               class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'notifications' %}bg-red-50 text-red-700 border-l-4 border-red-500{% endif %}">
+            <!-- Notifications -->
+            <a href="{% url 'notifications' %}"
+               class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'notifications' %}bg-red-50 text-red-700 border-l-4 border-red-500{% endif %} relative">
                 <i class="fas fa-bell w-6 text-red-600"></i>
                 <span class="ml-3">Notifications</span>
-                {% if user.is_authenticated %}
-                <span class="notification-badge ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">
+                <span id="menu-notification-badge" class="notification-badge hidden ml-auto">
                     0
                 </span>
-                {% endif %}
             </a>
 
-            <!-- Accounts URLs - USING DIRECT PATHS -->
-            <a href="/accounts/settings/"
+            <!-- Settings -->
+            <a href="{% url 'settings_main' %}"
                class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'settings_main' %}bg-gray-100 text-gray-900 border-l-4 border-gray-500{% endif %}">
                 <i class="fas fa-cog w-6 text-gray-600"></i>
                 <span class="ml-3">Settings</span>
@@ -412,8 +461,8 @@
             <hr class="my-4">
 
             {% if user.is_authenticated %}
-            <!-- Accounts URLs - USING DIRECT PATHS -->
-            <form method="POST" action="/accounts/logout/">
+            <!-- Logout -->
+            <form method="POST" action="{% url 'logout' %}">
                 {% csrf_token %}
                 <button type="submit" class="flex items-center w-full p-3 rounded-lg hover:bg-red-50 transition duration-200 text-red-600">
                     <i class="fas fa-sign-out-alt w-6"></i>
@@ -421,8 +470,8 @@
                 </button>
             </form>
             {% else %}
-            <!-- Accounts URLs - USING DIRECT PATHS -->
-            <a href="/accounts/login/" class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200">
+            <!-- Login -->
+            <a href="{% url 'login' %}" class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200">
                 <i class="fas fa-sign-in-alt w-6 text-blue-600"></i>
                 <span class="ml-3">Login</span>
             </a>
@@ -433,21 +482,18 @@
     <!-- Mobile Bottom Navigation -->
     {% if user.is_authenticated %}
     <div class="desktop-hidden bottom-nav">
-        <!-- Chat URLs -->
         <a href="{% url 'chat_home' %}"
            class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}text-blue-600{% endif %}">
             <i class="fas fa-comments text-xl mb-1"></i>
             <span class="text-xs">Chats</span>
         </a>
 
-        <!-- Chat URLs -->
         <a href="{% url 'discover_users' %}"
-                     class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'discover_users' %}text-blue-600{% endif %}">
+           class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'discover_users' %}text-blue-600{% endif %}">
             <i class="fas fa-search text-xl mb-1"></i>
             <span class="text-xs">Discover</span>
         </a>
 
-        <!-- Chat URLs -->
         <a href="{% url 'start_chat' %}"
            class="flex flex-col items-center justify-center p-2">
             <div class="w-12 h-12 -mt-6 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
@@ -455,15 +501,13 @@
             </div>
         </a>
 
-        <!-- Accounts URLs - USING DIRECT PATHS -->
-        <a href="/accounts/friend-requests/"
+        <a href="{% url 'friend_requests' %}"
            class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'friend_requests' %}text-blue-600{% endif %}">
             <i class="fas fa-user-friends text-xl mb-1"></i>
             <span class="text-xs">Friends</span>
         </a>
 
-        <!-- Accounts URLs - USING DIRECT PATHS -->
-        <a href="/accounts/profile/"
+        <a href="{% url 'profile' %}"
            class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}text-blue-600{% endif %}">
             <i class="fas fa-user text-xl mb-1"></i>
             <span class="text-xs">Profile</span>
@@ -485,48 +529,40 @@
 
             <!-- Navigation -->
             <nav class="flex-1 p-4 space-y-1">
-                <!-- Chat URLs -->
                 <a href="{% url 'chat_home' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-blue-50 transition duration-200 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}bg-blue-50 text-blue-600 border-l-4 border-blue-500{% endif %}">
                     <i class="fas fa-comments w-6"></i>
                     <span class="ml-3">Chats</span>
                 </a>
 
-                <!-- Chat URLs -->
                 <a href="{% url 'discover_users' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-green-50 transition duration-200 {% if request.resolver_match.url_name == 'discover_users' %}bg-green-50 text-green-600 border-l-4 border-green-500{% endif %}">
                     <i class="fas fa-search w-6"></i>
                     <span class="ml-3">Discover</span>
                 </a>
 
-                <!-- Accounts URLs - USING DIRECT PATHS -->
-                <a href="/accounts/friend-requests/"
+                <a href="{% url 'friend_requests' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-purple-50 transition duration-200 {% if request.resolver_match.url_name == 'friend_requests' %}bg-purple-50 text-purple-600 border-l-4 border-purple-500{% endif %}">
                     <i class="fas fa-user-friends w-6"></i>
                     <span class="ml-3">Friends</span>
                 </a>
 
-                <!-- Accounts URLs - USING DIRECT PATHS -->
-                <a href="/accounts/profile/"
+                <a href="{% url 'profile' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-yellow-50 transition duration-200 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}bg-yellow-50 text-yellow-600 border-l-4 border-yellow-500{% endif %}">
                     <i class="fas fa-user w-6"></i>
                     <span class="ml-3">Profile</span>
                 </a>
 
-                <!-- Accounts URLs - USING DIRECT PATHS -->
-                <a href="/accounts/notifications/"
-                   class="flex items-center p-3 rounded-lg hover:bg-red-50 transition duration-200 {% if request.resolver_match.url_name == 'notifications' %}bg-red-50 text-red-600 border-l-4 border-red-500{% endif %}">
+                <a href="{% url 'notifications' %}"
+                   class="flex items-center p-3 rounded-lg hover:bg-red-50 transition duration-200 {% if request.resolver_match.url_name == 'notifications' %}bg-red-50 text-red-600 border-l-4 border-red-500{% endif %} relative">
                     <i class="fas fa-bell w-6"></i>
                     <span class="ml-3">Notifications</span>
-                    {% if user.is_authenticated %}
-                    <span class="notification-badge ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">
+                    <span id="desktop-notification-badge" class="notification-badge hidden">
                         0
                     </span>
-                    {% endif %}
                 </a>
 
-                <!-- Accounts URLs - USING DIRECT PATHS -->
-                <a href="/accounts/settings/"
+                <a href="{% url 'settings_main' %}"
                    class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'settings_main' %}bg-gray-100 text-gray-900 border-l-4 border-gray-500{% endif %}">
                     <i class="fas fa-cog w-6"></i>
                     <span class="ml-3">Settings</span>
@@ -552,8 +588,7 @@
                             <p class="text-sm font-medium text-gray-900 truncate">{{ user.username }}</p>
                             <p class="text-xs text-gray-500 truncate">{{ user.email|truncatechars:20 }}</p>
                         </div>
-                        <!-- Accounts URLs - USING DIRECT PATHS -->
-                        <form method="POST" action="/accounts/logout/">
+                        <form method="POST" action="{% url 'logout' %}">
                             {% csrf_token %}
                             <button type="submit" class="p-2 text-gray-400 hover:text-red-600 transition duration-200"
                                     title="Logout">
@@ -570,8 +605,7 @@
                             <p class="text-sm font-medium text-gray-900 truncate">Guest</p>
                             <p class="text-xs text-gray-500 truncate">Not logged in</p>
                         </div>
-                        <!-- Accounts URLs - USING DIRECT PATHS -->
-                        <a href="/accounts/login/" class="p-2 text-blue-400 hover:text-blue-600 transition duration-200"
+                        <a href="{% url 'login' %}" class="p-2 text-blue-400 hover:text-blue-600 transition duration-200"
                            title="Login">
                             <i class="fas fa-sign-in-alt"></i>
                         </a>
@@ -610,7 +644,7 @@
                     </div>
                 </div>
                 {% endfor %}
-                </div>
+            </div>
             {% endif %}
 
             <!-- Page Content -->
@@ -623,6 +657,9 @@
 
     <!-- JavaScript -->
     <script>
+        // Global variables
+        let csrftoken = null;
+
         // Function to get CSRF token from cookies - FIXED VERSION
         function getCSRFToken() {
             let cookieValue = null;
@@ -654,6 +691,7 @@
                 cookieValue = window.csrftoken;
             }
 
+            csrftoken = cookieValue;
             return cookieValue;
         }
 
@@ -676,7 +714,7 @@
             formData.append('online', isOnline.toString());
             formData.append('csrfmiddlewaretoken', csrfToken);
 
-            fetch('/chat/update-online-status/', {
+           fetch('{% url "update_online_status" %}', {
                 method: 'POST',
                 body: formData,
                 credentials: 'same-origin'
@@ -701,7 +739,7 @@
                 const formData = new FormData();
                 formData.append('online', 'false');
                 formData.append('csrfmiddlewaretoken', csrfToken);
-                navigator.sendBeacon('/chat/update-online-status/', formData);
+                navigator.sendBeacon('{% url "update_online_status" %}', formData);
             } else {
                 // Fallback sync request
                 updateOnlineStatus(false);
@@ -714,11 +752,6 @@
             document.documentElement.style.setProperty('--vh', `${vh}px`);
         }
 
-        // Initialize
-        setVH();
-        window.addEventListener('resize', setVH);
-        window.addEventListener('orientationchange', setVH);
-
         // Function to fetch notification count
         function fetchNotificationCount() {
             // Only fetch if user is authenticated
@@ -726,41 +759,48 @@
                 return;
             }
 
-            fetch('/accounts/get-unread-count/')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.unread_count > 0) {
-                        // Update all notification badges
-                        const badges = document.querySelectorAll('.notification-badge');
-                        badges.forEach(badge => {
-                            badge.textContent = data.unread_count;
-                            badge.classList.remove('hidden');
-                        });
-                    } else {
-                        // Hide all notification badges
-                        const badges = document.querySelectorAll('.notification-badge');
-                        badges.forEach(badge => {
-                            badge.classList.add('hidden');
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching notification count:', error);
-                    // Hide all notification badges on error
+            fetch('/accounts/api/get-unread-count/', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.unread_count > 0) {
+                    // Update all notification badges
+                    const badges = document.querySelectorAll('.notification-badge');
+                    badges.forEach(badge => {
+                        badge.textContent = data.unread_count;
+                        badge.classList.remove('hidden');
+                    });
+                } else {
+                    // Hide all notification badges
                     const badges = document.querySelectorAll('.notification-badge');
                     badges.forEach(badge => {
                         badge.classList.add('hidden');
                     });
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching notification count:', error);
+                // Hide all notification badges on error
+                const badges = document.querySelectorAll('.notification-badge');
+                badges.forEach(badge => {
+                    badge.classList.add('hidden');
                 });
+            });
         }
 
         // Mobile menu functionality
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize CSRF token
+            getCSRFToken();
+
             const mobileMenuButton = document.getElementById('mobileMenuButton');
             const closeMobileMenu = document.getElementById('closeMobileMenu');
             const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
@@ -969,7 +1009,7 @@
             }, true);
 
             // Show toast notification
-            function showToast(message, type = 'info') {
+            window.showToast = function(message, type = 'info') {
                 // Create toast element
                 const toast = document.createElement('div');
                 toast.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full ${type === 'success' ? 'bg-green-500 text-white' : type === 'error' ? 'bg-red-500 text-white' : type === 'warning' ? 'bg-yellow-500 text-white' : 'bg-blue-500 text-white'}`;
@@ -997,7 +1037,7 @@
                         }
                     }, 300);
                 }, 3000);
-            }
+            };
 
             // Handle offline/online status
             function updateConnectionStatus() {
@@ -1005,7 +1045,7 @@
                 const message = status === 'online' ? 'You are back online!' : 'You are offline. Some features may not work.';
                 const type = status === 'online' ? 'success' : 'warning';
 
-                showToast(message, type);
+                window.showToast(message, type);
 
                 // Update online status in database
                 if (status === 'online' && userAuthenticated) {
@@ -1018,7 +1058,7 @@
 
             // Initialize connection status
             if (!navigator.onLine) {
-                showToast('You are offline. Some features may not work.', 'warning');
+                window.showToast('You are offline. Some features may not work.', 'warning');
             }
 
             // Handle push notifications permission
@@ -1031,7 +1071,7 @@
                 if (Notification.permission === 'default') {
                     Notification.requestPermission().then(permission => {
                         if (permission === 'granted') {
-                            showToast('Notifications enabled!', 'success');
+                            window.showToast('Notifications enabled!', 'success');
                         }
                     });
                 }
@@ -1198,7 +1238,7 @@
                 // Warn user 1 minute before session expires (assuming 15 minute session)
                 sessionTimeout = setTimeout(() => {
                     if (userAuthenticated) {
-                        showToast('Your session will expire in 1 minute. Please save your work.', 'warning');
+                        window.showToast('Your session will expire in 1 minute. Please save your work.', 'warning');
                     }
                 }, 14 * 60 * 1000); // 14 minutes
             }
@@ -1275,6 +1315,11 @@
 
             // Final initialization
             console.log('Base template JavaScript initialized successfully');
+
+            // Set VH on load and resize
+            setVH();
+            window.addEventListener('resize', setVH);
+            window.addEventListener('orientationchange', setVH);
         });
 
         // Global error handler for uncaught errors
