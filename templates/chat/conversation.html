@@ -1,4 +1,4 @@
-<!-- templates/chat/conversation.html - COMPLETE WITH DOWNLOAD SUPPORT -->
+<!-- templates/chat/conversation.html - COMPLETE MOBILE-FIXED VERSION WITH CHAT BOX -->
 {% extends 'base.html' %}
 {% load static %}
 
@@ -9,14 +9,14 @@
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50 flex flex-col" style="height: calc(var(--vh, 1vh) * 100);">
+<div class="min-h-screen bg-gray-50 flex flex-col" style="height: 100vh; height: calc(var(--vh, 1vh) * 100);">
     <!-- Chat Header -->
-    <div class="bg-white border-b border-gray-200 p-4 sticky top-0 z-30 md:relative">
+    <div class="bg-white border-b border-gray-200 p-4 sticky top-0 z-30 shadow-sm">
         <div class="flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <!-- Back Button (Mobile) -->
-                <a href="{% url 'chat_home' %}" class="md:hidden text-gray-600">
-                    <i class="fas fa-arrow-left text-lg"></i>
+                <a href="{% url 'chat_home' %}" class="md:hidden text-gray-600 p-2 -ml-2">
+                    <i class="fas fa-arrow-left text-xl"></i>
                 </a>
 
                 {% if is_group %}
@@ -58,59 +58,59 @@
                 {% endif %}
             </div>
 
-            <div class="flex items-center space-x-2">
+            <div class="flex items-center space-x-1">
                 <!-- Video Call Button -->
-                <a href="{% url 'video_chat' conversation.id %}" class="p-2 text-gray-600 hover:text-blue-600 rounded-full hover:bg-gray-100 hidden sm:block">
-                    <i class="fas fa-video"></i>
+                <a href="{% url 'video_chat' conversation.id %}" class="p-2 text-gray-600 hover:text-blue-600 rounded-full hover:bg-gray-100">
+                    <i class="fas fa-video text-lg"></i>
                 </a>
 
                 <!-- Audio Call Button -->
-                <a href="{% url 'audio_chat' conversation.id %}" class="p-2 text-gray-600 hover:text-blue-600 rounded-full hover:bg-gray-100 hidden sm:block">
-                    <i class="fas fa-phone"></i>
+                <a href="{% url 'audio_chat' conversation.id %}" class="p-2 text-gray-600 hover:text-blue-600 rounded-full hover:bg-gray-100">
+                    <i class="fas fa-phone text-lg"></i>
                 </a>
 
                 <!-- Info Button -->
-                <a href="{% url 'conversation_info' conversation.id %}" class="p-2 text-gray-600 hover:text-blue-600 rounded-full hover:bg-gray-100 hidden sm:block">
-                    <i class="fas fa-info-circle"></i>
+                <a href="{% url 'conversation_info' conversation.id %}" class="p-2 text-gray-600 hover:text-blue-600 rounded-full hover:bg-gray-100">
+                    <i class="fas fa-info-circle text-lg"></i>
                 </a>
 
                 {% if is_group %}
                 <a href="{% url 'group_settings' conversation.id %}"
                    class="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100">
-                    <i class="fas fa-cog"></i>
+                    <i class="fas fa-cog text-lg"></i>
                 </a>
                 {% endif %}
 
                 <!-- Mobile Menu Button -->
                 <div class="relative md:hidden">
                     <button id="chat-menu-btn" class="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100">
-                        <i class="fas fa-ellipsis-v"></i>
+                        <i class="fas fa-ellipsis-v text-lg"></i>
                     </button>
 
                     <!-- Mobile Chat Menu -->
-                    <div id="chat-menu" class="absolute right-0 top-12 bg-white border border-gray-200 rounded-lg shadow-lg py-2 hidden z-50 min-w-[160px]">
-                        <a href="{% url 'video_chat' conversation.id %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 text-sm">
-                            <i class="fas fa-video mr-2 text-blue-500"></i>Video Call
+                    <div id="chat-menu" class="absolute right-0 top-12 bg-white border border-gray-200 rounded-lg shadow-lg py-2 hidden z-50 min-w-[180px]">
+                        <a href="{% url 'video_chat' conversation.id %}" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 text-sm">
+                            <i class="fas fa-video mr-3 text-blue-500 w-5"></i>Video Call
                         </a>
-                        <a href="{% url 'audio_chat' conversation.id %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 text-sm">
-                            <i class="fas fa-phone mr-2 text-green-500"></i>Audio Call
+                        <a href="{% url 'audio_chat' conversation.id %}" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 text-sm">
+                            <i class="fas fa-phone mr-3 text-green-500 w-5"></i>Audio Call
                         </a>
-                        <a href="{% url 'conversation_info' conversation.id %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 text-sm">
-                            <i class="fas fa-info-circle mr-2 text-purple-500"></i>Info
+                        <a href="{% url 'conversation_info' conversation.id %}" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 text-sm">
+                            <i class="fas fa-info-circle mr-3 text-purple-500 w-5"></i>Info
                         </a>
                         {% if is_group %}
                         <form method="POST" action="{% url 'leave_group' conversation.id %}"
                               onsubmit="return confirm('Are you sure you want to leave this group?');">
                             {% csrf_token %}
-                            <button type="submit" class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 text-sm">
-                                <i class="fas fa-sign-out-alt mr-2"></i>Leave Group
+                            <button type="submit" class="w-full flex items-center px-4 py-3 text-red-600 hover:bg-red-50 text-sm">
+                                <i class="fas fa-sign-out-alt mr-3 w-5"></i>Leave Group
                             </button>
                         </form>
                         {% else %}
                             {% if other_user %}
-                            <a href="#" onclick="openBlockModal()" class="block px-4 py-2 text-red-600 hover:bg-red-50 text-sm">
-                                <i class="fas fa-user-slash mr-2"></i>Block User
-                            </a>
+                            <button onclick="openBlockModal()" class="w-full flex items-center px-4 py-3 text-red-600 hover:bg-red-50 text-sm">
+                                <i class="fas fa-user-slash mr-3 w-5"></i>Block User
+                            </button>
                             {% endif %}
                         {% endif %}
                     </div>
@@ -119,17 +119,17 @@
         </div>
     </div>
 
-    <!-- Messages Area -->
+    <!-- Messages Area - FIXED: Proper height calculation for mobile -->
     <div class="flex-1 overflow-y-auto p-4 bg-gray-50 custom-scrollbar"
          id="messages-container"
-         style="padding-bottom: 80px;">
+         style="height: calc(100vh - 130px); padding-bottom: 20px;">
         <div class="space-y-3" id="messages-list">
             {% for message in messages %}
             <div class="message-group flex {% if message.sender == request.user %}justify-end{% else %}justify-start{% endif %}"
                  data-message-id="{{ message.id }}"
                  data-timestamp="{{ message.timestamp.isoformat }}">
 
-                <div class="message-bubble relative group max-w-xs lg:max-w-md px-4 py-2 rounded-lg {% if message.sender == request.user %}bg-blue-600 text-white{% else %}bg-white border border-gray-200 text-gray-900{% endif %}">
+                <div class="message-bubble relative group max-w-[85%] sm:max-w-xs lg:max-w-md px-4 py-2 rounded-lg {% if message.sender == request.user %}bg-blue-600 text-white{% else %}bg-white border border-gray-200 text-gray-900{% endif %}">
 
                     <!-- Message Header for Group -->
                     {% if is_group and message.sender != request.user and not message.is_unsent %}
@@ -143,7 +143,7 @@
                     <p class="text-sm italic opacity-70">This message was unsent</p>
                     {% else %}
                         {% if message.message_type == 'text' %}
-                        <p class="text-sm message-content">{{ message.content }}</p>
+                        <p class="text-sm message-content whitespace-pre-wrap break-words">{{ message.content }}</p>
 
                         {% elif message.message_type == 'emoji' %}
                         <div class="emoji-message text-4xl text-center py-2">
@@ -157,19 +157,19 @@
                                  onclick="openMediaModal('{{ message.file.url }}', 'image')">
                         </div>
                         {% if message.content %}
-                        <p class="text-sm message-content mt-2">{{ message.content }}</p>
+                        <p class="text-sm message-content mt-2 whitespace-pre-wrap break-words">{{ message.content }}</p>
                         {% endif %}
 
                         {% elif message.message_type == 'video' %}
                         <div class="mb-2">
-                            <video controls class="max-w-full h-auto rounded-lg max-h-64"
+                            <video controls class="max-w-full h-auto rounded-lg max-h-64 w-full"
                                    onclick="openMediaModal('{{ message.file.url }}', 'video')">
                                 <source src="{{ message.file.url }}" type="video/mp4">
                                 Your browser does not support the video tag.
                             </video>
                         </div>
                         {% if message.content %}
-                        <p class="text-sm message-content mt-2">{{ message.content }}</p>
+                        <p class="text-sm message-content mt-2 whitespace-pre-wrap break-words">{{ message.content }}</p>
                         {% endif %}
 
                         {% elif message.message_type == 'audio' %}
@@ -180,27 +180,27 @@
                             </audio>
                         </div>
                         {% if message.content %}
-                        <p class="text-sm message-content mt-2">{{ message.content }}</p>
+                        <p class="text-sm message-content mt-2 whitespace-pre-wrap break-words">{{ message.content }}</p>
                         {% endif %}
 
                         {% elif message.message_type == 'voice' %}
                         <div class="voice-message mb-1">
                             <div class="flex items-center space-x-2">
                                 <button onclick="playVoiceMessage('{{ message.file.url }}', this)"
-                                        class="voice-play-btn w-8 h-8 rounded-full {% if message.sender == request.user %}bg-white bg-opacity-30 hover:bg-opacity-40{% else %}bg-blue-100 hover:bg-blue-200{% endif %} flex items-center justify-center">
-                                    <i class="fas fa-play text-sm {% if message.sender == request.user %}text-white{% else %}text-blue-600{% endif %}"></i>
+                                        class="voice-play-btn w-10 h-10 rounded-full {% if message.sender == request.user %}bg-white bg-opacity-30 hover:bg-opacity-40{% else %}bg-blue-100 hover:bg-blue-200{% endif %} flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-play text-base {% if message.sender == request.user %}text-white{% else %}text-blue-600{% endif %}"></i>
                                 </button>
-                                <div class="flex-1">
-                                    <div class="voice-waveform flex items-center h-8 space-x-0.5">
+                                <div class="flex-1 min-w-0">
+                                    <div class="voice-waveform flex items-center h-8 space-x-0.5 overflow-x-auto">
                                         {% if message.voice_waveform %}
                                             {% for height in message.voice_waveform %}
-                                            <div class="wave-bar w-1 {% if message.sender == request.user %}bg-white{% else %}bg-blue-500{% endif %} rounded-full"
+                                            <div class="wave-bar w-1 {% if message.sender == request.user %}bg-white{% else %}bg-blue-500{% endif %} rounded-full flex-shrink-0"
                                                  style="height: {{ height }}px;"></div>
                                             {% endfor %}
                                         {% else %}
                                             <!-- Default waveform -->
                                             {% for i in "12345678901234567890"|make_list %}
-                                            <div class="wave-bar w-1 {% if message.sender == request.user %}bg-white{% else %}bg-blue-500{% endif %} rounded-full"
+                                            <div class="wave-bar w-1 {% if message.sender == request.user %}bg-white{% else %}bg-blue-500{% endif %} rounded-full flex-shrink-0"
                                                  style="height: {% cycle '15' '25' '35' '40' '30' '20' '10' '25' '35' '30' '20' '15' '25' '35' '40' '30' '20' '10' '15' '25' %}px;"></div>
                                             {% endfor %}
                                         {% endif %}
@@ -210,7 +210,7 @@
                             </div>
                         </div>
                         {% if message.content %}
-                        <p class="text-sm message-content mt-2">{{ message.content }}</p>
+                        <p class="text-sm message-content mt-2 whitespace-pre-wrap break-words">{{ message.content }}</p>
                         {% endif %}
 
                         {% elif message.message_type == 'file' %}
@@ -237,7 +237,7 @@
                             </div>
                         </div>
                         {% if message.content %}
-                        <p class="text-sm message-content mt-2">{{ message.content }}</p>
+                        <p class="text-sm message-content mt-2 whitespace-pre-wrap break-words">{{ message.content }}</p>
                         {% endif %}
                         {% endif %}
                     {% endif %}
@@ -276,23 +276,24 @@
                         {% endif %}
                     </div>
 
-                    <!-- Message Actions -->
-                    {% if message.sender == request.user and not message.is_unsent %}
-                    <div class="message-actions absolute -top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-1 hidden group-hover:flex space-x-1">
-                        {% if message.message_type == 'text' %}
-                        <button onclick="editMessage('{{ message.id }}')"
-                                class="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition duration-200"
-                                title="Edit message">
-                            <i class="fas fa-edit text-xs"></i>
-                        </button>
+                    <!-- Message Actions (hidden on mobile, shown on hover on desktop) -->
+                    <div class="hidden md:group-hover:flex message-actions absolute -top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-1 space-x-1">
+                        {% if message.sender == request.user and not message.is_unsent %}
+                            {% if message.message_type == 'text' %}
+                            <button onclick="editMessage('{{ message.id }}')"
+                                    class="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition duration-200"
+                                    title="Edit message">
+                                <i class="fas fa-edit text-xs"></i>
+                            </button>
+                            {% endif %}
+
+                            <button onclick="unsendMessage('{{ message.id }}')"
+                                    class="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition duration-200"
+                                    title="Unsend message">
+                                <i class="fas fa-trash text-xs"></i>
+                            </button>
                         {% endif %}
 
-                        <button onclick="unsendMessage('{{ message.id }}')"
-                                class="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition duration-200"
-                                title="Unsend message">
-                            <i class="fas fa-trash text-xs"></i>
-                        </button>
-
                         <div class="relative">
                             <button onclick="toggleReactions('{{ message.id }}')"
                                     class="p-1 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition duration-200"
@@ -300,7 +301,7 @@
                                 <i class="fas fa-smile text-xs"></i>
                             </button>
 
-                            <div id="reactions-{{ message.id }}" class="reaction-picker absolute bottom-full left-0 bg-white border border-gray-300 rounded-lg shadow-lg p-2 hidden grid grid-cols-3 gap-1 z-50">
+                            <div id="reactions-{{ message.id }}" class="reaction-picker absolute bottom-full right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-2 hidden grid grid-cols-3 gap-1 z-50">
                                 <button onclick="addReaction('{{ message.id }}', '👍')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">👍</button>
                                 <button onclick="addReaction('{{ message.id }}', '❤️')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">❤️</button>
                                 <button onclick="addReaction('{{ message.id }}', '😂')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">😂</button>
@@ -312,29 +313,6 @@
                             </div>
                         </div>
                     </div>
-                    {% elif not message.is_unsent %}
-                    <!-- React button for others' messages -->
-                    <div class="message-actions absolute -top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-1 hidden group-hover:flex">
-                        <div class="relative">
-                            <button onclick="toggleReactions('{{ message.id }}')"
-                                    class="p-1 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition duration-200"
-                                    title="Add reaction">
-                                <i class="fas fa-smile text-xs"></i>
-                            </button>
-
-                            <div id="reactions-{{ message.id }}" class="reaction-picker absolute bottom-full left-0 bg-white border border-gray-300 rounded-lg shadow-lg p-2 hidden grid grid-cols-3 gap-1 z-50">
-                                <button onclick="addReaction('{{ message.id }}', '👍')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">👍</button>
-                                <button onclick="addReaction('{{ message.id }}', '❤️')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">❤️</button>
-                                <button onclick="addReaction('{{ message.id }}', '😂')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">😂</button>
-                                <button onclick="addReaction('{{ message.id }}', '😮')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">😮</button>
-                                <button onclick="addReaction('{{ message.id }}', '😢')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">😢</button>
-                                <button onclick="addReaction('{{ message.id }}', '😡')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">😡</button>
-                                <button onclick="addReaction('{{ message.id }}', '🔥')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">🔥</button>
-                                <button onclick="addReaction('{{ message.id }}', '🎉')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">🎉</button>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
             {% empty %}
@@ -371,22 +349,10 @@
                 </p>
             </div>
         </div>
-
-        <!-- Recording Indicator -->
-        <div id="recording-indicator" class="hidden fixed bottom-24 left-0 right-0 flex justify-center">
-            <div class="bg-red-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center space-x-2">
-                <div class="w-3 h-3 bg-white rounded-full animate-pulse"></div>
-                <span>Recording voice message...</span>
-                <span id="recording-timer">0:00</span>
-                <button onclick="stopVoiceRecording()" class="ml-2 p-1 hover:bg-red-600 rounded-full">
-                    <i class="fas fa-stop"></i>
-                </button>
-            </div>
-        </div>
     </div>
 
-    <!-- Enhanced Mobile Message Input with Voice Recording -->
-    <div class="bg-white border-t border-gray-200 p-3 fixed bottom-0 left-0 right-0 md:relative">
+    <!-- FIXED: Mobile Message Input - ALWAYS VISIBLE -->
+    <div class="bg-white border-t border-gray-200 p-3 w-full z-40" id="mobile-message-input">
         <form class="flex items-end space-x-2" id="message-form">
             {% csrf_token %}
 
@@ -394,8 +360,8 @@
             <div class="relative">
                 <button type="button" id="voice-record-btn"
                         onclick="toggleVoiceRecording()"
-                        class="p-2 text-gray-600 hover:text-red-500 rounded-full transition duration-200 voice-record-btn">
-                    <i class="fas fa-microphone text-lg"></i>
+                        class="p-3 text-gray-600 hover:text-red-500 rounded-full transition duration-200 voice-record-btn bg-gray-100">
+                    <i class="fas fa-microphone text-xl"></i>
                 </button>
             </div>
 
@@ -404,18 +370,18 @@
                 <input type="file" id="file-input" name="file"
                        accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.jpg,.jpeg,.png,.gif,.webp,.heic" class="hidden">
                 <button type="button" onclick="document.getElementById('file-input').click()"
-                        class="p-2 text-gray-600 hover:text-blue-600 rounded-full transition duration-200">
-                    <i class="fas fa-paperclip text-lg"></i>
+                        class="p-3 text-gray-600 hover:text-blue-600 rounded-full transition duration-200 bg-gray-100">
+                    <i class="fas fa-paperclip text-xl"></i>
                 </button>
             </div>
 
-            <!-- Enhanced Emoji Picker -->
+            <!-- Message Input Area -->
             <div class="relative flex-1">
-                <div class="flex items-end space-x-2">
+                <div class="flex items-end">
                     <!-- Emoji Button -->
                     <button type="button" onclick="toggleEmojiPicker()"
-                            class="p-2 text-gray-600 hover:text-yellow-500 rounded-full transition duration-200 flex-shrink-0">
-                        <i class="fas fa-smile text-lg"></i>
+                            class="p-3 text-gray-600 hover:text-yellow-500 rounded-full transition duration-200 bg-gray-100 mr-2 flex-shrink-0">
+                        <i class="fas fa-smile text-xl"></i>
                     </button>
 
                     <!-- Message Input -->
@@ -424,7 +390,7 @@
                             id="message-input"
                             name="content"
                             placeholder="Type a message..."
-                            class="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-base"
                             rows="1"
                             style="max-height: 120px; min-height: 48px;"
                             oninput="autoResize(this)"></textarea>
@@ -432,31 +398,9 @@
 
                     <!-- Send Button -->
                     <button type="submit"
-                            class="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition duration-200 flex-shrink-0">
-                        <i class="fas fa-paper-plane"></i>
+                            class="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition duration-200 flex-shrink-0 ml-2 w-12 h-12 flex items-center justify-center">
+                        <i class="fas fa-paper-plane text-lg"></i>
                     </button>
-                </div>
-
-                <!-- Enhanced Mobile Emoji Picker -->
-                <div id="emoji-picker"
-                     class="absolute bottom-14 left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-xl hidden z-50 emoji-picker-mobile">
-                    <div class="flex flex-col h-full">
-                        <!-- Search -->
-                        <div class="p-3 border-b border-gray-200">
-                            <input type="text" id="emoji-search" placeholder="Search emojis..."
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-
-                        <!-- Categories -->
-                        <div class="flex border-b border-gray-200 overflow-x-auto bg-gray-50" id="emoji-categories">
-                            <!-- Categories loaded via JS -->
-                        </div>
-
-                        <!-- Emoji Grid -->
-                        <div class="flex-1 overflow-y-auto p-3" id="emoji-grid">
-                            <!-- Emojis loaded via JS -->
-                        </div>
-                    </div>
                 </div>
             </div>
         </form>
@@ -466,13 +410,48 @@
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
                     <i class="fas fa-file text-gray-400 text-xl"></i>
-                    <div>
-                        <p id="file-name" class="text-sm font-medium text-gray-900"></p>
+                    <div class="flex-1 min-w-0">
+                        <p id="file-name" class="text-sm font-medium text-gray-900 truncate"></p>
                         <p id="file-size" class="text-xs text-gray-500"></p>
                     </div>
                 </div>
-                <button type="button" onclick="clearFilePreview()" class="text-gray-400 hover:text-gray-600">
+                <button type="button" onclick="clearFilePreview()" class="text-gray-400 hover:text-gray-600 p-2">
                     <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Emoji Picker - Mobile Optimized -->
+        <div id="emoji-picker"
+             class="absolute bottom-20 left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-xl hidden z-50 emoji-picker-mobile"
+             style="max-height: 350px;">
+            <div class="flex flex-col h-full">
+                <!-- Search -->
+                <div class="p-2 border-b border-gray-200">
+                    <input type="text" id="emoji-search" placeholder="Search emojis..."
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base">
+                </div>
+
+                <!-- Categories -->
+                <div class="flex border-b border-gray-200 overflow-x-auto bg-gray-50 py-1" id="emoji-categories">
+                    <!-- Categories loaded via JS -->
+                </div>
+
+                <!-- Emoji Grid -->
+                <div class="flex-1 overflow-y-auto p-2" id="emoji-grid" style="max-height: 250px;">
+                    <!-- Emojis loaded via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Recording Indicator -->
+        <div id="recording-indicator" class="hidden fixed bottom-24 left-0 right-0 flex justify-center z-50">
+            <div class="bg-red-500 text-white px-4 py-3 rounded-full shadow-lg flex items-center space-x-3">
+                <div class="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+                <span>Recording voice message...</span>
+                <span id="recording-timer" class="font-mono">0:00</span>
+                <button onclick="stopVoiceRecording()" class="ml-2 p-2 hover:bg-red-600 rounded-full">
+                    <i class="fas fa-stop"></i>
                 </button>
             </div>
         </div>
@@ -480,27 +459,27 @@
 </div>
 
 <!-- Media Modal -->
-<div id="mediaModal" class="fixed inset-0 bg-black bg-opacity-90 hidden items-center justify-center z-50 p-4">
+<div id="mediaModal" class="fixed inset-0 bg-black bg-opacity-95 hidden items-center justify-center z-[100] p-4">
     <div class="relative max-w-4xl max-h-full w-full">
-        <button onclick="closeMediaModal()" class="absolute -top-12 right-0 text-white hover:text-gray-300 text-2xl z-10">
+        <button onclick="closeMediaModal()" class="absolute -top-12 right-0 text-white hover:text-gray-300 text-3xl z-10 p-2">
             <i class="fas fa-times"></i>
         </button>
-        <div id="media-content" class="bg-transparent rounded-lg overflow-hidden">
+        <div id="media-content" class="bg-transparent rounded-lg overflow-hidden flex items-center justify-center">
             <!-- Media content will be inserted here -->
         </div>
     </div>
 </div>
 
 <!-- Edit Message Modal -->
-<div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-lg p-6 w-96">
+<div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-[100] p-4">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md">
         <h3 class="text-lg font-semibold mb-4">Edit Message</h3>
-        <textarea id="editMessageContent" class="w-full border border-gray-300 rounded-md p-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3"></textarea>
+        <textarea id="editMessageContent" class="w-full border border-gray-300 rounded-md p-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base" rows="4"></textarea>
         <div class="flex justify-end space-x-3">
-            <button onclick="closeEditModal()" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-200">
+            <button onclick="closeEditModal()" class="px-4 py-3 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-200 text-base">
                 Cancel
             </button>
-            <button onclick="saveEditedMessage()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200">
+            <button onclick="saveEditedMessage()" class="px-4 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200 text-base">
                 Save Changes
             </button>
         </div>
@@ -509,21 +488,21 @@
 
 <!-- Block User Modal -->
 {% if other_user %}
-<div id="blockModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-lg p-6 w-96">
+<div id="blockModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-[100] p-4">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md">
         <h3 class="text-lg font-semibold mb-4">Block User</h3>
-        <p class="text-gray-600 mb-4">Are you sure you want to block {{ other_user.username }}? They will not be able to send you messages or see your online status.</p>
+        <p class="text-gray-600 mb-4 text-base">Are you sure you want to block {{ other_user.username }}? They will not be able to send you messages or see your online status.</p>
         <form method="POST" action="{% url 'block_user' other_user.id %}">
             {% csrf_token %}
             <div class="mb-4">
                 <label for="blockReason" class="block text-sm font-medium text-gray-700 mb-2">Reason (optional)</label>
-                <textarea id="blockReason" name="reason" rows="2" class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Why are you blocking this user?"></textarea>
+                <textarea id="blockReason" name="reason" rows="3" class="w-full border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base" placeholder="Why are you blocking this user?"></textarea>
             </div>
             <div class="flex justify-end space-x-3">
-                <button type="button" onclick="closeBlockModal()" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-200">
+                <button type="button" onclick="closeBlockModal()" class="px-4 py-3 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-200 text-base">
                     Cancel
                 </button>
-                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-200">
+                <button type="submit" class="px-4 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-200 text-base">
                     Block User
                 </button>
             </div>
@@ -580,27 +559,20 @@
     // Toast notification function
     function showToast(message, type = 'info') {
         const toast = document.createElement('div');
-        toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white ${
+        toast.className = `fixed top-4 left-4 right-4 md:left-auto md:right-4 md:w-auto px-4 py-3 rounded-lg shadow-lg text-white text-center z-50 transform transition-transform duration-300 ${
             type === 'success' ? 'bg-green-500' :
             type === 'error' ? 'bg-red-500' : 'bg-blue-500'
-        } z-50 transform transition-transform duration-300 translate-x-full`;
+        }`;
         toast.textContent = message;
 
         document.body.appendChild(toast);
 
         setTimeout(() => {
-            toast.classList.remove('translate-x-full');
-        }, 100);
-
-        setTimeout(() => {
-            toast.classList.add('translate-x-full');
-            setTimeout(() => {
-                document.body.removeChild(toast);
-            }, 300);
+            toast.remove();
         }, 3000);
     }
 
-    // Download file function - FIXED for mobile
+    // Download file function
     async function downloadFile(messageId, fileName) {
         try {
             const response = await fetch(`/chat/download/${messageId}/`);
@@ -759,7 +731,7 @@
     // Add message to UI
     function addMessageToUI(message) {
         const messageDiv = document.createElement('div');
-        messageDiv.className = `message-group flex ${message.is_own ? 'justify-end' : 'justify-start'}`;
+        messageDiv.className = `message-group flex ${message.is_own ? 'justify-end' : 'justify-start'} mb-3`;
         messageDiv.id = `message-${message.id}`;
         messageDiv.setAttribute('data-message-id', message.id);
         messageDiv.setAttribute('data-timestamp', message.full_timestamp || new Date().toISOString());
@@ -768,7 +740,7 @@
         const isGroup = {% if is_group %}true{% else %}false{% endif %};
 
         let messageHTML = `
-            <div class="message-bubble relative group max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isOwn ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-900'}">
+            <div class="message-bubble relative max-w-[85%] sm:max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isOwn ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-900'}">
         `;
 
         if (isGroup && !isOwn && !message.is_unsent) {
@@ -779,7 +751,7 @@
             messageHTML += `<p class="text-sm italic opacity-70">This message was unsent</p>`;
         } else {
             if (message.message_type === 'text') {
-                messageHTML += `<p class="text-sm message-content">${message.content}</p>`;
+                messageHTML += `<p class="text-sm message-content whitespace-pre-wrap break-words">${message.content}</p>`;
             } else if (message.message_type === 'emoji') {
                 messageHTML += `
                     <div class="emoji-message text-4xl text-center py-2">
@@ -795,12 +767,12 @@
                     </div>
                 `;
                 if (message.content) {
-                    messageHTML += `<p class="text-sm message-content mt-2">${message.content}</p>`;
+                    messageHTML += `<p class="text-sm message-content mt-2 whitespace-pre-wrap break-words">${message.content}</p>`;
                 }
             } else if (message.message_type === 'video') {
                 messageHTML += `
                     <div class="mb-2">
-                        <video controls class="max-w-full h-auto rounded-lg max-h-64"
+                        <video controls class="max-w-full h-auto rounded-lg max-h-64 w-full"
                                onclick="openMediaModal('${message.file_url}', 'video')">
                             <source src="${message.file_url}" type="video/mp4">
                             Your browser does not support the video tag.
@@ -808,7 +780,7 @@
                     </div>
                 `;
                 if (message.content) {
-                    messageHTML += `<p class="text-sm message-content mt-2">${message.content}</p>`;
+                    messageHTML += `<p class="text-sm message-content mt-2 whitespace-pre-wrap break-words">${message.content}</p>`;
                 }
             } else if (message.message_type === 'audio') {
                 messageHTML += `
@@ -820,28 +792,28 @@
                     </div>
                 `;
                 if (message.content) {
-                    messageHTML += `<p class="text-sm message-content mt-2">${message.content}</p>`;
+                    messageHTML += `<p class="text-sm message-content mt-2 whitespace-pre-wrap break-words">${message.content}</p>`;
                 }
             } else if (message.message_type === 'voice') {
                 messageHTML += `
                     <div class="voice-message mb-1">
                         <div class="flex items-center space-x-2">
                             <button onclick="playVoiceMessage('${message.file_url}', this)"
-                                    class="voice-play-btn w-8 h-8 rounded-full ${isOwn ? 'bg-white bg-opacity-30 hover:bg-opacity-40' : 'bg-blue-100 hover:bg-blue-200'} flex items-center justify-center">
-                                <i class="fas fa-play text-sm ${isOwn ? 'text-white' : 'text-blue-600'}"></i>
+                                    class="voice-play-btn w-10 h-10 rounded-full ${isOwn ? 'bg-white bg-opacity-30 hover:bg-opacity-40' : 'bg-blue-100 hover:bg-blue-200'} flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-play text-base ${isOwn ? 'text-white' : 'text-blue-600'}"></i>
                             </button>
-                            <div class="flex-1">
-                                <div class="voice-waveform flex items-center h-8 space-x-0.5">
+                            <div class="flex-1 min-w-0">
+                                <div class="voice-waveform flex items-center h-8 space-x-0.5 overflow-x-auto">
                 `;
 
                 if (message.voice_waveform && message.voice_waveform.length > 0) {
                     message.voice_waveform.forEach(height => {
-                        messageHTML += `<div class="wave-bar w-1 ${isOwn ? 'bg-white' : 'bg-blue-500'} rounded-full" style="height: ${height}px;"></div>`;
+                        messageHTML += `<div class="wave-bar w-1 ${isOwn ? 'bg-white' : 'bg-blue-500'} rounded-full flex-shrink-0" style="height: ${height}px;"></div>`;
                     });
                 } else {
                     for (let i = 0; i < 20; i++) {
                         const height = [15, 25, 35, 40, 30, 20, 10, 25, 35, 30, 20, 15, 25, 35, 40, 30, 20, 10, 15, 25][i % 20];
-                        messageHTML += `<div class="wave-bar w-1 ${isOwn ? 'bg-white' : 'bg-blue-500'} rounded-full" style="height: ${height}px;"></div>`;
+                        messageHTML += `<div class="wave-bar w-1 ${isOwn ? 'bg-white' : 'bg-blue-500'} rounded-full flex-shrink-0" style="height: ${height}px;"></div>`;
                     }
                 }
 
@@ -853,7 +825,7 @@
                     </div>
                 `;
                 if (message.content) {
-                    messageHTML += `<p class="text-sm message-content mt-2">${message.content}</p>`;
+                    messageHTML += `<p class="text-sm message-content mt-2 whitespace-pre-wrap break-words">${message.content}</p>`;
                 }
             } else if (message.message_type === 'file') {
                 messageHTML += `
@@ -881,7 +853,7 @@
                     </div>
                 `;
                 if (message.content) {
-                    messageHTML += `<p class="text-sm message-content mt-2">${message.content}</p>`;
+                    messageHTML += `<p class="text-sm message-content mt-2 whitespace-pre-wrap break-words">${message.content}</p>`;
                 }
             }
         }
@@ -916,55 +888,14 @@
 
         messageHTML += `</div>`;
 
-        if (isOwn && !message.is_unsent) {
-            messageHTML += `
-                <div class="message-actions absolute -top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-1 hidden group-hover:flex space-x-1">
-                    ${message.message_type === 'text' ? `
-                        <button onclick="editMessage('${message.id}')" class="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition duration-200" title="Edit message">
-                            <i class="fas fa-edit text-xs"></i>
-                        </button>
-                    ` : ''}
-                    <button onclick="unsendMessage('${message.id}')" class="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition duration-200" title="Unsend message">
-                        <i class="fas fa-trash text-xs"></i>
-                    </button>
-                    <div class="relative">
-                        <button onclick="toggleReactions('${message.id}')" class="p-1 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition duration-200" title="Add reaction">
-                            <i class="fas fa-smile text-xs"></i>
-                        </button>
-                        <div id="reactions-${message.id}" class="reaction-picker absolute bottom-full left-0 bg-white border border-gray-300 rounded-lg shadow-lg p-2 hidden grid grid-cols-3 gap-1 z-50">
-                            <button onclick="addReaction('${message.id}', '👍')" class="p-1 hover:bg-gray-100 rounded text-lg">👍</button>
-                            <button onclick="addReaction('${message.id}', '❤️')" class="p-1 hover:bg-gray-100 rounded text-lg">❤️</button>
-                            <button onclick="addReaction('${message.id}', '😂')" class="p-1 hover:bg-gray-100 rounded text-lg">😂</button>
-                            <button onclick="addReaction('${message.id}', '😮')" class="p-1 hover:bg-gray-100 rounded text-lg">😮</button>
-                            <button onclick="addReaction('${message.id}', '😢')" class="p-1 hover:bg-gray-100 rounded text-lg">😢</button>
-                            <button onclick="addReaction('${message.id}', '😡')" class="p-1 hover:bg-gray-100 rounded text-lg">😡</button>
-                            <button onclick="addReaction('${message.id}', '🔥')" class="p-1 hover:bg-gray-100 rounded text-lg">🔥</button>
-                            <button onclick="addReaction('${message.id}', '🎉')" class="p-1 hover:bg-gray-100 rounded text-lg">🎉</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        } else if (!message.is_unsent) {
-            messageHTML += `
-                <div class="message-actions absolute -top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-1 hidden group-hover:flex">
-                    <div class="relative">
-                        <button onclick="toggleReactions('${message.id}')" class="p-1 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition duration-200" title="Add reaction">
-                            <i class="fas fa-smile text-xs"></i>
-                        </button>
-                        <div id="reactions-${message.id}" class="reaction-picker absolute bottom-full left-0 bg-white border border-gray-300 rounded-lg shadow-lg p-2 hidden grid grid-cols-3 gap-1 z-50">
-                            <button onclick="addReaction('${message.id}', '👍')" class="p-1 hover:bg-gray-100 rounded text-lg">👍</button>
-                            <button onclick="addReaction('${message.id}', '❤️')" class="p-1 hover:bg-gray-100 rounded text-lg">❤️</button>
-                            <button onclick="addReaction('${message.id}', '😂')" class="p-1 hover:bg-gray-100 rounded text-lg">😂</button>
-                            <button onclick="addReaction('${message.id}', '😮')" class="p-1 hover:bg-gray-100 rounded text-lg">😮</button>
-                            <button onclick="addReaction('${message.id}', '😢')" class="p-1 hover:bg-gray-100 rounded text-lg">😢</button>
-                            <button onclick="addReaction('${message.id}', '😡')" class="p-1 hover:bg-gray-100 rounded text-lg">😡</button>
-                            <button onclick="addReaction('${message.id}', '🔥')" class="p-1 hover:bg-gray-100 rounded text-lg">🔥</button>
-                            <button onclick="addReaction('${message.id}', '🎉')" class="p-1 hover:bg-gray-100 rounded text-lg">🎉</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
+        // Add reaction button for mobile (simplified)
+        messageHTML += `
+            <div class="md:hidden flex justify-end mt-1">
+                <button onclick="toggleReactions('${message.id}')" class="p-1 text-gray-500">
+                    <i class="fas fa-smile text-sm"></i>
+                </button>
+            </div>
+        `;
 
         messageHTML += `</div>`;
 
@@ -1197,50 +1128,28 @@
     }
 
     function loadEmojiCategories() {
-        const categories = {
-            'smileys_people': '😀',
-            'animals_nature': '🐶',
-            'food_drink': '🍔',
-            'activities': '⚽',
-            'travel_places': '✈️',
-            'objects': '💡',
-            'symbols': '❤️'
-        };
-
         const categoriesContainer = document.getElementById('emoji-categories');
-        let html = '';
-
-        for (const [category, emoji] of Object.entries(categories)) {
-            html += `
-                <button onclick="loadEmojisByCategory('${category}')"
-                        class="flex-shrink-0 px-3 py-2 text-lg hover:bg-gray-100">
-                    ${emoji}
-                </button>
-            `;
-        }
-
-        categoriesContainer.innerHTML = html;
+        categoriesContainer.innerHTML = `
+            <button onclick="loadEmojisByCategory('smileys_people')" class="flex-shrink-0 px-3 py-2 text-lg hover:bg-gray-100">😀</button>
+            <button onclick="loadEmojisByCategory('animals_nature')" class="flex-shrink-0 px-3 py-2 text-lg hover:bg-gray-100">🐶</button>
+            <button onclick="loadEmojisByCategory('food_drink')" class="flex-shrink-0 px-3 py-2 text-lg hover:bg-gray-100">🍔</button>
+            <button onclick="loadEmojisByCategory('activities')" class="flex-shrink-0 px-3 py-2 text-lg hover:bg-gray-100">⚽</button>
+            <button onclick="loadEmojisByCategory('travel_places')" class="flex-shrink-0 px-3 py-2 text-lg hover:bg-gray-100">✈️</button>
+            <button onclick="loadEmojisByCategory('objects')" class="flex-shrink-0 px-3 py-2 text-lg hover:bg-gray-100">💡</button>
+            <button onclick="loadEmojisByCategory('symbols')" class="flex-shrink-0 px-3 py-2 text-lg hover:bg-gray-100">❤️</button>
+        `;
     }
 
     function loadEmojisByCategory(category) {
-        const emojis = {
-            'smileys_people': ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾', '🙈', '🙉', '🙊', '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🫀', '🫁', '🦷', '🦴', '👀', '👁️', '👅', '👄', '💋', '🩸'],
-            'animals_nature': ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐻‍❄️', '🐨', '🐯', '🦁', '🐮', '🐷', '🐽', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🐺', '🐗', '🐴', '🦄', '🐝', '🪱', '🐛', '🦋', '🐌', '🐞', '🐜', '🪰', '🪲', '🪳', '🐞', '🐜', '🦟', '🦗', '🕷️', '🕸️', '🦂', '🐢', '🐍', '🦎', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🦬', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐈‍⬛', '🪶', '🐓', '🦃', '🦤', '🦚', '🦜', '🦢', '🦩', '🕊️', '🐇', '🦝', '🦨', '🦡', '🦫', '🦦', '🦥', '🐁', '🐀', '🐿️', '🦔', '🐾', '🐉', '🐲', '🌵', '🎄', '🌲', '🌳', '🌴', '🌱', '🌿', '☘️', '🍀', '🎍', '🪴', '🎋', '🍃', '🍂', '🍁', '🍄', '🐚', '🪸', '🌾', '💐', '🌷', '🌹', '🥀', '🌺', '🌸', '🌼', '🌻', '🌞', '🌝', '🌛', '🌜', '🌚', '🌕', '🌖', '🌗', '🌘', '🌑', '🌒', '🌓', '🌔', '🌙', '🌎', '🌍', '🌏', '🪐', '💫', '⭐', '🌟', '✨', '⚡', '☄️', '💥', '🔥', '🌪️', '🌈', '☀️', '🌤️', '⛅', '🌥️', '☁️', '🌦️', '🌧️', '⛈️', '🌩️', '🌨️', '❄️', '☃️', '⛄', '🌬️', '💨', '💧', '💦', '☔', '☂️', '🌊', '🌫️'],
-            'food_drink': ['🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🫑', '🌽', '🥕', '🧄', '🧅', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🦴', '🌭', '🍔', '🍟', '🍕', '🫓', '🥪', '🥙', '🧆', '🌮', '🌯', '🫔', '🥗', '🥘', '🫕', '🥫', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🦪', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '🌰', '🥜', '🍯', '🥛', '🍼', '🫗', '☕', '🫖', '🍵', '🧃', '🥤', '🧋', '🫙', '🍶', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🧉', '🍾', '🧊', '🥄', '🍴', '🍽️', '🥢', '🧂'],
-            'activities': ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🪂', '🏋️', '🤼', '🤸', '⛹️', '🤾', '🏌️', '🏇', '🧘', '🏄', '🏊', '🤽', '🚣', '🧗', '🚵', '🚴', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '🏵️', '🎗️', '🎫', '🎟️', '🎪', '🤹', '🎭', '🩰', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🪘', '🎷', '🎺', '🪗', '🎸', '🪕', '🎻', '🎲', '♟️', '🎯', '🎳', '🎮', '🎰', '🧩'],
-            'travel_places': ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🏍️', '🛵', '🚲', '🛴', '🛹', '🛼', '🚏', '🛣️', '🛤️', '⛽', '🚨', '🚥', '🚦', '🛑', '🚧', '⚓', '⛵', '🛶', '🚤', '🛳️', '⛴️', '🛥️', '🚢', '✈️', '🛩️', '🛫', '🛬', '🪂', '💺', '🚁', '🚟', '🚠', '🚡', '🛰️', '🚀', '🛸', '🛎️', '🧳', '⌛', '⏳', '⌚', '⏰', '⏱️', '⏲️', '🕰️', '🌡️', '🗺️', '🧭', '🏔️', '⛰️', '🌋', '🗻', '🏕️', '🏖️', '🏜️', '🏝️', '🏞️', '🏟️', '🏛️', '🏗️', '🧱', '🪨', '🪵', '🛖', '🏘️', '🏚️', '🏠', '🏡', '🏢', '🏣', '🏤', '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '🏯', '🏰', '💒', '🗼', '🗽', '⛪', '🕌', '🛕', '🕍', '⛩️', '🕋', '⛲', '🌆', '🌃', '🏙️', '🌇', '🌉', '🌌', '🌠', '🎆', '🎇', '🎑', '🌅', '🌄'],
-            'objects': ['⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '🕹️', '🗜️', '💽', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🪔', '🧯', '🛢️', '💸', '💵', '💴', '💶', '💷', '💰', '💳', '💎', '⚖️', '🧰', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🔩', '⚙️', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🪓', '🔪', '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '⚱️', '🏺', '🔮', '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳️', '🩹', '🩺', '💊', '💉', '🩸', '🧬', '🦠', '🧫', '🧪', '🌡️', '🧹', '🧺', '🧻', '🚽', '🚰', '🚿', '🛁', '🛀', '🧼', '🪒', '🧽', '🧴', '🛎️', '🔑', '🗝️', '🚪', '🪑', '🛋️', '🛏️', '🛌', '🧸', '🖼️', '🛍️', '🛒', '🎁', '🎈', '🎏', '🎀', '🎊', '🎉', '🎎', '🏮', '🎐', '✉️', '📩', '📨', '📧', '💌', '📥', '📤', '📦', '🏷️', '📪', '📫', '📬', '📭', '📮', '📯', '📜', '📃', '📄', '📑', '🧾', '📊', '📈', '📉', '🗒️', '🗓️', '📆', '📅', '🗑️', '📇', '🗃️', '🗳️', '🗄️', '📋', '📁', '📂', '🗂️', '🗞️', '📰', '📓', '📔', '📒', '📕', '📗', '📘', '📙', '📚', '📖', '🔖', '🧷', '🔗', '📎', '🖇️', '📐', '📏', '🧮', '📌', '📍', '✂️', '🖊️', '🖋️', '✒️', '🖌️', '🖍️', '📝', '✏️', '🔍', '🔎', '🔏', '🔐', '🔒', '🔓'],
-            'symbols': ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️', '📴', '📳', '🈶', '🈚', '🈸', '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️', '🈴', '🈵', '🈹', '🈲', '🅰️', '🅱️', '🆎', '🆑', '🅾️', '🆘', '❌', '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢', '♨️', '🚷', '🚯', '🚳', '🚱', '🔞', '📵', '🚭', '❗', '❕', '❓', '❔', '‼️', '⁉️', '🔅', '🔆', '〽️', '⚠️', '🚸', '🔱', '⚜️', '🔰', '♻️', '✅', '🈯', '💹', '❇️', '✳️', '❎', '🌐', '💠', 'Ⓜ️', '🌀', '💤', '🏧', '🚾', '♿', '🅿️', '🛗', '🈳', '🈂️', '🛂', '🛃', '🛄', '🛅', '🚹', '🚺', '🚼', '🚻', '🚮', '🎦', '📶', '🈁', '🔣', 'ℹ️', '🔤', '🔡', '🔠', '🆖', '🆗', '🆙', '🆒', '🆕', '🆓', '0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '🔢', '#️⃣', '*️⃣', '⏏️', '▶️', '⏸️', '⏯️', '⏹️', '⏺️', '⏭️', '⏮️', '⏩', '⏪', '⏫', '⏬', '◀️', '🔼', '🔽', '➡️', '⬅️', '⬆️', '⬇️', '↗️', '↘️', '↙️', '↖️', '↕️', '↔️', '↪️', '↩️', '⤴️', '⤵️', '🔀', '🔁', '🔂', '🔄', '🔃', '🎵', '🎶', '➕', '➖', '➗', '♾️', '💲', '💱', '™️', '©️', '®️', '〰️', '➰', '➿', '🔚', '🔙', '🔛', '🔝', '🔜']
-        };
+        const commonEmojis = ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡'];
 
         const emojiGrid = document.getElementById('emoji-grid');
-        const categoryEmojis = emojis[category] || [];
 
-        let html = '<div class="grid grid-cols-8 gap-2">';
-        categoryEmojis.forEach(emojiChar => {
+        let html = '<div class="grid grid-cols-6 gap-2">';
+        commonEmojis.slice(0, 36).forEach(emojiChar => {
             html += `
                 <button onclick="insertEmoji('${emojiChar}')"
-                        class="text-xl p-2 hover:bg-gray-100 rounded-lg transition duration-200">
+                        class="text-2xl p-2 hover:bg-gray-100 rounded-lg transition duration-200">
                     ${emojiChar}
                 </button>
             `;
@@ -1263,49 +1172,6 @@
         document.getElementById('emoji-picker').classList.add('hidden');
         messageInput.dispatchEvent(new Event('input'));
     }
-
-    // Search emojis
-    document.getElementById('emoji-search').addEventListener('input', function() {
-        const query = this.value.toLowerCase();
-        if (query.length === 0) {
-            loadEmojisByCategory('smileys_people');
-            return;
-        }
-
-        const allEmojis = [
-            '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘',
-            '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷',
-            '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭',
-            '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸',
-            '🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛',
-            '⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '🕹️', '🗜️', '💽', '💾',
-            '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞'
-        ];
-
-        const results = allEmojis.filter(emoji => {
-            return emoji.includes(query) || query.length === 0;
-        }).slice(0, 48);
-
-        const emojiGrid = document.getElementById('emoji-grid');
-
-        if (results.length === 0) {
-            emojiGrid.innerHTML = '<p class="text-center text-gray-500 py-4">No emojis found</p>';
-            return;
-        }
-
-        let html = '<div class="grid grid-cols-8 gap-2">';
-        results.forEach(emojiChar => {
-            html += `
-                <button onclick="insertEmoji('${emojiChar}')"
-                        class="text-xl p-2 hover:bg-gray-100 rounded-lg transition duration-200">
-                    ${emojiChar}
-                </button>
-            `;
-        });
-        html += '</div>';
-
-        emojiGrid.innerHTML = html;
-    });
 
     // Media Modal Functions
     function openMediaModal(url, type) {
@@ -1387,16 +1253,6 @@
                     }
                 }
 
-                if (!messageElement.querySelector('.edited-indicator')) {
-                    const metaElement = messageElement.querySelector('.flex.items-center.space-x-2');
-                    if (metaElement) {
-                        const editedSpan = document.createElement('span');
-                        editedSpan.className = 'text-xs opacity-70 edited-indicator';
-                        editedSpan.textContent = 'edited';
-                        metaElement.appendChild(editedSpan);
-                    }
-                }
-
                 closeEditModal();
                 showToast('Message edited successfully', 'success');
             } else {
@@ -1430,16 +1286,6 @@
                     const bubble = messageElement.querySelector('.message-bubble');
                     if (bubble) {
                         bubble.innerHTML = '<p class="text-sm italic opacity-70">This message was unsent</p>';
-                    }
-
-                    const actionsElement = messageElement.querySelector('.message-actions');
-                    if (actionsElement) {
-                        actionsElement.remove();
-                    }
-
-                    const reactionsElement = messageElement.querySelector('.message-reactions');
-                    if (reactionsElement) {
-                        reactionsElement.innerHTML = '';
                     }
                 }
                 showToast('Message unsent successfully', 'success');
@@ -1479,9 +1325,6 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                if (data.reactions) {
-                    updateReactionsDisplay(messageId, data.reactions);
-                }
                 toggleReactions(messageId);
                 showToast('Reaction added', 'success');
             } else {
@@ -1492,28 +1335,6 @@
             console.error('Error:', error);
             showToast('Error adding reaction', 'error');
         });
-    }
-
-    function updateReactionsDisplay(messageId, reactions) {
-        const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
-        if (!messageElement) return;
-
-        const reactionsContainer = messageElement.querySelector('.message-reactions');
-        if (!reactionsContainer) return;
-
-        const isOwn = messageElement.classList.contains('justify-end');
-
-        if (Object.keys(reactions).length === 0) {
-            reactionsContainer.innerHTML = '';
-            return;
-        }
-
-        let html = '';
-        for (const [emoji, count] of Object.entries(reactions)) {
-            html += `<span class="text-xs ${isOwn ? 'bg-white bg-opacity-20' : 'bg-gray-100'} rounded-full px-1">${emoji} ${count}</span>`;
-        }
-
-        reactionsContainer.innerHTML = html;
     }
 
     function stopTyping() {
@@ -1627,11 +1448,12 @@
     }
 
     #emoji-picker {
-        height: 300px !important;
-        bottom: 70px !important;
+        position: fixed !important;
+        bottom: 80px !important;
         left: 10px !important;
         right: 10px !important;
         width: auto !important;
+        max-height: 350px !important;
     }
 
     #emoji-grid .grid {
@@ -1639,12 +1461,22 @@
     }
 
     #messages-container {
-        padding-bottom: 100px;
+        padding-bottom: 20px;
     }
 
     .voice-waveform {
-        max-width: 150px;
+        max-width: 120px;
         overflow-x: auto;
+    }
+
+    /* Ensure chat input is always visible */
+    #mobile-message-input {
+        position: sticky;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 40;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
     }
 }
 
@@ -1707,16 +1539,6 @@ button, a {
     line-height: 1.2;
 }
 
-/* Message actions visibility */
-.message-bubble:hover .message-actions {
-    display: flex !important;
-}
-
-/* Reaction picker */
-.reaction-picker {
-    min-width: 150px;
-}
-
 /* Voice message waveform */
 .voice-waveform {
     display: flex;
@@ -1728,10 +1550,6 @@ button, a {
     transition: height 0.2s ease;
 }
 
-.wave-bar:hover {
-    transform: scaleY(1.2);
-}
-
 /* Voice play button */
 .voice-play-btn.playing {
     background-color: #3b82f6 !important;
@@ -1739,6 +1557,21 @@ button, a {
 
 .voice-play-btn.playing i {
     color: white !important;
+}
+
+/* Reaction picker for mobile */
+.reaction-picker {
+    min-width: 150px;
+}
+
+/* Ensure chat input is above everything */
+.z-40 {
+    z-index: 40;
+}
+
+/* Prevent zoom on input focus for iOS */
+input, textarea, select {
+    font-size: 16px !important;
 }
 </style>
 {% endblock %}
