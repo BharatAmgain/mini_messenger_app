@@ -1,4 +1,4 @@
-# chat/urls.py
+# chat/urls.py - COMPLETE WITH VOICE MESSAGE SUPPORT
 from django.urls import path, re_path
 from . import views
 

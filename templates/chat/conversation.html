@@ -1,4 +1,4 @@
-<!-- templates/chat/conversation.html -->
+<!-- templates/chat/conversation.html - COMPLETE WITH VOICE MESSAGES -->
 {% extends 'base.html' %}
 {% load static %}
 
@@ -59,6 +59,21 @@
             </div>
 
             <div class="flex items-center space-x-2">
+                <!-- Video Call Button -->
+                <a href="{% url 'video_chat' conversation.id %}" class="p-2 text-gray-600 hover:text-blue-600 rounded-full hover:bg-gray-100 hidden sm:block">
+                    <i class="fas fa-video"></i>
+                </a>
+
+                <!-- Audio Call Button -->
+                <a href="{% url 'audio_chat' conversation.id %}" class="p-2 text-gray-600 hover:text-blue-600 rounded-full hover:bg-gray-100 hidden sm:block">
+                    <i class="fas fa-phone"></i>
+                </a>
+
+                <!-- Info Button -->
+                <a href="{% url 'conversation_info' conversation.id %}" class="p-2 text-gray-600 hover:text-blue-600 rounded-full hover:bg-gray-100 hidden sm:block">
+                    <i class="fas fa-info-circle"></i>
+                </a>
+
                 {% if is_group %}
                 <a href="{% url 'group_settings' conversation.id %}"
                    class="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100">
@@ -73,7 +88,16 @@
                     </button>
 
                     <!-- Mobile Chat Menu -->
-                    <div id="chat-menu" class="absolute right-0 top-12 bg-white border border-gray-200 rounded-lg shadow-lg py-2 hidden z-50">
+                    <div id="chat-menu" class="absolute right-0 top-12 bg-white border border-gray-200 rounded-lg shadow-lg py-2 hidden z-50 min-w-[160px]">
+                        <a href="{% url 'video_chat' conversation.id %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 text-sm">
+                            <i class="fas fa-video mr-2 text-blue-500"></i>Video Call
+                        </a>
+                        <a href="{% url 'audio_chat' conversation.id %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 text-sm">
+                            <i class="fas fa-phone mr-2 text-green-500"></i>Audio Call
+                        </a>
+                        <a href="{% url 'conversation_info' conversation.id %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 text-sm">
+                            <i class="fas fa-info-circle mr-2 text-purple-500"></i>Info
+                        </a>
                         {% if is_group %}
                         <form method="POST" action="{% url 'leave_group' conversation.id %}"
                               onsubmit="return confirm('Are you sure you want to leave this group?');">
@@ -84,7 +108,7 @@
                         </form>
                         {% else %}
                             {% if other_user %}
-                            <a href="#" onclick="openBlockModal()" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 text-sm">
+                            <a href="#" onclick="openBlockModal()" class="block px-4 py-2 text-red-600 hover:bg-red-50 text-sm">
                                 <i class="fas fa-user-slash mr-2"></i>Block User
                             </a>
                             {% endif %}
@@ -120,22 +144,25 @@
                     {% else %}
                         {% if message.message_type == 'text' %}
                         <p class="text-sm message-content">{{ message.content }}</p>
+
                         {% elif message.message_type == 'emoji' %}
                         <div class="emoji-message text-4xl text-center py-2">
                             {{ message.content }}
                         </div>
+
                         {% elif message.message_type == 'image' %}
                         <div class="mb-2">
                             <img src="{{ message.file.url }}" alt="Shared image"
-                                 class="max-w-full h-auto rounded-lg cursor-pointer"
+                                 class="max-w-full h-auto rounded-lg cursor-pointer max-h-64 object-cover"
                                  onclick="openMediaModal('{{ message.file.url }}', 'image')">
                         </div>
                         {% if message.content %}
                         <p class="text-sm message-content mt-2">{{ message.content }}</p>
                         {% endif %}
+
                         {% elif message.message_type == 'video' %}
                         <div class="mb-2">
-                            <video controls class="max-w-full h-auto rounded-lg cursor-pointer"
+                            <video controls class="max-w-full h-auto rounded-lg max-h-64"
                                    onclick="openMediaModal('{{ message.file.url }}', 'video')">
                                 <source src="{{ message.file.url }}" type="video/mp4">
                                 Your browser does not support the video tag.
@@ -144,6 +171,7 @@
                         {% if message.content %}
                         <p class="text-sm message-content mt-2">{{ message.content }}</p>
                         {% endif %}
+
                         {% elif message.message_type == 'audio' %}
                         <div class="mb-2">
                             <audio controls class="w-full">
@@ -154,6 +182,37 @@
                         {% if message.content %}
                         <p class="text-sm message-content mt-2">{{ message.content }}</p>
                         {% endif %}
+
+                        {% elif message.message_type == 'voice' %}
+                        <div class="voice-message mb-1">
+                            <div class="flex items-center space-x-2">
+                                <button onclick="playVoiceMessage('{{ message.file.url }}', this)"
+                                        class="voice-play-btn w-8 h-8 rounded-full {% if message.sender == request.user %}bg-white bg-opacity-30 hover:bg-opacity-40{% else %}bg-blue-100 hover:bg-blue-200{% endif %} flex items-center justify-center">
+                                    <i class="fas fa-play text-sm {% if message.sender == request.user %}text-white{% else %}text-blue-600{% endif %}"></i>
+                                </button>
+                                <div class="flex-1">
+                                    <div class="voice-waveform flex items-center h-8 space-x-0.5">
+                                        {% if message.voice_waveform %}
+                                            {% for height in message.voice_waveform %}
+                                            <div class="wave-bar w-1 {% if message.sender == request.user %}bg-white{% else %}bg-blue-500{% endif %} rounded-full"
+                                                 style="height: {{ height }}px;"></div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <!-- Default waveform if none provided -->
+                                            {% for i in "12345678901234567890"|make_list %}
+                                            <div class="wave-bar w-1 {% if message.sender == request.user %}bg-white{% else %}bg-blue-500{% endif %} rounded-full"
+                                                 style="height: {% cycle '15' '25' '35' '40' '30' '20' '10' '25' '35' '30' '20' '15' '25' '35' '40' '30' '20' '10' '15' '25' %}px;"></div>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                    <span class="text-xs opacity-70">{{ message.voice_duration }}s</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% if message.content %}
+                        <p class="text-sm message-content mt-2">{{ message.content }}</p>
+                        {% endif %}
+
                         {% elif message.message_type == 'file' %}
                         <div class="mb-2 p-3 {% if message.sender == request.user %}bg-white bg-opacity-20{% else %}bg-gray-100{% endif %} rounded-lg">
                             <div class="flex items-center space-x-3">
@@ -250,6 +309,8 @@
                                 <button onclick="addReaction('{{ message.id }}', '😮')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">😮</button>
                                 <button onclick="addReaction('{{ message.id }}', '😢')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">😢</button>
                                 <button onclick="addReaction('{{ message.id }}', '😡')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">😡</button>
+                                <button onclick="addReaction('{{ message.id }}', '🔥')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">🔥</button>
+                                <button onclick="addReaction('{{ message.id }}', '🎉')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">🎉</button>
                             </div>
                         </div>
                     </div>
@@ -270,6 +331,8 @@
                                 <button onclick="addReaction('{{ message.id }}', '😮')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">😮</button>
                                 <button onclick="addReaction('{{ message.id }}', '😢')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">😢</button>
                                 <button onclick="addReaction('{{ message.id }}', '😡')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">😡</button>
+                                <button onclick="addReaction('{{ message.id }}', '🔥')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">🔥</button>
+                                <button onclick="addReaction('{{ message.id }}', '🎉')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">🎉</button>
                             </div>
                         </div>
                     </div>
@@ -310,17 +373,38 @@
                 </p>
             </div>
         </div>
+
+        <!-- Recording Indicator -->
+        <div id="recording-indicator" class="hidden fixed bottom-24 left-0 right-0 flex justify-center">
+            <div class="bg-red-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center space-x-2">
+                <div class="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+                <span>Recording voice message...</span>
+                <span id="recording-timer">0:00</span>
+                <button onclick="stopVoiceRecording()" class="ml-2 p-1 hover:bg-red-600 rounded-full">
+                    <i class="fas fa-stop"></i>
+                </button>
+            </div>
+        </div>
     </div>
 
-    <!-- Enhanced Mobile Message Input -->
+    <!-- Enhanced Mobile Message Input with Voice Recording -->
     <div class="bg-white border-t border-gray-200 p-3 fixed bottom-0 left-0 right-0 md:relative">
         <form class="flex items-end space-x-2" id="message-form">
             {% csrf_token %}
 
+            <!-- Voice Recording Button -->
+            <div class="relative">
+                <button type="button" id="voice-record-btn"
+                        onclick="toggleVoiceRecording()"
+                        class="p-2 text-gray-600 hover:text-red-500 rounded-full transition duration-200 voice-record-btn">
+                    <i class="fas fa-microphone text-lg"></i>
+                </button>
+            </div>
+
             <!-- File Upload -->
             <div class="relative">
                 <input type="file" id="file-input" name="file"
-                       accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip" class="hidden">
+                       accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.jpg,.jpeg,.png,.gif,.webp,.heic" class="hidden">
                 <button type="button" onclick="document.getElementById('file-input').click()"
                         class="p-2 text-gray-600 hover:text-blue-600 rounded-full transition duration-200">
                     <i class="fas fa-paperclip text-lg"></i>
@@ -450,7 +534,7 @@
 </div>
 {% endif %}
 
-<!-- Enhanced JavaScript for real-time messaging -->
+<!-- Enhanced JavaScript for real-time messaging with voice recording -->
 <script>
     // Global variables
     const conversationId = "{{ conversation.id }}";
@@ -460,6 +544,16 @@
     const TYPING_TIMEOUT = 3000;
     let isTyping = false;
 
+    // Voice recording variables
+    let mediaRecorder;
+    let audioChunks = [];
+    let recordingTimer;
+    let recordingStartTime;
+    let recordingInterval;
+    let isRecording = false;
+    let voiceWaveformData = [];
+    let currentlyPlaying = null;
+
     // DOM elements
     const messagesContainer = document.getElementById('messages-container');
     const messagesList = document.getElementById('messages-list');
@@ -468,6 +562,9 @@
     const typingIndicator = document.getElementById('typing-indicator');
     const typingText = document.getElementById('typing-text');
     const emptyState = document.getElementById('empty-state');
+    const recordingIndicator = document.getElementById('recording-indicator');
+    const recordingTimer_span = document.getElementById('recording-timer');
+    const voiceRecordBtn = document.getElementById('voice-record-btn');
 
     // Auto-resize textarea
     function autoResize(textarea) {
@@ -482,22 +579,6 @@
 
     // Initial scroll to bottom
     scrollToBottom();
-
-    // Helper function to get CSRF token
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
 
     // Toast notification function
     function showToast(message, type = 'info') {
@@ -522,7 +603,149 @@
         }, 3000);
     }
 
-    // Add message to UI
+    // Voice Recording Functions
+    async function toggleVoiceRecording() {
+        if (!isRecording) {
+            await startVoiceRecording();
+        } else {
+            stopVoiceRecording();
+        }
+    }
+
+    async function startVoiceRecording() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            voiceWaveformData = [];
+
+            mediaRecorder.ondataavailable = event => {
+                audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+
+                // Calculate duration
+                const duration = Math.round((Date.now() - recordingStartTime) / 1000);
+
+                // Generate waveform data (simplified for demo)
+                for (let i = 0; i < 20; i++) {
+                    voiceWaveformData.push(Math.floor(Math.random() * 30) + 10);
+                }
+
+                // Convert to base64
+                const reader = new FileReader();
+                reader.readAsDataURL(audioBlob);
+                reader.onloadend = function() {
+                    const base64Audio = reader.result;
+
+                    // Send voice message
+                    const formData = new FormData();
+                    formData.append('csrfmiddlewaretoken', csrftoken);
+                    formData.append('is_voice', 'true');
+                    formData.append('voice_data', base64Audio);
+                    formData.append('voice_duration', duration.toString());
+                    formData.append('voice_waveform', JSON.stringify(voiceWaveformData));
+
+                    fetch(`/chat/${conversationId}/send-message/`, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            addMessageToUI(data);
+                            scrollToBottom();
+                            showToast('Voice message sent', 'success');
+                        } else {
+                            showToast('Error sending voice message', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showToast('Error sending voice message', 'error');
+                    });
+                };
+
+                // Stop all tracks
+                stream.getTracks().forEach(track => track.stop());
+
+                // Hide recording indicator
+                recordingIndicator.classList.add('hidden');
+                voiceRecordBtn.classList.remove('bg-red-500', 'text-white');
+            };
+
+            mediaRecorder.start();
+            isRecording = true;
+            recordingStartTime = Date.now();
+
+            // Update UI
+            voiceRecordBtn.classList.add('bg-red-500', 'text-white');
+            recordingIndicator.classList.remove('hidden');
+
+            // Start timer
+            recordingInterval = setInterval(updateRecordingTimer, 1000);
+
+            showToast('Recording started...', 'info');
+        } catch (err) {
+            console.error('Error accessing microphone:', err);
+            showToast('Could not access microphone. Please check permissions.', 'error');
+        }
+    }
+
+    function stopVoiceRecording() {
+        if (mediaRecorder && isRecording) {
+            mediaRecorder.stop();
+            isRecording = false;
+            clearInterval(recordingInterval);
+        }
+    }
+
+    function updateRecordingTimer() {
+        const seconds = Math.floor((Date.now() - recordingStartTime) / 1000);
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        recordingTimer_span.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // Voice message playback
+    function playVoiceMessage(url, button) {
+        const audio = new Audio(url);
+        const icon = button.querySelector('i');
+
+        if (currentlyPlaying && currentlyPlaying !== audio) {
+            currentlyPlaying.pause();
+            const prevButton = document.querySelector('.voice-play-btn.playing');
+            if (prevButton) {
+                prevButton.classList.remove('playing');
+                prevButton.querySelector('i').className = 'fas fa-play text-sm';
+            }
+        }
+
+        if (audio.paused) {
+            audio.play();
+            button.classList.add('playing');
+            icon.className = 'fas fa-pause text-sm';
+            currentlyPlaying = audio;
+
+            audio.onended = function() {
+                button.classList.remove('playing');
+                icon.className = 'fas fa-play text-sm';
+                currentlyPlaying = null;
+            };
+        } else {
+            audio.pause();
+            button.classList.remove('playing');
+            icon.className = 'fas fa-play text-sm';
+            currentlyPlaying = null;
+        }
+    }
+
+    // Add message to UI (existing function but enhanced for voice)
     function addMessageToUI(message) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message-group flex ${message.is_own ? 'justify-end' : 'justify-start'}`;
@@ -558,7 +781,7 @@
                 messageHTML += `
                     <div class="mb-2">
                         <img src="${message.file_url}" alt="Shared image"
-                             class="max-w-full h-auto rounded-lg cursor-pointer"
+                             class="max-w-full h-auto rounded-lg cursor-pointer max-h-64 object-cover"
                              onclick="openMediaModal('${message.file_url}', 'image')">
                     </div>
                 `;
@@ -568,7 +791,7 @@
             } else if (message.message_type === 'video') {
                 messageHTML += `
                     <div class="mb-2">
-                        <video controls class="max-w-full h-auto rounded-lg cursor-pointer"
+                        <video controls class="max-w-full h-auto rounded-lg max-h-64"
                                onclick="openMediaModal('${message.file_url}', 'video')">
                             <source src="${message.file_url}" type="video/mp4">
                             Your browser does not support the video tag.
@@ -585,6 +808,40 @@
                             <source src="${message.file_url}" type="audio/mpeg">
                             Your browser does not support the audio element.
                         </audio>
+                    </div>
+                `;
+                if (message.content) {
+                    messageHTML += `<p class="text-sm message-content mt-2">${message.content}</p>`;
+                }
+            } else if (message.message_type === 'voice') {
+                messageHTML += `
+                    <div class="voice-message mb-1">
+                        <div class="flex items-center space-x-2">
+                            <button onclick="playVoiceMessage('${message.file_url}', this)"
+                                    class="voice-play-btn w-8 h-8 rounded-full ${isOwn ? 'bg-white bg-opacity-30 hover:bg-opacity-40' : 'bg-blue-100 hover:bg-blue-200'} flex items-center justify-center">
+                                <i class="fas fa-play text-sm ${isOwn ? 'text-white' : 'text-blue-600'}"></i>
+                            </button>
+                            <div class="flex-1">
+                                <div class="voice-waveform flex items-center h-8 space-x-0.5">
+                `;
+
+                if (message.voice_waveform && message.voice_waveform.length > 0) {
+                    message.voice_waveform.forEach(height => {
+                        messageHTML += `<div class="wave-bar w-1 ${isOwn ? 'bg-white' : 'bg-blue-500'} rounded-full" style="height: ${height}px;"></div>`;
+                    });
+                } else {
+                    // Default waveform
+                    for (let i = 0; i < 20; i++) {
+                        const height = [15, 25, 35, 40, 30, 20, 10, 25, 35, 30, 20, 15, 25, 35, 40, 30, 20, 10, 15, 25][i % 20];
+                        messageHTML += `<div class="wave-bar w-1 ${isOwn ? 'bg-white' : 'bg-blue-500'} rounded-full" style="height: ${height}px;"></div>`;
+                    }
+                }
+
+                messageHTML += `
+                                </div>
+                                <span class="text-xs opacity-70">${message.voice_duration || 0}s</span>
+                            </div>
+                        </div>
                     </div>
                 `;
                 if (message.content) {
@@ -619,7 +876,7 @@
             }
         }
 
-        // Message meta
+        // Message meta (same as before)
         messageHTML += `
             <div class="flex items-center justify-between mt-1">
                 <div class="flex items-center space-x-2">
@@ -651,7 +908,7 @@
 
         messageHTML += `</div>`;
 
-        // Message actions for own messages
+        // Message actions (same as before)
         if (isOwn && !message.is_unsent) {
             messageHTML += `
                 <div class="message-actions absolute -top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-1 hidden group-hover:flex space-x-1">
@@ -674,12 +931,13 @@
                             <button onclick="addReaction('${message.id}', '😮')" class="p-1 hover:bg-gray-100 rounded text-lg">😮</button>
                             <button onclick="addReaction('${message.id}', '😢')" class="p-1 hover:bg-gray-100 rounded text-lg">😢</button>
                             <button onclick="addReaction('${message.id}', '😡')" class="p-1 hover:bg-gray-100 rounded text-lg">😡</button>
+                            <button onclick="addReaction('${message.id}', '🔥')" class="p-1 hover:bg-gray-100 rounded text-lg">🔥</button>
+                            <button onclick="addReaction('${message.id}', '🎉')" class="p-1 hover:bg-gray-100 rounded text-lg">🎉</button>
                         </div>
                     </div>
                 </div>
             `;
         } else if (!message.is_unsent) {
-            // Message actions for others' messages
             messageHTML += `
                 <div class="message-actions absolute -top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-1 hidden group-hover:flex">
                     <div class="relative">
@@ -693,6 +951,8 @@
                             <button onclick="addReaction('${message.id}', '😮')" class="p-1 hover:bg-gray-100 rounded text-lg">😮</button>
                             <button onclick="addReaction('${message.id}', '😢')" class="p-1 hover:bg-gray-100 rounded text-lg">😢</button>
                             <button onclick="addReaction('${message.id}', '😡')" class="p-1 hover:bg-gray-100 rounded text-lg">😡</button>
+                            <button onclick="addReaction('${message.id}', '🔥')" class="p-1 hover:bg-gray-100 rounded text-lg">🔥</button>
+                            <button onclick="addReaction('${message.id}', '🎉')" class="p-1 hover:bg-gray-100 rounded text-lg">🎉</button>
                         </div>
                     </div>
                 </div>
@@ -710,9 +970,15 @@
         }
     }
 
-    // Send message function
+    // Send message function (existing)
     document.getElementById('message-form').addEventListener('submit', function(e) {
         e.preventDefault();
+
+        // Don't send if recording
+        if (isRecording) {
+            showToast('Finish recording first', 'warning');
+            return;
+        }
 
         const content = messageInput.value.trim();
         const fileInput = document.getElementById('file-input');
@@ -800,6 +1066,9 @@
         });
     });
 
+    // Rest of your existing functions (real-time polling, typing indicator, emoji picker, etc.)
+    // ... (keep all your existing JavaScript functions)
+
     // Real-time message polling
     setInterval(function() {
         const url = lastMessageTimestamp
@@ -831,7 +1100,7 @@
             }
         })
         .catch(error => console.error('Error polling messages:', error));
-    }, 2000); // Poll every 2 seconds
+    }, 2000);
 
     // Typing indicator
     messageInput.addEventListener('input', function() {
@@ -1379,6 +1648,11 @@
     #messages-container {
         padding-bottom: 100px;
     }
+
+    .voice-waveform {
+        max-width: 150px;
+        overflow-x: auto;
+    }
 }
 
 /* Typing indicator animation */
@@ -1409,6 +1683,20 @@
     }
 }
 
+/* Voice recording animation */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.animate-pulse {
+    animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 /* Better touch targets */
 button, a {
     min-height: 44px;
@@ -1434,6 +1722,30 @@ button, a {
 /* Reaction picker */
 .reaction-picker {
     min-width: 150px;
+}
+
+/* Voice message waveform */
+.voice-waveform {
+    display: flex;
+    align-items: center;
+    height: 32px;
+}
+
+.wave-bar {
+    transition: height 0.2s ease;
+}
+
+.wave-bar:hover {
+    transform: scaleY(1.2);
+}
+
+/* Voice play button */
+.voice-play-btn.playing {
+    background-color: #3b82f6 !important;
+}
+
+.voice-play-btn.playing i {
+    color: white !important;
 }
 </style>
 {% endblock %}

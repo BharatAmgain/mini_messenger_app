@@ -1,4 +1,4 @@
-# chat/models.py - FINAL COMPLETE VERSION
+# chat/models.py - COMPLETE WITH VOICE MESSAGE SUPPORT
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
@@ -145,6 +145,7 @@ class Message(models.Model):
         ('image', 'Image'),
         ('video', 'Video'),
         ('audio', 'Audio'),
+        ('voice', 'Voice Message'),  # New voice message type
         ('file', 'File'),
         ('emoji', 'Emoji'),
     ]
@@ -166,6 +167,10 @@ class Message(models.Model):
     file = models.FileField(upload_to='message_files/', blank=True, null=True)
     file_name = models.CharField(max_length=255, blank=True, null=True)
     file_size = models.IntegerField(null=True, blank=True)
+
+    # Voice message specific fields
+    voice_duration = models.IntegerField(null=True, blank=True)  # Duration in seconds
+    voice_waveform = models.JSONField(null=True, blank=True)  # Store waveform data for visualization
 
     is_read = models.BooleanField(default=False)
     is_edited = models.BooleanField(default=False)
@@ -198,6 +203,8 @@ class Message(models.Model):
             if len(self.content) > 50:
                 preview += "..."
             return f"{self.sender.username}: {preview}"
+        elif self.message_type == 'voice':
+            return f"{self.sender.username}: [Voice message {self.voice_duration}s]"
         elif self.message_type != 'text':
             return f"{self.sender.username}: [{self.get_message_type_display()}]"
         return f"{self.sender.username}: [Empty message]"
@@ -266,22 +273,26 @@ class Message(models.Model):
         """Check if the file is an image"""
         if not self.file:
             return False
-        image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg']
+        image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.heic', '.heif']
         return any(self.file.name.lower().endswith(ext) for ext in image_extensions)
 
     def is_video_file(self):
         """Check if the file is a video"""
         if not self.file:
             return False
-        video_extensions = ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv', '.webm', '.3gp']
+        video_extensions = ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv', '.webm', '.3gp', '.m4v']
         return any(self.file.name.lower().endswith(ext) for ext in video_extensions)
 
     def is_audio_file(self):
         """Check if the file is an audio"""
         if not self.file:
             return False
-        audio_extensions = ['.mp3', '.wav', '.ogg', '.m4a', '.flac', '.aac', '.wma']
+        audio_extensions = ['.mp3', '.wav', '.ogg', '.m4a', '.flac', '.aac', '.wma', '.opus']
         return any(self.file.name.lower().endswith(ext) for ext in audio_extensions)
+
+    def is_voice_message(self):
+        """Check if the message is a voice message"""
+        return self.message_type == 'voice'
 
     def get_file_size_display(self):
         """Get human-readable file size"""
@@ -308,7 +319,9 @@ class Message(models.Model):
             self.file = None
             self.file_name = None
             self.file_size = None
-            self.save(update_fields=['file', 'file_name', 'file_size'])
+            self.voice_duration = None
+            self.voice_waveform = None
+            self.save(update_fields=['file', 'file_name', 'file_size', 'voice_duration', 'voice_waveform'])
 
 
 class UserStatus(models.Model):
@@ -317,6 +330,7 @@ class UserStatus(models.Model):
         ('online', 'Online'),
         ('offline', 'Offline'),
         ('typing', 'Typing...'),
+        ('recording', 'Recording...'),  # New recording status
         ('away', 'Away'),
         ('busy', 'Busy'),
     ]
@@ -335,6 +349,13 @@ class UserStatus(models.Model):
         null=True,
         blank=True,
         related_name='typing_users_status'
+    )
+    is_recording_in = models.ForeignKey(
+        Conversation,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='recording_users_status'
     )
     custom_status = models.CharField(max_length=100, blank=True, null=True)
     status_emoji = models.CharField(max_length=10, blank=True, null=True)
@@ -375,6 +396,20 @@ class UserStatus(models.Model):
             self.is_typing_in = None
             self.save()
 
+    def set_recording(self, conversation=None):
+        """Set user as recording in a conversation"""
+        self.status = 'recording'
+        self.is_recording_in = conversation
+        self.last_seen = timezone.now()
+        self.save()
+
+    def clear_recording(self):
+        """Clear recording status"""
+        if self.status == 'recording':
+            self.status = 'online'
+            self.is_recording_in = None
+            self.save()
+
 
 class ChatNotification(models.Model):
     """Chat-specific notifications"""
@@ -385,6 +420,7 @@ class ChatNotification(models.Model):
         ('mention', 'Mention'),
         ('reaction', 'Message Reaction'),
         ('reply', 'Message Reply'),
+        ('voice', 'Voice Message'),  # New voice message notification
         ('system', 'System Notification'),
     ]
 
@@ -842,6 +878,7 @@ class ChatMedia(models.Model):
         ('image', 'Image'),
         ('video', 'Video'),
         ('audio', 'Audio'),
+        ('voice', 'Voice Message'),  # New voice message type
         ('document', 'Document'),
         ('sticker', 'Sticker'),
         ('gif', 'GIF'),
@@ -870,6 +907,9 @@ class ChatMedia(models.Model):
     width = models.IntegerField(null=True, blank=True)
     height = models.IntegerField(null=True, blank=True)
     duration = models.IntegerField(null=True, blank=True)  # in seconds for video/audio
+
+    # Voice message specific fields
+    waveform = models.JSONField(null=True, blank=True)  # Store waveform data for visualization
 
     # Thumbnail for videos and large images
     thumbnail = models.ImageField(
@@ -950,11 +990,28 @@ def create_message_notification(sender, instance, created, **kwargs):
             ).exists()
 
             if not settings:
+                # Determine notification type
+                notif_type = 'voice' if instance.message_type == 'voice' else 'message'
+
+                # Create message preview
+                if instance.message_type == 'voice':
+                    preview = f"🎤 Voice message ({instance.voice_duration}s)"
+                elif instance.message_type == 'image':
+                    preview = "📷 Photo"
+                elif instance.message_type == 'video':
+                    preview = "🎥 Video"
+                elif instance.message_type == 'audio':
+                    preview = "🎵 Audio"
+                elif instance.message_type == 'file':
+                    preview = f"📎 {instance.file_name}"
+                else:
+                    preview = instance.content[:100] if instance.content else f"Sent a {instance.message_type}"
+
                 ChatNotification.objects.create(
                     user=participant,
-                    notification_type='message',
+                    notification_type=notif_type,
                     title=f"New message from {instance.sender.username}",
-                    message=instance.content[:100] if instance.content else f"Sent a {instance.message_type}",
+                    message=preview,
                     related_conversation=instance.conversation,
                     related_message=instance
                 )
@@ -1004,6 +1061,7 @@ def create_call_notification(sender, instance, created, **kwargs):
 def delete_media_file(sender, instance, **kwargs):
     """Delete actual media files when record is deleted"""
     instance.delete_file()
+
 
 # Find this signal in chat/models.py and replace it with:
 

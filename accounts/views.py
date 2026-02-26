@@ -1,4 +1,4 @@
-# accounts/views.py - COMPLETE FIXED VERSION
+# accounts/views.py - COMPLETE FIXED VERSION WITH PROFILE PHOTO UPLOAD
 import json
 import traceback
 import base64
@@ -6,11 +6,14 @@ import requests
 from datetime import timedelta
 import urllib.parse
 import io
+import os
+from PIL import Image
 
 # QR Code and OTP imports with error handling
 try:
     import qrcode
     import pyotp
+
     QRCODE_AVAILABLE = True
 except ImportError:
     QRCODE_AVAILABLE = False
@@ -205,7 +208,6 @@ def update_profile(request):
             data = request.POST.dict()
 
         # CRITICAL FIX: Remove is_verified from data if it exists
-        # This field should NEVER be updated by users
         if 'is_verified' in data:
             del data['is_verified']
 
@@ -217,12 +219,37 @@ def update_profile(request):
                 ext = format.split('/')[-1]
                 image_data = base64.b64decode(imgstr)
 
+                # Validate image
+                img = Image.open(io.BytesIO(image_data))
+                img.verify()
+
+                # Optimize image
+                img = Image.open(io.BytesIO(image_data))
+                if img.mode in ('RGBA', 'P'):
+                    img = img.convert('RGB')
+
+                # Resize if too large (max 500x500)
+                max_size = (500, 500)
+                img.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+                # Save optimized image
+                output = io.BytesIO()
+                img.save(output, format='JPEG', quality=85, optimize=True)
+                optimized_image_data = output.getvalue()
+
                 # Save to file
-                filename = f"profile_{user.id}.{ext}"
+                filename = f"profile_{user.id}.jpg"
                 file_path = default_storage.save(
                     f"profile_pictures/{filename}",
-                    ContentFile(image_data)
+                    ContentFile(optimized_image_data)
                 )
+
+                # Delete old profile picture if exists
+                if user.profile_picture and user.profile_picture.name != 'profile_pictures/default.png':
+                    old_path = user.profile_picture.path
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+
                 user.profile_picture = file_path
             except Exception as e:
                 return JsonResponse({
@@ -257,7 +284,7 @@ def update_profile(request):
                 'first_name': user.first_name,
                 'last_name': user.last_name,
                 'profile_picture_url': user.get_profile_picture_url(),
-                'is_verified': user.is_verified,  # This is a boolean field
+                'is_verified': user.is_verified,
                 'phone_number': user.phone_number,
                 'bio': user.bio
             }
@@ -282,6 +309,98 @@ def update_profile(request):
             'success': False,
             'error': str(e)
         }, status=400)
+
+
+@login_required
+@csrf_exempt
+def upload_profile_photo(request):
+    """Upload profile photo via AJAX - Supports all image formats"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+
+    try:
+        user = request.user
+        photo = request.FILES.get('photo')
+
+        if not photo:
+            return JsonResponse({'success': False, 'error': 'No photo provided'})
+
+        # Validate file type - Support all common image formats
+        allowed_types = [
+            'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
+            'image/webp', 'image/heic', 'image/heif', 'image/bmp',
+            'image/tiff', 'image/svg+xml'
+        ]
+
+        # Check by extension as well
+        allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp',
+                              '.heic', '.heif', '.bmp', '.tiff', '.svg']
+
+        file_ext = os.path.splitext(photo.name)[1].lower()
+
+        if photo.content_type not in allowed_types and file_ext not in allowed_extensions:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid file type. Please upload an image (JPG, PNG, GIF, WebP, HEIC, etc.)'
+            })
+
+        # Validate file size (10MB max)
+        if photo.size > 10 * 1024 * 1024:
+            return JsonResponse({'success': False, 'error': 'File too large. Maximum size is 10MB.'})
+
+        # Open and optimize image
+        try:
+            img = Image.open(photo)
+
+            # Convert RGBA to RGB if necessary
+            if img.mode in ('RGBA', 'LA', 'P'):
+                # Create white background
+                background = Image.new('RGB', img.size, (255, 255, 255))
+                if img.mode == 'P':
+                    img = img.convert('RGBA')
+                background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                img = background
+
+            # Resize if too large (max 500x500)
+            max_size = (500, 500)
+            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+            # Save optimized image
+            output = io.BytesIO()
+            img.save(output, format='JPEG', quality=85, optimize=True)
+            optimized_image_data = output.getvalue()
+
+            # Generate filename
+            filename = f"profile_{user.id}_{int(timezone.now().timestamp())}.jpg"
+
+            # Delete old profile picture if it exists and is not default
+            if user.profile_picture and user.profile_picture.name != 'profile_pictures/default.png':
+                old_path = user.profile_picture.path
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+
+            # Save new profile picture
+            file_path = default_storage.save(
+                f"profile_pictures/{filename}",
+                ContentFile(optimized_image_data)
+            )
+            user.profile_picture = file_path
+            user.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Profile photo updated successfully',
+                'photo_url': user.profile_picture.url
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Error processing image: {str(e)}'
+            })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
 
 
 @login_required
@@ -343,11 +462,48 @@ def profile_edit(request):
             # Handle profile picture separately
             if 'profile_picture' in request.FILES and request.FILES['profile_picture']:
                 profile_picture = request.FILES['profile_picture']
+
+                # Check if it's an image by content type
                 if profile_picture.content_type.startswith('image/'):
-                    if profile_picture.size <= 5 * 1024 * 1024:  # 5MB
-                        user.profile_picture = profile_picture
+                    if profile_picture.size <= 10 * 1024 * 1024:  # 10MB
+
+                        # Process and optimize image
+                        try:
+                            img = Image.open(profile_picture)
+
+                            # Convert RGBA to RGB if necessary
+                            if img.mode in ('RGBA', 'LA', 'P'):
+                                background = Image.new('RGB', img.size, (255, 255, 255))
+                                if img.mode == 'P':
+                                    img = img.convert('RGBA')
+                                background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                                img = background
+
+                            # Resize if too large
+                            max_size = (500, 500)
+                            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+                            # Save to a temporary file
+                            output = io.BytesIO()
+                            img.save(output, format='JPEG', quality=85, optimize=True)
+                            output.seek(0)
+
+                            # Create a new file with optimized content
+                            from django.core.files.base import ContentFile
+                            optimized_file = ContentFile(output.getvalue(), name=f"profile_{user.id}.jpg")
+
+                            # Delete old profile picture
+                            if user.profile_picture and user.profile_picture.name != 'profile_pictures/default.png':
+                                old_path = user.profile_picture.path
+                                if os.path.exists(old_path):
+                                    os.remove(old_path)
+
+                            user.profile_picture = optimized_file
+
+                        except Exception as e:
+                            messages.error(request, f'Error processing image: {str(e)}')
                     else:
-                        messages.error(request, 'Image too large. Max 5MB.')
+                        messages.error(request, 'Image too large. Max 10MB.')
                 else:
                     messages.error(request, 'Please select a valid image file.')
 
@@ -397,13 +553,12 @@ def profile_edit(request):
                     messages.error(request, 'Invalid date format. Use YYYY-MM-DD')
 
             # Ensure is_verified is explicitly set to current value (boolean)
-            # This ensures it's never accidentally changed
             user.is_verified = bool(user.is_verified)
 
             # Only save if there are changes
-            if updated_fields:
-                # Force save with specific fields to ensure database update
-                user.save(update_fields=updated_fields)
+            if updated_fields or 'profile_picture' in request.FILES:
+                # Save with all updated fields
+                user.save()
                 messages.success(request, 'Profile updated successfully!')
             else:
                 messages.info(request, 'No changes were made to your profile.')
@@ -470,7 +625,6 @@ def update_privacy_settings(request):
         user.show_profile_picture = request.POST.get('show_profile_picture') == 'on'
 
         # CRITICAL FIX: Ensure is_verified is not being modified
-        # Keep the existing value and ensure it's a boolean
         if hasattr(user, 'is_verified'):
             if callable(user.is_verified):
                 user.is_verified = user.is_verified()
@@ -845,7 +999,11 @@ def delete_account(request):
     """Permanently delete user account"""
     if request.method == 'POST':
         user = request.user
-        # Perform cleanup (you might want to add more cleanup logic)
+        # Delete profile picture if exists
+        if user.profile_picture and user.profile_picture.name != 'profile_pictures/default.png':
+            if os.path.exists(user.profile_picture.path):
+                os.remove(user.profile_picture.path)
+        # Delete user
         user.delete()
         logout(request)
         messages.success(request, 'Your account has been permanently deleted.')
@@ -1083,6 +1241,7 @@ def cancel_friend_request(request, user_id):
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'success': False, 'error': 'Invalid request'})
     return redirect('discover_users')
+
 
 # Add/modify these functions in your accounts/views.py
 

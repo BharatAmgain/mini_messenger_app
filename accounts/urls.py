@@ -1,4 +1,4 @@
-# accounts/urls.py
+# accounts/urls.py - COMPLETE WITH PROFILE PHOTO UPLOAD
 from django.urls import path, re_path
 from django.contrib.auth import views as auth_views
 from . import views
@@ -18,6 +18,7 @@ urlpatterns = [
     # API endpoints
     path('api/get-profile/', views.get_profile, name='get_profile'),
     path('api/update-profile/', views.update_profile, name='update_profile'),
+    path('api/upload-profile-photo/', views.upload_profile_photo, name='upload_profile_photo'),  # NEW
     path('api/get-unread-count/', views.get_unread_count, name='get_unread_count'),
     path('api/refresh-profile/', views.refresh_profile, name='refresh_profile'),
     path('api/test-profile-update/', views.test_profile_update, name='test_profile_update'),

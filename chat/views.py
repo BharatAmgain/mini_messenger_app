@@ -1,4 +1,4 @@
-# chat/views.py - COMPLETE FIXED VERSION WITH WORKING MESSAGE SENDING
+# chat/views.py - COMPLETE WITH VOICE MESSAGE SUPPORT
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -14,6 +14,8 @@ import os
 from django.conf import settings
 import emoji
 import uuid
+import base64
+from django.core.files.base import ContentFile
 
 # Local chat models imports
 from .models import Conversation, Message, UserStatus, ChatNotification, GroupInvitation
@@ -640,13 +642,17 @@ def get_new_messages(request, conversation_id):
                 'is_edited': message.is_edited,
                 'is_unsent': message.is_unsent,
                 'reactions': message.get_reaction_summary() if hasattr(message, 'get_reaction_summary') else {},
-                'user_reaction': message.get_user_reaction(request.user) if hasattr(message, 'get_user_reaction') else None,
+                'user_reaction': message.get_user_reaction(request.user) if hasattr(message,
+                                                                                    'get_user_reaction') else None,
                 'file_url': message.file.url if message.file else None,
                 'file_name': message.file_name,
                 'file_size': message.get_file_size_display() if hasattr(message, 'get_file_size_display') else None,
                 'is_image': message.is_image_file() if hasattr(message, 'is_image_file') else False,
                 'is_video': message.is_video_file() if hasattr(message, 'is_video_file') else False,
-                'is_audio': message.is_audio_file() if hasattr(message, 'is_audio_file') else False
+                'is_audio': message.is_audio_file() if hasattr(message, 'is_audio_file') else False,
+                'is_voice': message.message_type == 'voice',
+                'voice_duration': message.voice_duration,
+                'voice_waveform': message.voice_waveform,
             }
             messages_data.append(message_data)
 
@@ -726,7 +732,8 @@ def send_message_ajax(request, conversation_id):
 
         # Check if user is a participant
         if request.user not in conversation.participants.all():
-            return JsonResponse({'success': False, 'error': 'You are not a participant in this conversation'}, status=403)
+            return JsonResponse({'success': False, 'error': 'You are not a participant in this conversation'},
+                                status=403)
 
         # Check for blocks in direct chats
         if not conversation.is_group:
@@ -744,8 +751,16 @@ def send_message_ajax(request, conversation_id):
         content = request.POST.get('content', '').strip()
         file = request.FILES.get('file')
 
+        # Voice message specific data
+        is_voice = request.POST.get('is_voice') == 'true'
+        voice_duration = request.POST.get('voice_duration')
+        voice_waveform = request.POST.get('voice_waveform')
+
+        # Handle base64 voice recording
+        voice_data = request.POST.get('voice_data')
+
         # Validate input
-        if not content and not file:
+        if not content and not file and not voice_data:
             return JsonResponse({'success': False, 'error': 'Message content or file is required'})
 
         # Validate file size (50MB limit)
@@ -756,8 +771,32 @@ def send_message_ajax(request, conversation_id):
         message_type = 'text'
         file_name = None
         file_size = None
+        voice_duration_int = None
+        voice_waveform_data = None
 
-        if file:
+        # Handle voice message
+        if is_voice or voice_data:
+            message_type = 'voice'
+            if voice_duration:
+                voice_duration_int = int(voice_duration)
+            if voice_waveform:
+                try:
+                    voice_waveform_data = json.loads(voice_waveform)
+                except:
+                    voice_waveform_data = None
+
+            # Handle base64 voice data
+            if voice_data and not file:
+                try:
+                    format, audio_data = voice_data.split(';base64,')
+                    audio_bytes = base64.b64decode(audio_data)
+                    file = ContentFile(audio_bytes, name=f"voice_{uuid.uuid4()}.webm")
+                    file_name = file.name
+                    file_size = file.size
+                except Exception as e:
+                    print(f"Error processing voice data: {e}")
+
+        elif file:
             file_name = file.name
             file_size = file.size
 
@@ -790,9 +829,11 @@ def send_message_ajax(request, conversation_id):
                 message_type=message_type,
                 file=file if file else None,
                 file_name=file_name,
-                file_size=file_size
+                file_size=file_size,
+                voice_duration=voice_duration_int,
+                voice_waveform=voice_waveform_data
             )
-            print(f"Message created with ID: {message.id}")
+            print(f"Message created with ID: {message.id}, Type: {message_type}")
         except Exception as e:
             print(f"Error creating message: {e}")
             return JsonResponse({'success': False, 'error': f'Failed to create message: {str(e)}'})
@@ -822,7 +863,10 @@ def send_message_ajax(request, conversation_id):
             'file_size': message.get_file_size_display() if message.file_size else None,
             'is_image': message.is_image_file() if message.file else False,
             'is_video': message.is_video_file() if message.file else False,
-            'is_audio': message.is_audio_file() if message.file else False
+            'is_audio': message.is_audio_file() if message.file else False,
+            'is_voice': message.message_type == 'voice',
+            'voice_duration': message.voice_duration,
+            'voice_waveform': message.voice_waveform,
         }
 
         return JsonResponse(response_data)
@@ -888,14 +932,18 @@ def get_messages_ajax(request, conversation_id):
                 'is_edited': message.is_edited,
                 'is_unsent': message.is_unsent,
                 'reactions': message.get_reaction_summary() if hasattr(message, 'get_reaction_summary') else {},
-                'user_reaction': message.get_user_reaction(request.user) if hasattr(message, 'get_user_reaction') else None,
+                'user_reaction': message.get_user_reaction(request.user) if hasattr(message,
+                                                                                    'get_user_reaction') else None,
                 'message_type': message.message_type,
                 'file_url': message.file.url if message.file else None,
                 'file_name': message.file_name,
                 'file_size': message.get_file_size_display() if hasattr(message, 'get_file_size_display') else None,
                 'is_image': message.is_image_file() if hasattr(message, 'is_image_file') else False,
                 'is_video': message.is_video_file() if hasattr(message, 'is_video_file') else False,
-                'is_audio': message.is_audio_file() if hasattr(message, 'is_audio_file') else False
+                'is_audio': message.is_audio_file() if hasattr(message, 'is_audio_file') else False,
+                'is_voice': message.message_type == 'voice',
+                'voice_duration': message.voice_duration,
+                'voice_waveform': message.voice_waveform,
             }
 
             messages_data.append(message_data)
@@ -1399,6 +1447,7 @@ def quick_chat(request, user_id):
         messages.error(request, f'Error: {str(e)}')
         return redirect('discover_users')
 
+
 @login_required(login_url='/accounts/login/')
 def group_chat(request, conversation_id=None):
     """Group chat interface"""
@@ -1756,6 +1805,7 @@ def export_conversation(request, conversation_id):
                 'message_type': msg.message_type,
                 'is_edited': msg.is_edited,
                 'is_unsent': msg.is_unsent,
+                'voice_duration': msg.voice_duration,
             }
 
             if msg.edited_at:

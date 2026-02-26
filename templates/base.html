@@ -326,663 +326,655 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body class="h-full bg-gray-50 {% if user.is_authenticated %}user-authenticated{% endif %}">
-    <!-- Mobile Top Navigation -->
-    <div class="desktop-hidden top-nav">
-        <div class="flex items-center justify-between w-full">
-            <!-- Left side: Menu button or Back button -->
-            <div class="flex items-center space-x-3">
-                {% if 'conversation' in request.resolver_match.url_name or 'profile' in request.resolver_match.url_name %}
-                <button onclick="window.history.back()" class="p-2 text-gray-700">
-                    <i class="fas fa-arrow-left text-lg"></i>
-                </button>
-                {% else %}
-                <button id="mobileMenuButton" class="p-2 text-gray-700">
-                    <i class="fas fa-bars text-lg"></i>
-                </button>
-                {% endif %}
+<!-- Mobile Top Navigation -->
+<div class="desktop-hidden top-nav">
+    <div class="flex items-center justify-between w-full">
+        <!-- Left side: Menu button or Back button -->
+        <div class="flex items-center space-x-3">
+            {% if 'conversation' in request.resolver_match.url_name or 'profile' in request.resolver_match.url_name %}
+            <button onclick="window.history.back()" class="p-2 text-gray-700">
+                <i class="fas fa-arrow-left text-lg"></i>
+            </button>
+            {% else %}
+            <button id="mobileMenuButton" class="p-2 text-gray-700">
+                <i class="fas fa-bars text-lg"></i>
+            </button>
+            {% endif %}
 
-                <!-- Page title for mobile -->
-                <h1 class="text-lg font-semibold text-gray-900">
-                    {% block mobile_title %}{% endblock %}
-                </h1>
-            </div>
+            <!-- Page title for mobile -->
+            <h1 class="text-lg font-semibold text-gray-900">
+                {% block mobile_title %}{% endblock %}
+            </h1>
+        </div>
 
-            <!-- Right side: User actions -->
-            <div class="flex items-center space-x-3">
-                {% if user.is_authenticated %}
-                <!-- Notifications -->
-                <a href="{% url 'notifications' %}" class="relative p-2 text-gray-600">
-                    <i class="fas fa-bell text-lg"></i>
-                    <span id="mobile-notification-badge" class="notification-badge hidden">
+        <!-- Right side: User actions -->
+        <div class="flex items-center space-x-3">
+            {% if user.is_authenticated %}
+            <!-- Notifications -->
+            <a href="{% url 'notifications' %}" class="relative p-2 text-gray-600">
+                <i class="fas fa-bell text-lg"></i>
+                <span id="mobile-notification-badge" class="notification-badge hidden">
                         0
                     </span>
-                </a>
-
-                <!-- Profile -->
-                <a href="{% url 'profile' %}" class="flex items-center">
-                    {% if user.is_authenticated and user.profile_picture and user.profile_picture.url %}
-                    <div class="profile-picture">
-                        <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}">
-                    </div>
-                    {% else %}
-                    <div class="profile-picture bg-gray-300">
-                        <div class="placeholder">
-                            <i class="fas fa-user text-gray-500"></i>
-                        </div>
-                    </div>
-                    {% endif %}
-                </a>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <!-- Mobile Menu Overlay -->
-    <div id="mobileMenuOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
-
-    <!-- Mobile Menu -->
-    <div id="mobileMenu" class="mobile-menu fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 p-4 swipe-area">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-lg font-semibold">Menu</h2>
-            <button id="closeMobileMenu" class="p-2">
-                <i class="fas fa-times text-gray-600"></i>
-            </button>
-        </div>
-
-        <!-- User Profile in Mobile Menu -->
-        {% if user.is_authenticated %}
-        <div class="mb-6 p-3 bg-gray-50 rounded-lg">
-            <div class="flex items-center space-x-3">
-                {% if user.profile_picture and user.profile_picture.url %}
-                <div class="profile-picture-lg">
-                    <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}">
-                </div>
-                {% else %}
-                <div class="profile-picture-lg bg-gray-300">
-                    <div class="placeholder">
-                        <i class="fas fa-user text-gray-500 text-2xl"></i>
-                    </div>
-                </div>
-                {% endif %}
-                <div>
-                    <p class="font-medium text-gray-900">{{ user.username }}</p>
-                    <p class="text-sm text-gray-600">{{ user.email|truncatechars:20 }}</p>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        <div class="space-y-1">
-            <!-- Chat URLs -->
-            <a href="{% url 'chat_home' %}"
-               class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}bg-blue-50 text-blue-700 border-l-4 border-blue-500{% endif %}">
-                <i class="fas fa-comments w-6 text-blue-600"></i>
-                <span class="ml-3">Chats</span>
-            </a>
-
-            <!-- Discover Users -->
-            <a href="{% url 'discover_users' %}"
-               class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'discover_users' %}bg-green-50 text-green-700 border-l-4 border-green-500{% endif %}">
-                <i class="fas fa-search w-6 text-green-600"></i>
-                <span class="ml-3">Discover</span>
-            </a>
-
-            <!-- Friend Requests -->
-            <a href="{% url 'friend_requests' %}"
-               class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'friend_requests' %}bg-purple-50 text-purple-700 border-l-4 border-purple-500{% endif %}">
-                <i class="fas fa-user-friends w-6 text-purple-600"></i>
-                <span class="ml-3">Friends</span>
             </a>
 
             <!-- Profile -->
-            <a href="{% url 'profile' %}"
-               class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}bg-yellow-50 text-yellow-700 border-l-4 border-yellow-500{% endif %}">
-                <i class="fas fa-user w-6 text-yellow-600"></i>
-                <span class="ml-3">Profile</span>
-            </a>
-
-            <!-- Notifications -->
-            <a href="{% url 'notifications' %}"
-               class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'notifications' %}bg-red-50 text-red-700 border-l-4 border-red-500{% endif %} relative">
-                <i class="fas fa-bell w-6 text-red-600"></i>
-                <span class="ml-3">Notifications</span>
-                <span id="menu-notification-badge" class="notification-badge hidden ml-auto">
-                    0
-                </span>
-            </a>
-
-            <!-- Settings -->
-            <a href="{% url 'settings_main' %}"
-               class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'settings_main' %}bg-gray-100 text-gray-900 border-l-4 border-gray-500{% endif %}">
-                <i class="fas fa-cog w-6 text-gray-600"></i>
-                <span class="ml-3">Settings</span>
-            </a>
-
-            <hr class="my-4">
-
-            {% if user.is_authenticated %}
-            <!-- Logout -->
-            <form method="POST" action="{% url 'logout' %}">
-                {% csrf_token %}
-                <button type="submit" class="flex items-center w-full p-3 rounded-lg hover:bg-red-50 transition duration-200 text-red-600">
-                    <i class="fas fa-sign-out-alt w-6"></i>
-                    <span class="ml-3">Logout</span>
-                </button>
-            </form>
-            {% else %}
-            <!-- Login -->
-            <a href="{% url 'login' %}" class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200">
-                <i class="fas fa-sign-in-alt w-6 text-blue-600"></i>
-                <span class="ml-3">Login</span>
+            <a href="{% url 'profile' %}" class="flex items-center">
+                {% if user.is_authenticated and user.profile_picture and user.profile_picture.url %}
+                <div class="profile-picture">
+                    <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}">
+                </div>
+                {% else %}
+                <div class="profile-picture bg-gray-300">
+                    <div class="placeholder">
+                        <i class="fas fa-user text-gray-500"></i>
+                    </div>
+                </div>
+                {% endif %}
             </a>
             {% endif %}
         </div>
     </div>
+</div>
 
-    <!-- Mobile Bottom Navigation -->
+<!-- Mobile Menu Overlay -->
+<div id="mobileMenuOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
+
+<!-- Mobile Menu -->
+<div id="mobileMenu" class="mobile-menu fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 p-4 swipe-area">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-lg font-semibold">Menu</h2>
+        <button id="closeMobileMenu" class="p-2">
+            <i class="fas fa-times text-gray-600"></i>
+        </button>
+    </div>
+
+    <!-- User Profile in Mobile Menu -->
     {% if user.is_authenticated %}
-    <div class="desktop-hidden bottom-nav">
-        <a href="{% url 'chat_home' %}"
-           class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}text-blue-600{% endif %}">
-            <i class="fas fa-comments text-xl mb-1"></i>
-            <span class="text-xs">Chats</span>
-        </a>
-
-        <a href="{% url 'discover_users' %}"
-           class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'discover_users' %}text-blue-600{% endif %}">
-            <i class="fas fa-search text-xl mb-1"></i>
-            <span class="text-xs">Discover</span>
-        </a>
-
-        <a href="{% url 'start_chat' %}"
-           class="flex flex-col items-center justify-center p-2">
-            <div class="w-12 h-12 -mt-6 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
-                <i class="fas fa-edit text-white text-lg"></i>
+    <div class="mb-6 p-3 bg-gray-50 rounded-lg">
+        <div class="flex items-center space-x-3">
+            {% if user.profile_picture and user.profile_picture.url %}
+            <div class="profile-picture-lg">
+                <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}">
             </div>
-        </a>
-
-        <a href="{% url 'friend_requests' %}"
-           class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'friend_requests' %}text-blue-600{% endif %}">
-            <i class="fas fa-user-friends text-xl mb-1"></i>
-            <span class="text-xs">Friends</span>
-        </a>
-
-        <a href="{% url 'profile' %}"
-           class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}text-blue-600{% endif %}">
-            <i class="fas fa-user text-xl mb-1"></i>
-            <span class="text-xs">Profile</span>
-        </a>
+            {% else %}
+            <div class="profile-picture-lg bg-gray-300">
+                <div class="placeholder">
+                    <i class="fas fa-user text-gray-500 text-2xl"></i>
+                </div>
+            </div>
+            {% endif %}
+            <div>
+                <p class="font-medium text-gray-900">{{ user.username }}</p>
+                <p class="text-sm text-gray-600">{{ user.email|truncatechars:20 }}</p>
+            </div>
+        </div>
     </div>
     {% endif %}
 
-    <!-- Main Content -->
-    <div class="flex h-full">
-        <!-- Desktop Sidebar -->
-        <div class="mobile-hidden w-64 bg-white shadow-lg flex flex-col">
-            <!-- Logo -->
-            <div class="p-4 border-b border-gray-200">
-                <h1 class="text-xl font-bold text-blue-600">
-                    <i class="fas fa-comments mr-2"></i>
-                    Connect.io
-                </h1>
-            </div>
+    <div class="space-y-1">
+        <!-- Chat URLs -->
+        <a href="{% url 'chat_home' %}"
+           class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}bg-blue-50 text-blue-700 border-l-4 border-blue-500{% endif %}">
+            <i class="fas fa-comments w-6 text-blue-600"></i>
+            <span class="ml-3">Chats</span>
+        </a>
 
-            <!-- Navigation -->
-            <nav class="flex-1 p-4 space-y-1">
-                <a href="{% url 'chat_home' %}"
-                   class="flex items-center p-3 rounded-lg hover:bg-blue-50 transition duration-200 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}bg-blue-50 text-blue-600 border-l-4 border-blue-500{% endif %}">
-                    <i class="fas fa-comments w-6"></i>
-                    <span class="ml-3">Chats</span>
-                </a>
+        <!-- Discover Users -->
+        <a href="{% url 'discover_users' %}"
+           class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'discover_users' %}bg-green-50 text-green-700 border-l-4 border-green-500{% endif %}">
+            <i class="fas fa-search w-6 text-green-600"></i>
+            <span class="ml-3">Discover</span>
+        </a>
 
-                <a href="{% url 'discover_users' %}"
-                   class="flex items-center p-3 rounded-lg hover:bg-green-50 transition duration-200 {% if request.resolver_match.url_name == 'discover_users' %}bg-green-50 text-green-600 border-l-4 border-green-500{% endif %}">
-                    <i class="fas fa-search w-6"></i>
-                    <span class="ml-3">Discover</span>
-                </a>
+        <!-- Friend Requests -->
+        <a href="{% url 'friend_requests' %}"
+           class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'friend_requests' %}bg-purple-50 text-purple-700 border-l-4 border-purple-500{% endif %}">
+            <i class="fas fa-user-friends w-6 text-purple-600"></i>
+            <span class="ml-3">Friends</span>
+        </a>
 
-                <a href="{% url 'friend_requests' %}"
-                   class="flex items-center p-3 rounded-lg hover:bg-purple-50 transition duration-200 {% if request.resolver_match.url_name == 'friend_requests' %}bg-purple-50 text-purple-600 border-l-4 border-purple-500{% endif %}">
-                    <i class="fas fa-user-friends w-6"></i>
-                    <span class="ml-3">Friends</span>
-                </a>
+        <!-- Profile -->
+        <a href="{% url 'profile' %}"
+           class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}bg-yellow-50 text-yellow-700 border-l-4 border-yellow-500{% endif %}">
+            <i class="fas fa-user w-6 text-yellow-600"></i>
+            <span class="ml-3">Profile</span>
+        </a>
 
-                <a href="{% url 'profile' %}"
-                   class="flex items-center p-3 rounded-lg hover:bg-yellow-50 transition duration-200 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}bg-yellow-50 text-yellow-600 border-l-4 border-yellow-500{% endif %}">
-                    <i class="fas fa-user w-6"></i>
-                    <span class="ml-3">Profile</span>
-                </a>
+        <!-- Notifications -->
+        <a href="{% url 'notifications' %}"
+           class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'notifications' %}bg-red-50 text-red-700 border-l-4 border-red-500{% endif %} relative">
+            <i class="fas fa-bell w-6 text-red-600"></i>
+            <span class="ml-3">Notifications</span>
+            <span id="menu-notification-badge" class="notification-badge hidden ml-auto">
+                    0
+                </span>
+        </a>
 
-                <a href="{% url 'notifications' %}"
-                   class="flex items-center p-3 rounded-lg hover:bg-red-50 transition duration-200 {% if request.resolver_match.url_name == 'notifications' %}bg-red-50 text-red-600 border-l-4 border-red-500{% endif %} relative">
-                    <i class="fas fa-bell w-6"></i>
-                    <span class="ml-3">Notifications</span>
-                    <span id="desktop-notification-badge" class="notification-badge hidden">
-                        0
-                    </span>
-                </a>
+        <!-- Settings -->
+        <a href="{% url 'settings_main' %}"
+           class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'settings_main' %}bg-gray-100 text-gray-900 border-l-4 border-gray-500{% endif %}">
+            <i class="fas fa-cog w-6 text-gray-600"></i>
+            <span class="ml-3">Settings</span>
+        </a>
 
-                <a href="{% url 'settings_main' %}"
-                   class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'settings_main' %}bg-gray-100 text-gray-900 border-l-4 border-gray-500{% endif %}">
-                    <i class="fas fa-cog w-6"></i>
-                    <span class="ml-3">Settings</span>
-                </a>
-            </nav>
+        <hr class="my-4">
 
-            <!-- User Info -->
-            <div class="p-4 border-t border-gray-200">
-                <div class="flex items-center space-x-3">
-                    {% if user.is_authenticated %}
-                        {% if user.profile_picture and user.profile_picture.url %}
-                        <div class="profile-picture">
-                            <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}">
-                        </div>
-                        {% else %}
-                        <div class="profile-picture bg-gray-300">
-                            <div class="placeholder">
-                                <i class="fas fa-user text-gray-500"></i>
-                            </div>
-                        </div>
-                        {% endif %}
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-medium text-gray-900 truncate">{{ user.username }}</p>
-                            <p class="text-xs text-gray-500 truncate">{{ user.email|truncatechars:20 }}</p>
-                        </div>
-                        <form method="POST" action="{% url 'logout' %}">
-                            {% csrf_token %}
-                            <button type="submit" class="p-2 text-gray-400 hover:text-red-600 transition duration-200"
-                                    title="Logout">
-                                <i class="fas fa-sign-out-alt"></i>
-                            </button>
-                        </form>
-                    {% else %}
-                        <div class="profile-picture bg-gray-300">
-                            <div class="placeholder">
-                                <i class="fas fa-user text-gray-500"></i>
-                            </div>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-medium text-gray-900 truncate">Guest</p>
-                            <p class="text-xs text-gray-500 truncate">Not logged in</p>
-                        </div>
-                        <a href="{% url 'login' %}" class="p-2 text-blue-400 hover:text-blue-600 transition duration-200"
-                           title="Login">
-                            <i class="fas fa-sign-in-alt"></i>
-                        </a>
-                    {% endif %}
-                </div>
-            </div>
+        {% if user.is_authenticated %}
+        <!-- Logout -->
+        <form method="POST" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit"
+                    class="flex items-center w-full p-3 rounded-lg hover:bg-red-50 transition duration-200 text-red-600">
+                <i class="fas fa-sign-out-alt w-6"></i>
+                <span class="ml-3">Logout</span>
+            </button>
+        </form>
+        {% else %}
+        <!-- Login -->
+        <a href="{% url 'login' %}" class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200">
+            <i class="fas fa-sign-in-alt w-6 text-blue-600"></i>
+            <span class="ml-3">Login</span>
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Mobile Bottom Navigation -->
+{% if user.is_authenticated %}
+<div class="desktop-hidden bottom-nav">
+    <a href="{% url 'chat_home' %}"
+       class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}text-blue-600{% endif %}">
+        <i class="fas fa-comments text-xl mb-1"></i>
+        <span class="text-xs">Chats</span>
+    </a>
+
+    <a href="{% url 'discover_users' %}"
+       class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'discover_users' %}text-blue-600{% endif %}">
+        <i class="fas fa-search text-xl mb-1"></i>
+        <span class="text-xs">Discover</span>
+    </a>
+
+    <a href="{% url 'start_chat' %}"
+       class="flex flex-col items-center justify-center p-2">
+        <div class="w-12 h-12 -mt-6 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
+            <i class="fas fa-edit text-white text-lg"></i>
+        </div>
+    </a>
+
+    <a href="{% url 'friend_requests' %}"
+       class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'friend_requests' %}text-blue-600{% endif %}">
+        <i class="fas fa-user-friends text-xl mb-1"></i>
+        <span class="text-xs">Friends</span>
+    </a>
+
+    <a href="{% url 'profile' %}"
+       class="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-blue-600 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}text-blue-600{% endif %}">
+        <i class="fas fa-user text-xl mb-1"></i>
+        <span class="text-xs">Profile</span>
+    </a>
+</div>
+{% endif %}
+
+<!-- Main Content -->
+<div class="flex h-full">
+    <!-- Desktop Sidebar -->
+    <div class="mobile-hidden w-64 bg-white shadow-lg flex flex-col">
+        <!-- Logo -->
+        <div class="p-4 border-b border-gray-200">
+            <h1 class="text-xl font-bold text-blue-600">
+                <i class="fas fa-comments mr-2"></i>
+                Connect.io
+            </h1>
         </div>
 
-        <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col main-content">
-            <!-- Messages Display -->
-            {% if messages %}
-            <div class="bg-white border-b border-gray-200 p-4">
-                {% for message in messages %}
-                <div class="rounded-lg p-3 mb-2 {% if message.tags == 'success' %}bg-green-50 text-green-700 border border-green-200{% elif message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200{% elif message.tags == 'warning' %}bg-yellow-50 text-yellow-700 border border-yellow-200{% else %}bg-blue-50 text-blue-700 border border-blue-200{% endif %}">
-                    <div class="flex items-start">
-                        <div class="flex-shrink-0">
-                            {% if message.tags == 'success' %}
-                            <i class="fas fa-check-circle text-green-400"></i>
-                            {% elif message.tags == 'error' %}
-                            <i class="fas fa-exclamation-circle text-red-400"></i>
-                            {% elif message.tags == 'warning' %}
-                            <i class="fas fa-exclamation-triangle text-yellow-400"></i>
-                            {% else %}
-                            <i class="fas fa-info-circle text-blue-400"></i>
-                            {% endif %}
-                        </div>
-                        <div class="ml-3 flex-1">
-                            <p class="text-sm font-medium">{{ message }}</p>
-                        </div>
-                        <button type="button" class="ml-auto -mx-1.5 -my-1.5 rounded-lg p-1.5 inline-flex h-8 w-8"
-                                onclick="this.parentElement.parentElement.remove()">
-                            <span class="sr-only">Dismiss</span>
-                            <i class="fas fa-times"></i>
-                        </button>
+        <!-- Navigation -->
+        <nav class="flex-1 p-4 space-y-1">
+            <a href="{% url 'chat_home' %}"
+               class="flex items-center p-3 rounded-lg hover:bg-blue-50 transition duration-200 {% if request.resolver_match.url_name == 'chat_home' or request.resolver_match.url_name == 'conversation' %}bg-blue-50 text-blue-600 border-l-4 border-blue-500{% endif %}">
+                <i class="fas fa-comments w-6"></i>
+                <span class="ml-3">Chats</span>
+            </a>
+
+            <a href="{% url 'discover_users' %}"
+               class="flex items-center p-3 rounded-lg hover:bg-green-50 transition duration-200 {% if request.resolver_match.url_name == 'discover_users' %}bg-green-50 text-green-600 border-l-4 border-green-500{% endif %}">
+                <i class="fas fa-search w-6"></i>
+                <span class="ml-3">Discover</span>
+            </a>
+
+            <a href="{% url 'friend_requests' %}"
+               class="flex items-center p-3 rounded-lg hover:bg-purple-50 transition duration-200 {% if request.resolver_match.url_name == 'friend_requests' %}bg-purple-50 text-purple-600 border-l-4 border-purple-500{% endif %}">
+                <i class="fas fa-user-friends w-6"></i>
+                <span class="ml-3">Friends</span>
+            </a>
+
+            <a href="{% url 'profile' %}"
+               class="flex items-center p-3 rounded-lg hover:bg-yellow-50 transition duration-200 {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}bg-yellow-50 text-yellow-600 border-l-4 border-yellow-500{% endif %}">
+                <i class="fas fa-user w-6"></i>
+                <span class="ml-3">Profile</span>
+            </a>
+
+            <a href="{% url 'notifications' %}"
+               class="flex items-center p-3 rounded-lg hover:bg-red-50 transition duration-200 {% if request.resolver_match.url_name == 'notifications' %}bg-red-50 text-red-600 border-l-4 border-red-500{% endif %} relative">
+                <i class="fas fa-bell w-6"></i>
+                <span class="ml-3">Notifications</span>
+                <span id="desktop-notification-badge" class="notification-badge hidden">
+                        0
+                    </span>
+            </a>
+
+            <a href="{% url 'settings_main' %}"
+               class="flex items-center p-3 rounded-lg hover:bg-gray-100 transition duration-200 {% if request.resolver_match.url_name == 'settings_main' %}bg-gray-100 text-gray-900 border-l-4 border-gray-500{% endif %}">
+                <i class="fas fa-cog w-6"></i>
+                <span class="ml-3">Settings</span>
+            </a>
+        </nav>
+
+        <!-- User Info -->
+        <div class="p-4 border-t border-gray-200">
+            <div class="flex items-center space-x-3">
+                {% if user.is_authenticated %}
+                {% if user.profile_picture and user.profile_picture.url %}
+                <div class="profile-picture">
+                    <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}">
+                </div>
+                {% else %}
+                <div class="profile-picture bg-gray-300">
+                    <div class="placeholder">
+                        <i class="fas fa-user text-gray-500"></i>
                     </div>
                 </div>
-                {% endfor %}
+                {% endif %}
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">{{ user.username }}</p>
+                    <p class="text-xs text-gray-500 truncate">{{ user.email|truncatechars:20 }}</p>
+                </div>
+                <form method="POST" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="p-2 text-gray-400 hover:text-red-600 transition duration-200"
+                            title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </form>
+                {% else %}
+                <div class="profile-picture bg-gray-300">
+                    <div class="placeholder">
+                        <i class="fas fa-user text-gray-500"></i>
+                    </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">Guest</p>
+                    <p class="text-xs text-gray-500 truncate">Not logged in</p>
+                </div>
+                <a href="{% url 'login' %}" class="p-2 text-blue-400 hover:text-blue-600 transition duration-200"
+                   title="Login">
+                    <i class="fas fa-sign-in-alt"></i>
+                </a>
+                {% endif %}
             </div>
-            {% endif %}
-
-            <!-- Page Content -->
-            <main class="flex-1 overflow-auto custom-scrollbar">
-                {% block content %}
-                {% endblock %}
-            </main>
         </div>
     </div>
 
-    <!-- JavaScript -->
-    <script>
-        // Global variables
-        let csrftoken = null;
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col main-content">
+        <!-- Messages Display -->
+        {% if messages %}
+        <div class="bg-white border-b border-gray-200 p-4">
+            {% for message in messages %}
+            <div class="rounded-lg p-3 mb-2 {% if message.tags == 'success' %}bg-green-50 text-green-700 border border-green-200{% elif message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200{% elif message.tags == 'warning' %}bg-yellow-50 text-yellow-700 border border-yellow-200{% else %}bg-blue-50 text-blue-700 border border-blue-200{% endif %}">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        {% if message.tags == 'success' %}
+                        <i class="fas fa-check-circle text-green-400"></i>
+                        {% elif message.tags == 'error' %}
+                        <i class="fas fa-exclamation-circle text-red-400"></i>
+                        {% elif message.tags == 'warning' %}
+                        <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                        {% else %}
+                        <i class="fas fa-info-circle text-blue-400"></i>
+                        {% endif %}
+                    </div>
+                    <div class="ml-3 flex-1">
+                        <p class="text-sm font-medium">{{ message }}</p>
+                    </div>
+                    <button type="button" class="ml-auto -mx-1.5 -my-1.5 rounded-lg p-1.5 inline-flex h-8 w-8"
+                            onclick="this.parentElement.parentElement.remove()">
+                        <span class="sr-only">Dismiss</span>
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
 
-        // Function to get CSRF token from cookies - FIXED VERSION
-        function getCSRFToken() {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    // Check for both possible cookie names
-                    if (cookie.startsWith('csrftoken=')) {
-                        cookieValue = decodeURIComponent(cookie.substring('csrftoken='.length));
-                        break;
-                    } else if (cookie.startsWith('csrf_token=')) {
-                        cookieValue = decodeURIComponent(cookie.substring('csrf_token='.length));
-                        break;
-                    }
+        <!-- Page Content -->
+        <main class="flex-1 overflow-auto custom-scrollbar">
+            {% block content %}
+            {% endblock %}
+        </main>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+    // Global variables
+    let csrftoken = null;
+
+    // Function to get CSRF token from cookies - FIXED VERSION
+    function getCSRFToken() {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // Check for both possible cookie names
+                if (cookie.startsWith('csrftoken=')) {
+                    cookieValue = decodeURIComponent(cookie.substring('csrftoken='.length));
+                    break;
+                } else if (cookie.startsWith('csrf_token=')) {
+                    cookieValue = decodeURIComponent(cookie.substring('csrf_token='.length));
+                    break;
                 }
             }
-
-            // Fallback: get from meta tag
-            if (!cookieValue) {
-                const metaToken = document.querySelector('meta[name="csrf-token"]');
-                if (metaToken) {
-                    cookieValue = metaToken.getAttribute('content');
-                }
-            }
-
-            // Final fallback: use window.csrftoken from csrf_fix.js
-            if (!cookieValue && window.csrftoken) {
-                cookieValue = window.csrftoken;
-            }
-
-            csrftoken = cookieValue;
-            return cookieValue;
         }
 
-        // SIMPLIFIED online status function
-        function updateOnlineStatus(isOnline) {
-            // Only update if user is authenticated
-            if (!document.body.classList.contains('user-authenticated')) {
-                return;
+        // Fallback: get from meta tag
+        if (!cookieValue) {
+            const metaToken = document.querySelector('meta[name="csrf-token"]');
+            if (metaToken) {
+                cookieValue = metaToken.getAttribute('content');
             }
+        }
 
-            const csrfToken = getCSRFToken();
+        // Final fallback: use window.csrftoken from csrf_fix.js
+        if (!cookieValue && window.csrftoken) {
+            cookieValue = window.csrftoken;
+        }
 
-            if (!csrfToken) {
-                console.warn('CSRF token not found');
-                return;
+        csrftoken = cookieValue;
+        return cookieValue;
+    }
+
+    // SIMPLIFIED online status function
+    function updateOnlineStatus(isOnline) {
+        // Only update if user is authenticated
+        if (!document.body.classList.contains('user-authenticated')) {
+            return;
+        }
+
+        const csrfToken = getCSRFToken();
+
+        if (!csrfToken) {
+            console.warn('CSRF token not found');
+            return;
+        }
+
+        // Use FormData instead of JSON
+        const formData = new FormData();
+        formData.append('online', isOnline.toString());
+        formData.append('csrfmiddlewaretoken', csrfToken);
+
+       fetch('{% url "update_online_status" %}', {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+        }).then(response => {
+            if (!response.ok) {
+                console.log('Online status update failed:', response.status);
             }
+            return response.json();
+        }).then(data => {
+            if (data && data.success) {
+                console.log('Online status updated successfully');
+            }
+        }).catch(error => {
+            console.log('Non-critical online status error:', error);
+        });
+    }
 
-            // Use FormData instead of JSON
+    // Function to send beacons when page is closing
+    function sendBeforeUnloadBeacon() {
+        const csrfToken = getCSRFToken();
+        if (csrfToken && navigator.sendBeacon) {
             const formData = new FormData();
-            formData.append('online', isOnline.toString());
+            formData.append('online', 'false');
             formData.append('csrfmiddlewaretoken', csrfToken);
+            navigator.sendBeacon('{% url "update_online_status" %}', formData);
+        } else {
+            // Fallback sync request
+            updateOnlineStatus(false);
+        }
+    }
 
-           fetch('{% url "update_online_status" %}', {
-                method: 'POST',
-                body: formData,
-                credentials: 'same-origin'
-            }).then(response => {
-                if (!response.ok) {
-                    console.log('Online status update failed:', response.status);
-                }
-                return response.json();
-            }).then(data => {
-                if (data && data.success) {
-                    console.log('Online status updated successfully');
-                }
-            }).catch(error => {
-                console.log('Non-critical online status error:', error);
-            });
+    // Set CSS custom property for viewport height
+    function setVH() {
+        let vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+    }
+
+    // Function to fetch notification count
+    function fetchNotificationCount() {
+        // Only fetch if user is authenticated
+        if (!document.body.classList.contains('user-authenticated')) {
+            return;
         }
 
-        // Function to send beacons when page is closing
-        function sendBeforeUnloadBeacon() {
-            const csrfToken = getCSRFToken();
-            if (csrfToken && navigator.sendBeacon) {
-                const formData = new FormData();
-                formData.append('online', 'false');
-                formData.append('csrfmiddlewaretoken', csrfToken);
-                navigator.sendBeacon('{% url "update_online_status" %}', formData);
+        fetch('/accounts/api/get-unread-count/', {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.unread_count > 0) {
+                // Update all notification badges
+                const badges = document.querySelectorAll('.notification-badge');
+                badges.forEach(badge => {
+                    badge.textContent = data.unread_count;
+                    badge.classList.remove('hidden');
+                });
             } else {
-                // Fallback sync request
-                updateOnlineStatus(false);
-            }
-        }
-
-        // Set CSS custom property for viewport height
-        function setVH() {
-            let vh = window.innerHeight * 0.01;
-            document.documentElement.style.setProperty('--vh', `${vh}px`);
-        }
-
-        // Function to fetch notification count
-        function fetchNotificationCount() {
-            // Only fetch if user is authenticated
-            if (!document.body.classList.contains('user-authenticated')) {
-                return;
-            }
-
-            fetch('/accounts/api/get-unread-count/', {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.unread_count > 0) {
-                    // Update all notification badges
-                    const badges = document.querySelectorAll('.notification-badge');
-                    badges.forEach(badge => {
-                        badge.textContent = data.unread_count;
-                        badge.classList.remove('hidden');
-                    });
-                } else {
-                    // Hide all notification badges
-                    const badges = document.querySelectorAll('.notification-badge');
-                    badges.forEach(badge => {
-                        badge.classList.add('hidden');
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching notification count:', error);
-                // Hide all notification badges on error
+                // Hide all notification badges
                 const badges = document.querySelectorAll('.notification-badge');
                 badges.forEach(badge => {
                     badge.classList.add('hidden');
                 });
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching notification count:', error);
+            // Hide all notification badges on error
+            const badges = document.querySelectorAll('.notification-badge');
+            badges.forEach(badge => {
+                badge.classList.add('hidden');
             });
+        });
+    }
+
+   // Mobile menu functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize CSRF token
+    getCSRFToken();
+
+    // ADD THESE LINES - Global URLs for AJAX calls
+    window.profilePhotoUploadUrl = "{% url 'upload_profile_photo' %}";
+    window.updateOnlineStatusUrl = "{% url 'update_online_status' %}";
+    window.getUnreadCountUrl = "{% url 'get_unread_count' %}";
+
+    const mobileMenuButton = document.getElementById('mobileMenuButton');
+    // ... rest of your code
+        const closeMobileMenu = document.getElementById('closeMobileMenu');
+        const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
+        const mobileMenu = document.getElementById('mobileMenu');
+
+        function openMobileMenu() {
+            mobileMenu.classList.add('open');
+            mobileMenuOverlay.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
         }
 
-        // Mobile menu functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize CSRF token
-            getCSRFToken();
+        function closeMobileMenuFunc() {
+            mobileMenu.classList.remove('open');
+            mobileMenuOverlay.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
 
-            const mobileMenuButton = document.getElementById('mobileMenuButton');
-            const closeMobileMenu = document.getElementById('closeMobileMenu');
-            const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
-            const mobileMenu = document.getElementById('mobileMenu');
+        if (mobileMenuButton) {
+            mobileMenuButton.addEventListener('click', openMobileMenu);
+        }
 
-            function openMobileMenu() {
-                mobileMenu.classList.add('open');
-                mobileMenuOverlay.classList.remove('hidden');
-                document.body.style.overflow = 'hidden';
-            }
+        if (closeMobileMenu) {
+            closeMobileMenu.addEventListener('click', closeMobileMenuFunc);
+        }
 
-            function closeMobileMenuFunc() {
-                mobileMenu.classList.remove('open');
-                mobileMenuOverlay.classList.add('hidden');
-                document.body.style.overflow = 'auto';
-            }
+        if (mobileMenuOverlay) {
+            mobileMenuOverlay.addEventListener('click', closeMobileMenuFunc);
+        }
 
-            if (mobileMenuButton) {
-                mobileMenuButton.addEventListener('click', openMobileMenu);
-            }
-
-            if (closeMobileMenu) {
-                closeMobileMenu.addEventListener('click', closeMobileMenuFunc);
-            }
-
-            if (mobileMenuOverlay) {
-                mobileMenuOverlay.addEventListener('click', closeMobileMenuFunc);
-            }
-
-            // Auto-hide messages after 5 seconds
-            const alerts = document.querySelectorAll('.rounded-lg.p-3.mb-2');
-            alerts.forEach(alert => {
+        // Auto-hide messages after 5 seconds
+        const alerts = document.querySelectorAll('.rounded-lg.p-3.mb-2');
+        alerts.forEach(alert => {
+            setTimeout(() => {
+                alert.style.opacity = '0';
+                alert.style.transition = 'opacity 0.5s ease';
                 setTimeout(() => {
-                    alert.style.opacity = '0';
-                    alert.style.transition = 'opacity 0.5s ease';
-                    setTimeout(() => {
-                        alert.remove();
-                    }, 500);
-                }, 5000);
+                    alert.remove();
+                }, 500);
+            }, 5000);
+        });
+
+        // Handle keyboard on mobile
+        const inputs = document.querySelectorAll('input, textarea');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                if (window.innerWidth <= 768) {
+                    document.body.classList.add('keyboard-open');
+                }
             });
 
-            // Handle keyboard on mobile
-            const inputs = document.querySelectorAll('input, textarea');
-            inputs.forEach(input => {
-                input.addEventListener('focus', function() {
-                    if (window.innerWidth <= 768) {
-                        document.body.classList.add('keyboard-open');
-                    }
-                });
-
-                input.addEventListener('blur', function() {
-                    document.body.classList.remove('keyboard-open');
-                });
+            input.addEventListener('blur', function() {
+                document.body.classList.remove('keyboard-open');
             });
+        });
 
-            // Check if user is authenticated
-            const userAuthenticated = document.body.classList.contains('user-authenticated');
+        // Check if user is authenticated
+        const userAuthenticated = document.body.classList.contains('user-authenticated');
+        if (userAuthenticated) {
+            // Fetch notification count on page load
+            fetchNotificationCount();
+
+            // Update notification count every 30 seconds
+            setInterval(fetchNotificationCount, 30000);
+
+            // Update online status when page loads (with delay to ensure CSRF token is available)
+            setTimeout(() => {
+                updateOnlineStatus(true);
+            }, 1000);
+        }
+
+        // Update status when user leaves (using sendBeacon for reliability)
+        window.addEventListener('beforeunload', sendBeforeUnloadBeacon);
+
+        // Also update on page hide (for mobile)
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'hidden') {
+                sendBeforeUnloadBeacon();
+            } else if (document.visibilityState === 'visible') {
+                updateOnlineStatus(true);
+            }
+        });
+
+        // Add focus/blur handlers
+        window.addEventListener('focus', function() {
             if (userAuthenticated) {
-                // Fetch notification count on page load
-                fetchNotificationCount();
-
-                // Update notification count every 30 seconds
-                setInterval(fetchNotificationCount, 30000);
-
-                // Update online status when page loads (with delay to ensure CSRF token is available)
-                setTimeout(() => {
-                    updateOnlineStatus(true);
-                }, 1000);
+                updateOnlineStatus(true);
             }
+        });
 
-            // Update status when user leaves (using sendBeacon for reliability)
-            window.addEventListener('beforeunload', sendBeforeUnloadBeacon);
-
-            // Also update on page hide (for mobile)
-            document.addEventListener('visibilitychange', function() {
-                if (document.visibilityState === 'hidden') {
-                    sendBeforeUnloadBeacon();
-                } else if (document.visibilityState === 'visible') {
-                    updateOnlineStatus(true);
-                }
-            });
-
-            // Add focus/blur handlers
-            window.addEventListener('focus', function() {
-                if (userAuthenticated) {
-                    updateOnlineStatus(true);
-                }
-            });
-
-            window.addEventListener('blur', function() {
-                if (userAuthenticated) {
-                    updateOnlineStatus(false);
-                }
-            });
-
-            // Handle all forms with CSRF protection
-            document.addEventListener('submit', function(e) {
-                const form = e.target;
-                if (form.tagName === 'FORM' && form.method.toUpperCase() === 'POST') {
-                    const csrfToken = getCSRFToken();
-                    if (csrfToken) {
-                        // Add CSRF token if not present
-                        let hasCsrfInput = false;
-                        const inputs = form.querySelectorAll('input[name="csrfmiddlewaretoken"]');
-                        inputs.forEach(input => {
-                            if (input.value !== csrfToken) {
-                                input.value = csrfToken;
-                            }
-                            hasCsrfInput = true;
-                        });
-
-                        if (!hasCsrfInput) {
-                            const csrfInput = document.createElement('input');
-                            csrfInput.type = 'hidden';
-                            csrfInput.name = 'csrfmiddlewaretoken';
-                            csrfInput.value = csrfToken;
-                            form.appendChild(csrfInput);
-                        }
-                    }
-                }
-            });
-
-            // Prevent zoom on double-tap for mobile
-            let lastTouchEnd = 0;
-            document.addEventListener('touchend', function(event) {
-                const now = (new Date()).getTime();
-                if (now - lastTouchEnd <= 300) {
-                    event.preventDefault();
-                }
-                lastTouchEnd = now;
-            }, false);
-
-            // Touch device detection
-            function isTouchDevice() {
-                return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+        window.addEventListener('blur', function() {
+            if (userAuthenticated) {
+                updateOnlineStatus(false);
             }
+        });
 
-            if (isTouchDevice()) {
-                document.body.classList.add('touch-device');
-
-                // Add swipe gestures for mobile menu
-                let touchStartX = 0;
-                let touchEndX = 0;
-
-                document.addEventListener('touchstart', function(e) {
-                    touchStartX = e.changedTouches[0].screenX;
-                });
-
-                document.addEventListener('touchend', function(e) {
-                    touchEndX = e.changedTouches[0].screenX;
-                    handleSwipe();
-                });
-
-                function handleSwipe() {
-                    const swipeThreshold = 50;
-                    const swipeDistance = touchEndX - touchStartX;
-
-                    // Swipe right to open menu
-                    if (swipeDistance > swipeThreshold && touchStartX < 50) {
-                        const mobileMenuButton = document.getElementById('mobileMenuButton');
-                        if (mobileMenuButton) {
-                            mobileMenuButton.click();
+        // Handle all forms with CSRF protection
+        document.addEventListener('submit', function(e) {
+            const form = e.target;
+            if (form.tagName === 'FORM' && form.method.toUpperCase() === 'POST') {
+                const csrfToken = getCSRFToken();
+                if (csrfToken) {
+                    // Add CSRF token if not present
+                    let hasCsrfInput = false;
+                    const inputs = form.querySelectorAll('input[name="csrfmiddlewaretoken"]');
+                    inputs.forEach(input => {
+                        if (input.value !== csrfToken) {
+                            input.value = csrfToken;
                         }
-                    }
+                        hasCsrfInput = true;
+                    });
 
-                    // Swipe left to close menu
-                    if (swipeDistance < -swipeThreshold) {
-                        const mobileMenu = document.getElementById('mobileMenu');
-                        if (mobileMenu && mobileMenu.classList.contains('open')) {
-                            const closeMobileMenu = document.getElementById('closeMobileMenu');
-                            if (closeMobileMenu) {
-                                closeMobileMenu.click();
-                            }
-                        }
+                    if (!hasCsrfInput) {
+                        const csrfInput = document.createElement('input');
+                        csrfInput.type = 'hidden';
+                        csrfInput.name = 'csrfmiddlewaretoken';
+                        csrfInput.value = csrfToken;
+                        form.appendChild(csrfInput);
                     }
                 }
             }
+        });
 
-            // Handle mobile back button
-            if (window.innerWidth <= 768) {
-                window.addEventListener('popstate', function() {
-                    // Handle back button press
+        // Prevent zoom on double-tap for mobile
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+
+        // Touch device detection
+        function isTouchDevice() {
+            return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+        }
+
+        if (isTouchDevice()) {
+            document.body.classList.add('touch-device');
+
+            // Add swipe gestures for mobile menu
+            let touchStartX = 0;
+            let touchEndX = 0;
+
+            document.addEventListener('touchstart', function(e) {
+                touchStartX = e.changedTouches[0].screenX;
+            });
+
+            document.addEventListener('touchend', function(e) {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            });
+
+            function handleSwipe() {
+                const swipeThreshold = 50;
+                const swipeDistance = touchEndX - touchStartX;
+
+                // Swipe right to open menu
+                if (swipeDistance > swipeThreshold && touchStartX < 50) {
+                    const mobileMenuButton = document.getElementById('mobileMenuButton');
+                    if (mobileMenuButton) {
+                        mobileMenuButton.click();
+                    }
+                }
+
+                // Swipe left to close menu
+                if (swipeDistance < -swipeThreshold) {
                     const mobileMenu = document.getElementById('mobileMenu');
                     if (mobileMenu && mobileMenu.classList.contains('open')) {
                         const closeMobileMenu = document.getElementById('closeMobileMenu');
@@ -990,349 +982,364 @@
                             closeMobileMenu.click();
                         }
                     }
-                });
+                }
             }
+        }
 
-            // Handle image loading errors
-            document.addEventListener('error', function(e) {
-                if (e.target.tagName === 'IMG') {
-                    e.target.onerror = null; // Prevent infinite loop
-                    e.target.style.display = 'none';
-
-                    // Check if it's a profile picture
-                    const parent = e.target.parentElement;
-                    if (parent && parent.classList.contains('profile-picture')) {
-                        // Replace with placeholder
-                        parent.innerHTML = '<div class="placeholder"><i class="fas fa-user text-gray-500"></i></div>';
+        // Handle mobile back button
+        if (window.innerWidth <= 768) {
+            window.addEventListener('popstate', function() {
+                // Handle back button press
+                const mobileMenu = document.getElementById('mobileMenu');
+                if (mobileMenu && mobileMenu.classList.contains('open')) {
+                    const closeMobileMenu = document.getElementById('closeMobileMenu');
+                    if (closeMobileMenu) {
+                        closeMobileMenu.click();
                     }
                 }
-            }, true);
+            });
+        }
 
-            // Show toast notification
-            window.showToast = function(message, type = 'info') {
-                // Create toast element
-                const toast = document.createElement('div');
-                toast.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full ${type === 'success' ? 'bg-green-500 text-white' : type === 'error' ? 'bg-red-500 text-white' : type === 'warning' ? 'bg-yellow-500 text-white' : 'bg-blue-500 text-white'}`;
-                toast.innerHTML = `
-                    <div class="flex items-center">
-                        <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'} mr-3"></i>
-                        <span>${message}</span>
-                    </div>
-                `;
-                document.body.appendChild(toast);
+        // Handle image loading errors
+        document.addEventListener('error', function(e) {
+            if (e.target.tagName === 'IMG') {
+                e.target.onerror = null; // Prevent infinite loop
+                e.target.style.display = 'none';
 
-                // Animate in
+                // Check if it's a profile picture
+                const parent = e.target.parentElement;
+                if (parent && parent.classList.contains('profile-picture')) {
+                    // Replace with placeholder
+                    parent.innerHTML = '<div class="placeholder"><i class="fas fa-user text-gray-500"></i></div>';
+                }
+            }
+        }, true);
+
+        // Show toast notification
+        window.showToast = function(message, type = 'info') {
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full ${type === 'success' ? 'bg-green-500 text-white' : type === 'error' ? 'bg-red-500 text-white' : type === 'warning' ? 'bg-yellow-500 text-white' : 'bg-blue-500 text-white'}`;
+            toast.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'} mr-3"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            document.body.appendChild(toast);
+
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+                toast.classList.add('translate-x-0');
+            }, 10);
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.classList.remove('translate-x-0');
+                toast.classList.add('translate-x-full');
                 setTimeout(() => {
-                    toast.classList.remove('translate-x-full');
-                    toast.classList.add('translate-x-0');
+                    if (toast.parentElement) {
+                        document.body.removeChild(toast);
+                    }
+                }, 300);
+            }, 3000);
+        };
+
+        // Handle offline/online status
+        function updateConnectionStatus() {
+            const status = navigator.onLine ? 'online' : 'offline';
+            const message = status === 'online' ? 'You are back online!' : 'You are offline. Some features may not work.';
+            const type = status === 'online' ? 'success' : 'warning';
+
+            window.showToast(message, type);
+
+            // Update online status in database
+            if (status === 'online' && userAuthenticated) {
+                updateOnlineStatus(true);
+            }
+        }
+
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+
+        // Initialize connection status
+        if (!navigator.onLine) {
+            window.showToast('You are offline. Some features may not work.', 'warning');
+        }
+
+        // Handle push notifications permission
+        function requestNotificationPermission() {
+            if (!('Notification' in window)) {
+                console.log('This browser does not support notifications');
+                return;
+            }
+
+            if (Notification.permission === 'default') {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        window.showToast('Notifications enabled!', 'success');
+                    }
+                });
+            }
+        }
+
+        // Auto-request notification permission on user interaction
+        document.addEventListener('click', function() {
+            if (Notification.permission === 'default') {
+                // Request after a delay to avoid interrupting user
+                setTimeout(requestNotificationPermission, 2000);
+            }
+        }, { once: true });
+
+        // Handle theme preference
+        function getPreferredTheme() {
+            if (localStorage.getItem('theme')) {
+                return localStorage.getItem('theme');
+            }
+            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+
+        function setTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            localStorage.setItem('theme', theme);
+        }
+
+        // Initialize theme
+        const preferredTheme = getPreferredTheme();
+        setTheme(preferredTheme);
+
+        // Listen for theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            if (!localStorage.getItem('theme')) {
+                setTheme(e.matches ? 'dark' : 'light');
+            }
+        });
+
+        // Handle scroll to top
+        const scrollToTopBtn = document.createElement('button');
+        scrollToTopBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
+        scrollToTopBtn.className = 'fixed bottom-20 right-4 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition duration-200 opacity-0 transform translate-y-10 transition-all duration-300 z-40';
+        scrollToTopBtn.style.display = 'none';
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        document.body.appendChild(scrollToTopBtn);
+
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                scrollToTopBtn.style.display = 'block';
+                setTimeout(() => {
+                    scrollToTopBtn.classList.remove('opacity-0', 'translate-y-10');
+                    scrollToTopBtn.classList.add('opacity-100', 'translate-y-0');
                 }, 10);
-
-                // Remove after 3 seconds
+            } else {
+                scrollToTopBtn.classList.remove('opacity-100', 'translate-y-0');
+                scrollToTopBtn.classList.add('opacity-0', 'translate-y-10');
                 setTimeout(() => {
-                    toast.classList.remove('translate-x-0');
-                    toast.classList.add('translate-x-full');
-                    setTimeout(() => {
-                        if (toast.parentElement) {
-                            document.body.removeChild(toast);
+                    scrollToTopBtn.style.display = 'none';
+                }, 300);
+            }
+        });
+
+        // Handle lazy loading images
+        if ('IntersectionObserver' in window) {
+            const imageObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        const src = img.getAttribute('data-src');
+                        if (src) {
+                            img.src = src;
+                            img.removeAttribute('data-src');
                         }
-                    }, 300);
-                }, 3000);
-            };
-
-            // Handle offline/online status
-            function updateConnectionStatus() {
-                const status = navigator.onLine ? 'online' : 'offline';
-                const message = status === 'online' ? 'You are back online!' : 'You are offline. Some features may not work.';
-                const type = status === 'online' ? 'success' : 'warning';
-
-                window.showToast(message, type);
-
-                // Update online status in database
-                if (status === 'online' && userAuthenticated) {
-                    updateOnlineStatus(true);
-                }
-            }
-
-            window.addEventListener('online', updateConnectionStatus);
-            window.addEventListener('offline', updateConnectionStatus);
-
-            // Initialize connection status
-            if (!navigator.onLine) {
-                window.showToast('You are offline. Some features may not work.', 'warning');
-            }
-
-            // Handle push notifications permission
-            function requestNotificationPermission() {
-                if (!('Notification' in window)) {
-                    console.log('This browser does not support notifications');
-                    return;
-                }
-
-                if (Notification.permission === 'default') {
-                    Notification.requestPermission().then(permission => {
-                        if (permission === 'granted') {
-                            window.showToast('Notifications enabled!', 'success');
-                        }
-                    });
-                }
-            }
-
-            // Auto-request notification permission on user interaction
-            document.addEventListener('click', function() {
-                if (Notification.permission === 'default') {
-                    // Request after a delay to avoid interrupting user
-                    setTimeout(requestNotificationPermission, 2000);
-                }
-            }, { once: true });
-
-            // Handle theme preference
-            function getPreferredTheme() {
-                if (localStorage.getItem('theme')) {
-                    return localStorage.getItem('theme');
-                }
-                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            }
-
-            function setTheme(theme) {
-                if (theme === 'dark') {
-                    document.documentElement.classList.add('dark');
-                } else {
-                    document.documentElement.classList.remove('dark');
-                }
-                localStorage.setItem('theme', theme);
-            }
-
-            // Initialize theme
-            const preferredTheme = getPreferredTheme();
-            setTheme(preferredTheme);
-
-            // Listen for theme changes
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-                if (!localStorage.getItem('theme')) {
-                    setTheme(e.matches ? 'dark' : 'light');
-                }
+                        imageObserver.unobserve(img);
+                    }
+                });
             });
 
-            // Handle scroll to top
-            const scrollToTopBtn = document.createElement('button');
-            scrollToTopBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
-            scrollToTopBtn.className = 'fixed bottom-20 right-4 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition duration-200 opacity-0 transform translate-y-10 transition-all duration-300 z-40';
-            scrollToTopBtn.style.display = 'none';
-            scrollToTopBtn.addEventListener('click', () => {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.querySelectorAll('img[data-src]').forEach(img => {
+                imageObserver.observe(img);
             });
-            document.body.appendChild(scrollToTopBtn);
+        }
 
-            window.addEventListener('scroll', () => {
-                if (window.scrollY > 300) {
-                    scrollToTopBtn.style.display = 'block';
-                    setTimeout(() => {
-                        scrollToTopBtn.classList.remove('opacity-0', 'translate-y-10');
-                        scrollToTopBtn.classList.add('opacity-100', 'translate-y-0');
-                    }, 10);
-                } else {
-                    scrollToTopBtn.classList.remove('opacity-100', 'translate-y-0');
-                    scrollToTopBtn.classList.add('opacity-0', 'translate-y-10');
-                    setTimeout(() => {
-                        scrollToTopBtn.style.display = 'none';
-                    }, 300);
-                }
+        // Handle video autoplay
+        document.querySelectorAll('video').forEach(video => {
+            video.addEventListener('play', function() {
+                // Pause other videos when one starts playing
+                document.querySelectorAll('video').forEach(otherVideo => {
+                    if (otherVideo !== video && !otherVideo.paused) {
+                        otherVideo.pause();
+                    }
+                });
             });
+        });
 
-            // Handle lazy loading images
-            if ('IntersectionObserver' in window) {
-                const imageObserver = new IntersectionObserver((entries) => {
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting) {
-                            const img = entry.target;
-                            const src = img.getAttribute('data-src');
-                            if (src) {
-                                img.src = src;
-                                img.removeAttribute('data-src');
+        // Handle file upload preview
+        document.addEventListener('change', function(e) {
+            if (e.target.type === 'file' && e.target.accept && e.target.accept.includes('image')) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const previewId = e.target.getAttribute('data-preview');
+                        if (previewId) {
+                            const preview = document.getElementById(previewId);
+                            if (preview) {
+                                preview.src = event.target.result;
+                                preview.style.display = 'block';
                             }
-                            imageObserver.unobserve(img);
                         }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+
+        // Handle password visibility toggle
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('toggle-password')) {
+                const input = e.target.previousElementSibling;
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    e.target.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                } else {
+                    input.type = 'password';
+                    e.target.innerHTML = '<i class="fas fa-eye"></i>';
+                }
+            }
+        });
+
+        // Initialize tooltips
+        document.querySelectorAll('[title]').forEach(element => {
+            element.addEventListener('mouseenter', function() {
+                const tooltip = document.createElement('div');
+                tooltip.className = 'fixed bg-gray-900 text-white text-sm px-2 py-1 rounded shadow-lg z-50';
+                tooltip.textContent = this.getAttribute('title');
+                document.body.appendChild(tooltip);
+
+                const rect = this.getBoundingClientRect();
+                tooltip.style.top = (rect.top - tooltip.offsetHeight - 5) + 'px';
+                tooltip.style.left = (rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2)) + 'px';
+
+                this._tooltip = tooltip;
+            });
+
+            element.addEventListener('mouseleave', function() {
+                if (this._tooltip) {
+                    document.body.removeChild(this._tooltip);
+                    delete this._tooltip;
+                }
+            });
+        });
+
+        // Handle session timeout warning
+        let sessionTimeout;
+        function resetSessionTimer() {
+            clearTimeout(sessionTimeout);
+
+            // Warn user 1 minute before session expires (assuming 15 minute session)
+            sessionTimeout = setTimeout(() => {
+                if (userAuthenticated) {
+                    window.showToast('Your session will expire in 1 minute. Please save your work.', 'warning');
+                }
+            }, 14 * 60 * 1000); // 14 minutes
+        }
+
+        // Reset timer on user activity
+        ['click', 'keypress', 'scroll', 'mousemove'].forEach(event => {
+            document.addEventListener(event, resetSessionTimer, { passive: true });
+        });
+
+        // Initialize session timer
+        resetSessionTimer();
+
+        // Handle browser back/forward cache (bfcache)
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                // Page was loaded from bfcache
+                location.reload();
+            }
+        });
+
+        // Handle service worker registration for PWA
+        if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('{% static "js/service-worker.js" %}')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('ServiceWorker registration failed: ', error);
                     });
-                });
+            });
+        }
 
-                document.querySelectorAll('img[data-src]').forEach(img => {
-                    imageObserver.observe(img);
-                });
+        // Handle PWA install prompt
+        let deferredPrompt;
+        const installButton = document.createElement('button');
+        installButton.innerHTML = '<i class="fas fa-download mr-2"></i>Install App';
+        installButton.className = 'fixed bottom-24 right-4 bg-purple-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-purple-700 transition duration-200 hidden z-40';
+        installButton.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    installButton.style.display = 'none';
+                }
+                deferredPrompt = null;
             }
+        });
+        document.body.appendChild(installButton);
 
-            // Handle video autoplay
-            document.querySelectorAll('video').forEach(video => {
-                video.addEventListener('play', function() {
-                    // Pause other videos when one starts playing
-                    document.querySelectorAll('video').forEach(otherVideo => {
-                        if (otherVideo !== video && !otherVideo.paused) {
-                            otherVideo.pause();
-                        }
-                    });
-                });
-            });
-
-            // Handle file upload preview
-            document.addEventListener('change', function(e) {
-                if (e.target.type === 'file' && e.target.accept && e.target.accept.includes('image')) {
-                    const file = e.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = function(event) {
-                            const previewId = e.target.getAttribute('data-preview');
-                            if (previewId) {
-                                const preview = document.getElementById(previewId);
-                                if (preview) {
-                                    preview.src = event.target.result;
-                                    preview.style.display = 'block';
-                                }
-                            }
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                }
-            });
-
-            // Handle password visibility toggle
-            document.addEventListener('click', function(e) {
-                if (e.target.classList.contains('toggle-password')) {
-                    const input = e.target.previousElementSibling;
-                    if (input.type === 'password') {
-                        input.type = 'text';
-                        e.target.innerHTML = '<i class="fas fa-eye-slash"></i>';
-                    } else {
-                        input.type = 'password';
-                        e.target.innerHTML = '<i class="fas fa-eye"></i>';
-                    }
-                }
-            });
-
-            // Initialize tooltips
-            document.querySelectorAll('[title]').forEach(element => {
-                element.addEventListener('mouseenter', function() {
-                    const tooltip = document.createElement('div');
-                    tooltip.className = 'fixed bg-gray-900 text-white text-sm px-2 py-1 rounded shadow-lg z-50';
-                    tooltip.textContent = this.getAttribute('title');
-                    document.body.appendChild(tooltip);
-
-                    const rect = this.getBoundingClientRect();
-                    tooltip.style.top = (rect.top - tooltip.offsetHeight - 5) + 'px';
-                    tooltip.style.left = (rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2)) + 'px';
-
-                    this._tooltip = tooltip;
-                });
-
-                element.addEventListener('mouseleave', function() {
-                    if (this._tooltip) {
-                        document.body.removeChild(this._tooltip);
-                        delete this._tooltip;
-                    }
-                });
-            });
-
-            // Handle session timeout warning
-            let sessionTimeout;
-            function resetSessionTimer() {
-                clearTimeout(sessionTimeout);
-
-                // Warn user 1 minute before session expires (assuming 15 minute session)
-                sessionTimeout = setTimeout(() => {
-                    if (userAuthenticated) {
-                        window.showToast('Your session will expire in 1 minute. Please save your work.', 'warning');
-                    }
-                }, 14 * 60 * 1000); // 14 minutes
-            }
-
-            // Reset timer on user activity
-            ['click', 'keypress', 'scroll', 'mousemove'].forEach(event => {
-                document.addEventListener(event, resetSessionTimer, { passive: true });
-            });
-
-            // Initialize session timer
-            resetSessionTimer();
-
-            // Handle browser back/forward cache (bfcache)
-            window.addEventListener('pageshow', function(event) {
-                if (event.persisted) {
-                    // Page was loaded from bfcache
-                    location.reload();
-                }
-            });
-
-            // Handle service worker registration for PWA
-            if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
-                window.addEventListener('load', function() {
-                    navigator.serviceWorker.register('{% static "js/service-worker.js" %}')
-                        .then(registration => {
-                            console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                        })
-                        .catch(error => {
-                            console.log('ServiceWorker registration failed: ', error);
-                        });
-                });
-            }
-
-            // Handle PWA install prompt
-            let deferredPrompt;
-            const installButton = document.createElement('button');
-            installButton.innerHTML = '<i class="fas fa-download mr-2"></i>Install App';
-            installButton.className = 'fixed bottom-24 right-4 bg-purple-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-purple-700 transition duration-200 hidden z-40';
-            installButton.addEventListener('click', async () => {
-                if (deferredPrompt) {
-                    deferredPrompt.prompt();
-                    const { outcome } = await deferredPrompt.userChoice;
-                    if (outcome === 'accepted') {
-                        installButton.style.display = 'none';
-                    }
-                    deferredPrompt = null;
-                }
-            });
-            document.body.appendChild(installButton);
-
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-                installButton.style.display = 'block';
-            });
-
-            // Show loading indicator for slow connections
-            let loadingTimeout = setTimeout(() => {
-                if (document.readyState !== 'complete') {
-                    const loadingOverlay = document.createElement('div');
-                    loadingOverlay.className = 'loading-overlay';
-                    loadingOverlay.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-2"></i><p class="text-gray-600">Loading...</p></div>';
-                    document.body.appendChild(loadingOverlay);
-                }
-            }, 2000);
-
-            window.addEventListener('load', () => {
-                clearTimeout(loadingTimeout);
-                const loadingOverlay = document.querySelector('.loading-overlay');
-                if (loadingOverlay) {
-                    loadingOverlay.remove();
-                }
-            });
-
-            // Final initialization
-            console.log('Base template JavaScript initialized successfully');
-
-            // Set VH on load and resize
-            setVH();
-            window.addEventListener('resize', setVH);
-            window.addEventListener('orientationchange', setVH);
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installButton.style.display = 'block';
         });
 
-        // Global error handler for uncaught errors
-        window.addEventListener('error', function(e) {
-            console.error('Uncaught error:', e.error);
+        // Show loading indicator for slow connections
+        let loadingTimeout = setTimeout(() => {
+            if (document.readyState !== 'complete') {
+                const loadingOverlay = document.createElement('div');
+                loadingOverlay.className = 'loading-overlay';
+                loadingOverlay.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-2"></i><p class="text-gray-600">Loading...</p></div>';
+                document.body.appendChild(loadingOverlay);
+            }
+        }, 2000);
+
+        window.addEventListener('load', () => {
+            clearTimeout(loadingTimeout);
+            const loadingOverlay = document.querySelector('.loading-overlay');
+            if (loadingOverlay) {
+                loadingOverlay.remove();
+            }
         });
 
-        // Handle unhandled promise rejections
-        window.addEventListener('unhandledrejection', function(e) {
-            console.error('Unhandled promise rejection:', e.reason);
-        });
-    </script>
+        // Final initialization
+        console.log('Base template JavaScript initialized successfully');
 
-    {% block extra_js %}{% endblock %}
+        // Set VH on load and resize
+        setVH();
+        window.addEventListener('resize', setVH);
+        window.addEventListener('orientationchange', setVH);
+    });
+
+    // Global error handler for uncaught errors
+    window.addEventListener('error', function(e) {
+        console.error('Uncaught error:', e.error);
+    });
+
+    // Handle unhandled promise rejections
+    window.addEventListener('unhandledrejection', function(e) {
+        console.error('Unhandled promise rejection:', e.reason);
+    });
+</script>
+
+{% block extra_js %}{% endblock %}
 </body>
 </html>
