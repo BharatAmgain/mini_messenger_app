@@ -100,7 +100,6 @@ class Conversation(models.Model):
         if user not in self.participants.all():
             self.participants.add(user)
 
-            # If this is a group, create a notification
             if self.is_group and added_by:
                 from accounts.models import Notification
                 Notification.objects.create(
@@ -118,11 +117,9 @@ class Conversation(models.Model):
         if user in self.participants.all():
             self.participants.remove(user)
 
-            # Remove from admins if they were an admin
             if user in self.admins.all():
                 self.admins.remove(user)
 
-            # If this is a group and there's a system message needed
             if self.is_group and removed_by:
                 Message.objects.create(
                     conversation=self,
@@ -145,7 +142,7 @@ class Message(models.Model):
         ('image', 'Image'),
         ('video', 'Video'),
         ('audio', 'Audio'),
-        ('voice', 'Voice Message'),  # New voice message type
+        ('voice', 'Voice Message'),
         ('file', 'File'),
         ('emoji', 'Emoji'),
     ]
@@ -169,8 +166,8 @@ class Message(models.Model):
     file_size = models.IntegerField(null=True, blank=True)
 
     # Voice message specific fields
-    voice_duration = models.IntegerField(null=True, blank=True)  # Duration in seconds
-    voice_waveform = models.JSONField(null=True, blank=True)  # Store waveform data for visualization
+    voice_duration = models.IntegerField(null=True, blank=True)
+    voice_waveform = models.JSONField(null=True, blank=True)
 
     is_read = models.BooleanField(default=False)
     is_edited = models.BooleanField(default=False)
@@ -214,7 +211,6 @@ class Message(models.Model):
         super().save(*args, **kwargs)
 
         if is_new:
-            # Update conversation's updated_at
             self.conversation.updated_at = self.timestamp
             self.conversation.save(update_fields=['updated_at'])
 
@@ -226,13 +222,10 @@ class Message(models.Model):
         user_id_str = str(user.id)
         if user_id_str in self.reactions:
             if self.reactions[user_id_str] == emoji:
-                # Remove reaction if same emoji
                 del self.reactions[user_id_str]
             else:
-                # Update reaction
                 self.reactions[user_id_str] = emoji
         else:
-            # Add new reaction
             self.reactions[user_id_str] = emoji
 
         self.save(update_fields=['reactions'])
@@ -330,7 +323,7 @@ class UserStatus(models.Model):
         ('online', 'Online'),
         ('offline', 'Offline'),
         ('typing', 'Typing...'),
-        ('recording', 'Recording...'),  # New recording status
+        ('recording', 'Recording...'),
         ('away', 'Away'),
         ('busy', 'Busy'),
     ]
@@ -420,7 +413,7 @@ class ChatNotification(models.Model):
         ('mention', 'Mention'),
         ('reaction', 'Message Reaction'),
         ('reply', 'Message Reply'),
-        ('voice', 'Voice Message'),  # New voice message notification
+        ('voice', 'Voice Message'),
         ('system', 'System Notification'),
     ]
 
@@ -504,7 +497,6 @@ class GroupInvitation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     responded_at = models.DateTimeField(null=True, blank=True)
 
-    # Track if notification was sent
     notification_sent = models.BooleanField(default=False)
 
     class Meta:
@@ -525,10 +517,8 @@ class GroupInvitation(models.Model):
             self.responded_at = timezone.now()
             self.save()
 
-            # Add user to conversation
             self.conversation.participants.add(self.invited_user)
 
-            # Create system message
             Message.objects.create(
                 conversation=self.conversation,
                 sender=self.invited_user,
@@ -536,7 +526,6 @@ class GroupInvitation(models.Model):
                 is_read=True
             )
 
-            # Create notification for inviter
             ChatNotification.objects.create(
                 user=self.invited_by,
                 notification_type='group_invite',
@@ -555,7 +544,6 @@ class GroupInvitation(models.Model):
             self.responded_at = timezone.now()
             self.save()
 
-            # Create notification for inviter
             ChatNotification.objects.create(
                 user=self.invited_by,
                 notification_type='group_invite',
@@ -574,7 +562,6 @@ class GroupInvitation(models.Model):
             self.responded_at = timezone.now()
             self.save()
 
-            # Create notification for invited user
             ChatNotification.objects.create(
                 user=self.invited_user,
                 notification_type='group_invite',
@@ -649,14 +636,12 @@ class ChatCall(models.Model):
 
     started_at = models.DateTimeField(null=True, blank=True)
     ended_at = models.DateTimeField(null=True, blank=True)
-    duration = models.IntegerField(default=0)  # in seconds
+    duration = models.IntegerField(default=0)
 
-    # Call quality metrics
     call_quality = models.CharField(max_length=20, blank=True, null=True)
     is_recorded = models.BooleanField(default=False)
     recording_url = models.URLField(blank=True, null=True)
 
-    # Additional metadata
     caller_ip = models.GenericIPAddressField(blank=True, null=True)
     recipient_ip = models.GenericIPAddressField(blank=True, null=True)
     call_direction = models.CharField(
@@ -712,13 +697,11 @@ class ChatCall(models.Model):
             self.status = status
             self.ended_at = timezone.now()
 
-            # Calculate duration if call was answered
             if self.started_at:
                 self.duration = int((self.ended_at - self.started_at).total_seconds())
 
             self.save(update_fields=['status', 'ended_at', 'duration'])
 
-            # Create call ended message
             if status == 'completed':
                 duration_display = self.formatted_duration
                 call_type_display = "Video call" if self.call_type == 'video' else "Voice call"
@@ -727,7 +710,7 @@ class ChatCall(models.Model):
                     sender=self.caller,
                     content=f"{call_type_display} ended ({duration_display})",
                     is_read=True
-                )
+            )
 
             return True
         return False
@@ -783,7 +766,7 @@ class MessageReaction(models.Model):
         on_delete=models.CASCADE,
         related_name='message_reactions'
     )
-    reaction = models.CharField(max_length=10)  # Emoji character
+    reaction = models.CharField(max_length=10)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -818,7 +801,7 @@ class PinnedMessage(models.Model):
         related_name='pinned_messages'
     )
     pinned_at = models.DateTimeField(auto_now_add=True)
-    note = models.TextField(blank=True, null=True)  # Optional note about why it's pinned
+    note = models.TextField(blank=True, null=True)
 
     class Meta:
         ordering = ['-pinned_at']
@@ -844,16 +827,13 @@ class ConversationSettings(models.Model):
         related_name='user_settings'
     )
 
-    # Notification settings
     mute_notifications = models.BooleanField(default=False)
     custom_notification_sound = models.CharField(max_length=100, blank=True, null=True)
     hide_preview = models.BooleanField(default=False)
 
-    # Display settings
     custom_nickname = models.CharField(max_length=50, blank=True, null=True)
-    custom_color = models.CharField(max_length=7, blank=True, null=True)  # Hex color
+    custom_color = models.CharField(max_length=7, blank=True, null=True)
 
-    # Privacy settings
     archive_conversation = models.BooleanField(default=False)
     hide_conversation = models.BooleanField(default=False)
 
@@ -878,7 +858,7 @@ class ChatMedia(models.Model):
         ('image', 'Image'),
         ('video', 'Video'),
         ('audio', 'Audio'),
-        ('voice', 'Voice Message'),  # New voice message type
+        ('voice', 'Voice Message'),
         ('document', 'Document'),
         ('sticker', 'Sticker'),
         ('gif', 'GIF'),
@@ -900,25 +880,21 @@ class ChatMedia(models.Model):
     media_type = models.CharField(max_length=10, choices=MEDIA_TYPES)
     file = models.FileField(upload_to='chat_media/')
     file_name = models.CharField(max_length=255)
-    file_size = models.IntegerField()  # in bytes
+    file_size = models.IntegerField()
     mime_type = models.CharField(max_length=100)
 
-    # Image/Video specific fields
     width = models.IntegerField(null=True, blank=True)
     height = models.IntegerField(null=True, blank=True)
-    duration = models.IntegerField(null=True, blank=True)  # in seconds for video/audio
+    duration = models.IntegerField(null=True, blank=True)
 
-    # Voice message specific fields
-    waveform = models.JSONField(null=True, blank=True)  # Store waveform data for visualization
+    waveform = models.JSONField(null=True, blank=True)
 
-    # Thumbnail for videos and large images
     thumbnail = models.ImageField(
         upload_to='chat_media/thumbnails/',
         null=True,
         blank=True
     )
 
-    # Metadata
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -926,7 +902,6 @@ class ChatMedia(models.Model):
     )
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
-    # Privacy/Deletion
     is_deleted = models.BooleanField(default=False)
     deleted_at = models.DateTimeField(null=True, blank=True)
     deleted_by = models.ForeignKey(
@@ -980,9 +955,7 @@ from django.dispatch import receiver
 def create_message_notification(sender, instance, created, **kwargs):
     """Create chat notification for new messages"""
     if created and not instance.is_unsent:
-        # Create notifications for other participants
         for participant in instance.conversation.participants.exclude(id=instance.sender.id):
-            # Check if participant has muted this conversation
             settings = ConversationSettings.objects.filter(
                 user=participant,
                 conversation=instance.conversation,
@@ -990,10 +963,8 @@ def create_message_notification(sender, instance, created, **kwargs):
             ).exists()
 
             if not settings:
-                # Determine notification type
                 notif_type = 'voice' if instance.message_type == 'voice' else 'message'
 
-                # Create message preview
                 if instance.message_type == 'voice':
                     preview = f"🎤 Voice message ({instance.voice_duration}s)"
                 elif instance.message_type == 'image':
@@ -1028,13 +999,11 @@ def send_group_invitation_notification(sender, instance, created, **kwargs):
 def conversation_participants_changed(sender, instance, action, pk_set, **kwargs):
     """Handle conversation participants changes"""
     if action == "post_add":
-        # New participants added
         for user_id in pk_set:
             from django.contrib.auth import get_user_model
             User = get_user_model()
             try:
                 user = User.objects.get(id=user_id)
-                # Create conversation settings for new participant
                 ConversationSettings.objects.get_or_create(
                     user=user,
                     conversation=instance
@@ -1063,17 +1032,13 @@ def delete_media_file(sender, instance, **kwargs):
     instance.delete_file()
 
 
-# Find this signal in chat/models.py and replace it with:
-
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_user_status(sender, instance, created, **kwargs):
-    """Create UserStatus when a new user is created - FIXED to avoid duplicates"""
+    """Create UserStatus when a new user is created"""
     if created:
-        # Check if status already exists (to avoid duplicate errors)
         if not UserStatus.objects.filter(user=instance).exists():
             UserStatus.objects.create(user=instance)
             print(f"✓ Created UserStatus for user: {instance.username}")
-    # Always ensure user has a status (even if not newly created)
     else:
         UserStatus.objects.get_or_create(user=instance)
 

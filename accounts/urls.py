@@ -12,13 +12,12 @@ urlpatterns = [
     # Profile
     path('profile/', views.profile, name='profile'),
     path('profile/edit/', views.profile_edit, name='profile_edit'),
-    # FIXED: Accept both integer and UUID for user profile
     re_path(r'^profile/(?P<user_id>[^/]+)/$', views.view_user_profile, name='view_profile'),
 
     # API endpoints
     path('api/get-profile/', views.get_profile, name='get_profile'),
     path('api/update-profile/', views.update_profile, name='update_profile'),
-    path('api/upload-profile-photo/', views.upload_profile_photo, name='upload_profile_photo'),  # NEW
+    path('api/upload-profile-photo/', views.upload_profile_photo, name='upload_profile_photo'),
     path('api/get-unread-count/', views.get_unread_count, name='get_unread_count'),
     path('api/refresh-profile/', views.refresh_profile, name='refresh_profile'),
     path('api/test-profile-update/', views.test_profile_update, name='test_profile_update'),
@@ -62,7 +61,7 @@ urlpatterns = [
     # Resend OTP
     path('resend-otp/<str:otp_type>/', views.resend_otp, name='resend_otp'),
 
-    # Friend management - FIXED to handle both integer and UUID for request_id
+    # Friend management
     path('friend-requests/', views.friend_requests, name='friend_requests'),
     re_path(r'^friend-request/send/(?P<user_id>[^/]+)/$', views.send_friend_request, name='send_friend_request'),
     re_path(r'^friend-request/cancel/(?P<user_id>[^/]+)/$', views.cancel_friend_request, name='cancel_friend_request'),
@@ -76,7 +75,7 @@ urlpatterns = [
     path('discover/', views.discover_users, name='discover_users'),
     path('search/', views.search_users, name='search_users'),
 
-    # NOTIFICATION MANAGEMENT - FIXED to handle UUID
+    # NOTIFICATION MANAGEMENT
     path('notifications/', views.notifications, name='notifications'),
     re_path(r'^notifications/mark-read/(?P<notification_id>[^/]+)/$', views.mark_notification_read,
             name='mark_notification_read'),

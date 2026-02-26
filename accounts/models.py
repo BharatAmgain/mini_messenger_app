@@ -13,7 +13,6 @@ import re
 
 class CustomUser(AbstractUser):
     """Extended User model with additional fields"""
-    # DO NOT add an id field here - AbstractUser already provides it!
 
     # Profile fields
     profile_picture = models.ImageField(
@@ -55,7 +54,7 @@ class CustomUser(AbstractUser):
     last_seen = models.DateTimeField(default=timezone.now)
     is_online = models.BooleanField(default=False)
 
-    # Account verification - This is a field, NOT a property
+    # Account verification
     is_verified = models.BooleanField(default=False)
     verification_date = models.DateTimeField(null=True, blank=True)
 
@@ -148,11 +147,9 @@ class CustomUser(AbstractUser):
         if self == other_user:
             return 'self'
 
-        # Check if friends
         if Friendship.are_friends(self, other_user):
             return 'friends'
 
-        # Check for pending friend requests
         sent_request = FriendRequest.objects.filter(
             from_user=self,
             to_user=other_user,
@@ -177,18 +174,16 @@ class CustomUser(AbstractUser):
         """Custom validation"""
         errors = {}
 
-        # Email validation - case-insensitive check
+        # Email validation
         if self.email:
             self.email = self.email.strip().lower()
 
-            # Email format validation
             email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
             if not re.match(email_pattern, self.email):
                 errors['email'] = 'Please enter a valid email address.'
 
-            # Email uniqueness validation
             query = CustomUser.objects.filter(email__iexact=self.email)
-            if self.pk:  # For existing users
+            if self.pk:
                 query = query.exclude(id=self.id)
 
             if query.exists():
@@ -198,19 +193,16 @@ class CustomUser(AbstractUser):
         if self.phone_number:
             self.phone_number = self.phone_number.strip()
 
-            # Basic phone validation
             if self.phone_number and not self.phone_number.startswith('+'):
                 errors['phone_number'] = 'Phone number must start with + for international format.'
             elif self.phone_number:
-                # Remove + and check if rest contains only digits and spaces
                 cleaned = self.phone_number[1:].replace(' ', '').replace('-', '')
                 if cleaned and not cleaned.isdigit():
                     errors['phone_number'] = 'Phone number can only contain digits, spaces, and hyphens after +.'
 
-            # Phone uniqueness validation (only if valid format)
             if self.phone_number and 'phone_number' not in errors:
                 query = CustomUser.objects.filter(phone_number=self.phone_number)
-                if self.pk:  # For existing users
+                if self.pk:
                     query = query.exclude(id=self.id)
 
                 if query.exists():
@@ -236,7 +228,6 @@ class CustomUser(AbstractUser):
             if self.date_of_birth > timezone.now().date():
                 errors['date_of_birth'] = 'Date of birth cannot be in the future.'
             else:
-                # Check if user is at least 13 years old
                 age = (timezone.now().date() - self.date_of_birth).days / 365.25
                 if age < 13:
                     errors['date_of_birth'] = 'You must be at least 13 years old to register.'
@@ -254,27 +245,22 @@ class CustomUser(AbstractUser):
             elif len(self.website) > 200:
                 errors['website'] = 'Website URL is too long.'
 
-        # Raise validation errors if any
         if errors:
             raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
         """Override save to handle validation and updates"""
-        # CRITICAL FIX: Ensure is_verified is always a boolean
         if hasattr(self, 'is_verified'):
             if callable(self.is_verified):
                 self.is_verified = self.is_verified()
             else:
                 self.is_verified = bool(self.is_verified)
 
-        # Run full validation before saving
         self.full_clean()
 
-        # Set verification_date if user is verified on creation
         if self.is_verified and not self.verification_date:
             self.verification_date = timezone.now()
         else:
-            # If is_verified changed from False to True, set verification_date
             if self.pk:
                 try:
                     old_user = CustomUser.objects.get(id=self.id)
@@ -283,11 +269,9 @@ class CustomUser(AbstractUser):
                 except CustomUser.DoesNotExist:
                     pass
 
-        # Ensure email is lowercase for consistency
         if self.email:
             self.email = self.email.lower().strip()
 
-        # Remove whitespace from phone number
         if self.phone_number:
             self.phone_number = self.phone_number.strip()
 
@@ -396,16 +380,13 @@ class FriendRequest(models.Model):
         """Validate friend request"""
         errors = {}
 
-        # Cannot send friend request to self
         if self.from_user == self.to_user:
             errors['to_user'] = 'You cannot send a friend request to yourself.'
 
-        # Check if friendship already exists
-        if self.pk is None:  # Only check for new requests
+        if self.pk is None:
             if Friendship.are_friends(self.from_user, self.to_user):
                 errors['to_user'] = 'You are already friends with this user.'
 
-            # Check for existing pending request
             existing_request = FriendRequest.objects.filter(
                 from_user=self.from_user,
                 to_user=self.to_user,
@@ -414,7 +395,6 @@ class FriendRequest(models.Model):
             if existing_request:
                 errors['to_user'] = 'A pending friend request already exists.'
 
-        # Validate message length
         if self.message and len(self.message) > 1000:
             errors['message'] = 'Message cannot be longer than 1000 characters.'
 
@@ -426,10 +406,8 @@ class FriendRequest(models.Model):
         self.status = 'accepted'
         self.save(update_fields=['status', 'updated_at'])
 
-        # Create friendship
         Friendship.create_friendship(self.from_user, self.to_user)
 
-        # Create notification for the requester
         Notification.objects.create(
             user=self.from_user,
             notification_type='friend_request',
@@ -445,7 +423,6 @@ class FriendRequest(models.Model):
         self.status = 'rejected'
         self.save(update_fields=['status', 'updated_at'])
 
-        # Create notification for the requester
         Notification.objects.create(
             user=self.from_user,
             notification_type='friend_request',
@@ -461,7 +438,6 @@ class FriendRequest(models.Model):
         self.status = 'cancelled'
         self.save(update_fields=['status', 'updated_at'])
 
-        # Create notification for the receiver
         Notification.objects.create(
             user=self.to_user,
             notification_type='friend_request',
@@ -501,14 +477,12 @@ class Friendship(models.Model):
 
     def clean(self):
         """Validate friendship"""
-        # Cannot be friends with self
         if self.user1 == self.user2:
             raise ValidationError('A user cannot be friends with themselves.')
 
     @classmethod
     def create_friendship(cls, user1, user2):
         """Create a mutual friendship"""
-        # Ensure consistent ordering
         if user1.id > user2.id:
             user1, user2 = user2, user1
 
@@ -518,7 +492,6 @@ class Friendship(models.Model):
         )
 
         if created:
-            # Create notifications for both users
             Notification.objects.create(
                 user=user1,
                 notification_type='system',
@@ -576,7 +549,6 @@ class Friendship(models.Model):
             (Q(user1=user2) & Q(user2=user1))
         ).delete()
 
-        # Create notifications
         Notification.objects.create(
             user=user1,
             notification_type='system',
@@ -755,11 +727,9 @@ class BlockedUser(models.Model):
 
     def clean(self):
         """Validate blocked user"""
-        # Cannot block self
         if self.blocker == self.blocked:
             raise ValidationError('You cannot block yourself.')
 
-        # Validate reason length
         if self.reason and len(self.reason) > 500:
             raise ValidationError({'reason': 'Reason cannot be longer than 500 characters.'})
 
@@ -772,7 +742,7 @@ class BlockedUser(models.Model):
         ).exists()
 
 
-# Signal handlers at the bottom to avoid circular imports
+# Signal handlers
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 
@@ -790,7 +760,6 @@ def update_last_seen_on_save(sender, instance, **kwargs):
     """Update last_seen when user saves their profile"""
     if instance.online_status == 'online':
         instance.last_seen = timezone.now()
-        # Avoid infinite recursion
         if 'update_fields' not in kwargs:
             try:
                 instance.save(update_fields=['last_seen'])
@@ -815,7 +784,6 @@ def create_friend_request_notification(sender, instance, created, **kwargs):
 def update_friend_request_notification(sender, instance, **kwargs):
     """Update notification when friend request status changes"""
     if instance.status == 'accepted':
-        # Create notification for the requester
         Notification.objects.create(
             user=instance.from_user,
             notification_type='friend_request',
@@ -824,7 +792,6 @@ def update_friend_request_notification(sender, instance, **kwargs):
             related_url=f"/accounts/profile/{instance.to_user.id}/"
         )
 
-        # Archive the original notification for the receiver
         Notification.objects.filter(
             user=instance.to_user,
             notification_type='friend_request',
@@ -832,7 +799,6 @@ def update_friend_request_notification(sender, instance, **kwargs):
         ).update(is_archived=True)
 
     elif instance.status == 'rejected':
-        # Create notification for the requester
         Notification.objects.create(
             user=instance.from_user,
             notification_type='friend_request',
@@ -841,7 +807,6 @@ def update_friend_request_notification(sender, instance, **kwargs):
             related_url="/accounts/friend-requests/"
         )
 
-        # Archive the original notification
         Notification.objects.filter(
             user=instance.to_user,
             notification_type='friend_request',
@@ -849,7 +814,6 @@ def update_friend_request_notification(sender, instance, **kwargs):
         ).update(is_archived=True)
 
     elif instance.status == 'cancelled':
-        # Create notification for the receiver
         Notification.objects.create(
             user=instance.to_user,
             notification_type='friend_request',
@@ -863,7 +827,6 @@ def update_friend_request_notification(sender, instance, **kwargs):
 def create_block_notification(sender, instance, created, **kwargs):
     """Create notification when user is blocked"""
     if created:
-        # Notification for blocked user
         Notification.objects.create(
             user=instance.blocked,
             notification_type='system',
@@ -872,7 +835,6 @@ def create_block_notification(sender, instance, created, **kwargs):
             related_url="/accounts/settings/"
         )
 
-        # Notification for blocker
         Notification.objects.create(
             user=instance.blocker,
             notification_type='system',
@@ -881,7 +843,6 @@ def create_block_notification(sender, instance, created, **kwargs):
             related_url="/chat/blocked-users/"
         )
 
-        # Remove any existing friendship
         if Friendship.are_friends(instance.blocker, instance.blocked):
             Friendship.remove_friendship(instance.blocker, instance.blocked)
 
@@ -889,7 +850,6 @@ def create_block_notification(sender, instance, created, **kwargs):
 @receiver(post_delete, sender=BlockedUser)
 def create_unblock_notification(sender, instance, **kwargs):
     """Create notification when user is unblocked"""
-    # Notification for unblocked user
     Notification.objects.create(
         user=instance.blocked,
         notification_type='system',
@@ -898,7 +858,6 @@ def create_unblock_notification(sender, instance, **kwargs):
         related_url="/accounts/settings/"
     )
 
-    # Notification for unblocker
     Notification.objects.create(
         user=instance.blocker,
         notification_type='system',
@@ -906,11 +865,3 @@ def create_unblock_notification(sender, instance, **kwargs):
         message=f"You have unblocked {instance.blocked.username}",
         related_url="/chat/discover/"
     )
-
-
-@receiver(post_save, sender=Friendship)
-def create_friendship_notification(sender, instance, created, **kwargs):
-    """Create notification when friendship is created"""
-    if created:
-        # Notifications are already created in create_friendship method
-        pass

@@ -1,4 +1,4 @@
-<!-- templates/chat/conversation.html - COMPLETE WITH VOICE MESSAGES -->
+<!-- templates/chat/conversation.html - COMPLETE WITH DOWNLOAD SUPPORT -->
 {% extends 'base.html' %}
 {% load static %}
 
@@ -198,7 +198,7 @@
                                                  style="height: {{ height }}px;"></div>
                                             {% endfor %}
                                         {% else %}
-                                            <!-- Default waveform if none provided -->
+                                            <!-- Default waveform -->
                                             {% for i in "12345678901234567890"|make_list %}
                                             <div class="wave-bar w-1 {% if message.sender == request.user %}bg-white{% else %}bg-blue-500{% endif %} rounded-full"
                                                  style="height: {% cycle '15' '25' '35' '40' '30' '20' '10' '25' '35' '30' '20' '15' '25' '35' '40' '30' '20' '10' '15' '25' %}px;"></div>
@@ -227,9 +227,11 @@
                                         {{ message.get_file_size_display }}
                                     </p>
                                 </div>
-                                <a href="{{ message.file.url }}" download
+                                <a href="{% url 'download_file' message.id %}"
+                                   download
                                    class="flex-shrink-0 p-2 {% if message.sender == request.user %}bg-white bg-opacity-20 hover:bg-opacity-30{% else %}bg-blue-100 hover:bg-blue-200{% endif %} rounded-lg transition duration-200"
-                                   title="Download file">
+                                   title="Download file"
+                                   onclick="downloadFile('{{ message.id }}', '{{ message.file_name|escapejs }}'); return false;">
                                     <i class="fas fa-download {% if message.sender == request.user %}text-white{% else %}text-blue-600{% endif %} text-sm"></i>
                                 </a>
                             </div>
@@ -274,10 +276,9 @@
                         {% endif %}
                     </div>
 
-                    <!-- Message Actions (hover menu) -->
+                    <!-- Message Actions -->
                     {% if message.sender == request.user and not message.is_unsent %}
                     <div class="message-actions absolute -top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-1 hidden group-hover:flex space-x-1">
-                        <!-- Edit Button (only for text messages) -->
                         {% if message.message_type == 'text' %}
                         <button onclick="editMessage('{{ message.id }}')"
                                 class="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition duration-200"
@@ -286,14 +287,12 @@
                         </button>
                         {% endif %}
 
-                        <!-- Unsend Button -->
                         <button onclick="unsendMessage('{{ message.id }}')"
                                 class="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition duration-200"
                                 title="Unsend message">
                             <i class="fas fa-trash text-xs"></i>
                         </button>
 
-                        <!-- React Button -->
                         <div class="relative">
                             <button onclick="toggleReactions('{{ message.id }}')"
                                     class="p-1 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition duration-200"
@@ -301,7 +300,6 @@
                                 <i class="fas fa-smile text-xs"></i>
                             </button>
 
-                            <!-- Reaction Picker -->
                             <div id="reactions-{{ message.id }}" class="reaction-picker absolute bottom-full left-0 bg-white border border-gray-300 rounded-lg shadow-lg p-2 hidden grid grid-cols-3 gap-1 z-50">
                                 <button onclick="addReaction('{{ message.id }}', '👍')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">👍</button>
                                 <button onclick="addReaction('{{ message.id }}', '❤️')" class="p-1 hover:bg-gray-100 rounded text-lg transition duration-200">❤️</button>
@@ -509,7 +507,7 @@
     </div>
 </div>
 
-<!-- Block User Modal - FIXED: Only show if other_user exists -->
+<!-- Block User Modal -->
 {% if other_user %}
 <div id="blockModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
     <div class="bg-white rounded-lg p-6 w-96">
@@ -534,7 +532,6 @@
 </div>
 {% endif %}
 
-<!-- Enhanced JavaScript for real-time messaging with voice recording -->
 <script>
     // Global variables
     const conversationId = "{{ conversation.id }}";
@@ -603,6 +600,28 @@
         }, 3000);
     }
 
+    // Download file function - FIXED for mobile
+    async function downloadFile(messageId, fileName) {
+        try {
+            const response = await fetch(`/chat/download/${messageId}/`);
+            if (!response.ok) throw new Error('Download failed');
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName || 'file';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            showToast('Download started', 'success');
+        } catch (error) {
+            console.error('Download error:', error);
+            showToast('Failed to download file', 'error');
+        }
+    }
+
     // Voice Recording Functions
     async function toggleVoiceRecording() {
         if (!isRecording) {
@@ -626,21 +645,17 @@
             mediaRecorder.onstop = async () => {
                 const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
 
-                // Calculate duration
                 const duration = Math.round((Date.now() - recordingStartTime) / 1000);
 
-                // Generate waveform data (simplified for demo)
                 for (let i = 0; i < 20; i++) {
                     voiceWaveformData.push(Math.floor(Math.random() * 30) + 10);
                 }
 
-                // Convert to base64
                 const reader = new FileReader();
                 reader.readAsDataURL(audioBlob);
                 reader.onloadend = function() {
                     const base64Audio = reader.result;
 
-                    // Send voice message
                     const formData = new FormData();
                     formData.append('csrfmiddlewaretoken', csrftoken);
                     formData.append('is_voice', 'true');
@@ -671,10 +686,8 @@
                     });
                 };
 
-                // Stop all tracks
                 stream.getTracks().forEach(track => track.stop());
 
-                // Hide recording indicator
                 recordingIndicator.classList.add('hidden');
                 voiceRecordBtn.classList.remove('bg-red-500', 'text-white');
             };
@@ -683,11 +696,9 @@
             isRecording = true;
             recordingStartTime = Date.now();
 
-            // Update UI
             voiceRecordBtn.classList.add('bg-red-500', 'text-white');
             recordingIndicator.classList.remove('hidden');
 
-            // Start timer
             recordingInterval = setInterval(updateRecordingTimer, 1000);
 
             showToast('Recording started...', 'info');
@@ -745,7 +756,7 @@
         }
     }
 
-    // Add message to UI (existing function but enhanced for voice)
+    // Add message to UI
     function addMessageToUI(message) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message-group flex ${message.is_own ? 'justify-end' : 'justify-start'}`;
@@ -760,12 +771,10 @@
             <div class="message-bubble relative group max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isOwn ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-900'}">
         `;
 
-        // Message header for group
         if (isGroup && !isOwn && !message.is_unsent) {
             messageHTML += `<p class="text-xs font-medium ${isOwn ? 'text-blue-100' : 'text-blue-600'} mb-1">${message.sender}</p>`;
         }
 
-        // Message content
         if (message.is_unsent) {
             messageHTML += `<p class="text-sm italic opacity-70">This message was unsent</p>`;
         } else {
@@ -830,7 +839,6 @@
                         messageHTML += `<div class="wave-bar w-1 ${isOwn ? 'bg-white' : 'bg-blue-500'} rounded-full" style="height: ${height}px;"></div>`;
                     });
                 } else {
-                    // Default waveform
                     for (let i = 0; i < 20; i++) {
                         const height = [15, 25, 35, 40, 30, 20, 10, 25, 35, 30, 20, 15, 25, 35, 40, 30, 20, 10, 15, 25][i % 20];
                         messageHTML += `<div class="wave-bar w-1 ${isOwn ? 'bg-white' : 'bg-blue-500'} rounded-full" style="height: ${height}px;"></div>`;
@@ -862,9 +870,11 @@
                                     ${message.file_size}
                                 </p>
                             </div>
-                            <a href="${message.file_url}" download
+                            <a href="/chat/download/${message.id}/"
+                               download
                                class="flex-shrink-0 p-2 ${isOwn ? 'bg-white bg-opacity-20 hover:bg-opacity-30' : 'bg-blue-100 hover:bg-blue-200'} rounded-lg transition duration-200"
-                               title="Download file">
+                               title="Download file"
+                               onclick="downloadFile('${message.id}', '${message.file_name}'); return false;">
                                 <i class="fas fa-download ${isOwn ? 'text-white' : 'text-blue-600'} text-sm"></i>
                             </a>
                         </div>
@@ -876,7 +886,6 @@
             }
         }
 
-        // Message meta (same as before)
         messageHTML += `
             <div class="flex items-center justify-between mt-1">
                 <div class="flex items-center space-x-2">
@@ -897,7 +906,6 @@
 
         messageHTML += `</div>`;
 
-        // Reactions
         if (!message.is_unsent && message.reactions && Object.keys(message.reactions).length > 0) {
             messageHTML += `<div class="message-reactions flex space-x-1">`;
             for (const [emoji, count] of Object.entries(message.reactions)) {
@@ -908,7 +916,6 @@
 
         messageHTML += `</div>`;
 
-        // Message actions (same as before)
         if (isOwn && !message.is_unsent) {
             messageHTML += `
                 <div class="message-actions absolute -top-8 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-1 hidden group-hover:flex space-x-1">
@@ -964,17 +971,15 @@
         messageDiv.innerHTML = messageHTML;
         messagesList.appendChild(messageDiv);
 
-        // Remove empty state if it exists
         if (emptyState) {
             emptyState.remove();
         }
     }
 
-    // Send message function (existing)
+    // Send message function
     document.getElementById('message-form').addEventListener('submit', function(e) {
         e.preventDefault();
 
-        // Don't send if recording
         if (isRecording) {
             showToast('Finish recording first', 'warning');
             return;
@@ -989,7 +994,6 @@
             return;
         }
 
-        // Disable input and button
         messageInput.disabled = true;
         sendButton.disabled = true;
         sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -1019,7 +1023,6 @@
         })
         .then(data => {
             if (data.success) {
-                // Clear input and file preview
                 messageInput.value = '';
                 messageInput.disabled = false;
                 sendButton.disabled = false;
@@ -1030,23 +1033,16 @@
                     fileInput.value = '';
                 }
 
-                // Add message to UI
                 addMessageToUI(data);
 
-                // Update last timestamp
                 if (data.full_timestamp) {
                     lastMessageTimestamp = data.full_timestamp;
                 } else {
                     lastMessageTimestamp = new Date().toISOString();
                 }
 
-                // Scroll to bottom
                 scrollToBottom();
-
-                // Stop typing indicator
                 stopTyping();
-
-                // Auto-resize textarea
                 autoResize(messageInput);
 
                 showToast('Message sent', 'success');
@@ -1065,9 +1061,6 @@
             sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
         });
     });
-
-    // Rest of your existing functions (real-time polling, typing indicator, emoji picker, etc.)
-    // ... (keep all your existing JavaScript functions)
 
     // Real-time message polling
     setInterval(function() {

@@ -1,4 +1,4 @@
-# chat/urls.py - COMPLETE WITH VOICE MESSAGE SUPPORT
+# chat/urls.py - COMPLETE WITH VOICE MESSAGE AND DOWNLOAD SUPPORT
 from django.urls import path, re_path
 from . import views
 
@@ -20,6 +20,9 @@ urlpatterns = [
     # Search
     path('search/', views.message_search, name='message_search'),
     path('search/users/', views.search_users, name='chat_search_users'),
+
+    # Download file - NEW
+    path('download/<uuid:message_id>/', views.download_file, name='download_file'),
 
     # User actions
     re_path(r'^block/(?P<user_id>[^/]+)/$', views.block_user, name='block_user'),
@@ -46,8 +49,7 @@ urlpatterns = [
     path('message/<uuid:message_id>/pin/', views.pin_message, name='pin_message'),
     path('message/<uuid:message_id>/star/', views.star_message, name='star_message'),
 
-    # ===== CONVERSATION-SPECIFIC URLS - ORDER IS CRITICAL =====
-    # These must come BEFORE the catch-all conversation URL
+    # ===== CONVERSATION-SPECIFIC URLS =====
     path('<uuid:conversation_id>/settings/', views.group_settings, name='group_settings'),
     path('<uuid:conversation_id>/leave/', views.leave_group, name='leave_group'),
     path('<uuid:conversation_id>/invite/', views.invite_to_group, name='invite_to_group'),
