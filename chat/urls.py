@@ -1,4 +1,4 @@
-# chat/urls.py - COMPLETE WITH VOICE MESSAGE AND DOWNLOAD SUPPORT
+# chat/urls.py - COMPLETE WITH VOICE MESSAGE AND CALL SUPPORT
 from django.urls import path, re_path
 from . import views
 
@@ -21,7 +21,7 @@ urlpatterns = [
     path('search/', views.message_search, name='message_search'),
     path('search/users/', views.search_users, name='chat_search_users'),
 
-    # Download file - NEW
+    # Download file
     path('download/<uuid:message_id>/', views.download_file, name='download_file'),
 
     # User actions
@@ -49,6 +49,10 @@ urlpatterns = [
     path('message/<uuid:message_id>/pin/', views.pin_message, name='pin_message'),
     path('message/<uuid:message_id>/star/', views.star_message, name='star_message'),
 
+    # Voice message specific
+    path('voice/upload/', views.upload_voice_message, name='upload_voice_message'),
+    path('voice/play/<uuid:message_id>/', views.play_voice_message, name='play_voice_message'),
+
     # ===== CONVERSATION-SPECIFIC URLS =====
     path('<uuid:conversation_id>/settings/', views.group_settings, name='group_settings'),
     path('<uuid:conversation_id>/leave/', views.leave_group, name='leave_group'),
@@ -67,6 +71,7 @@ urlpatterns = [
     path('<uuid:conversation_id>/restore/', views.restore_conversation, name='restore_conversation'),
     path('<uuid:conversation_id>/typing-ws/', views.typing_status_ws, name='typing_status_ws'),
     path('<uuid:conversation_id>/bulk-delete/', views.bulk_delete_messages, name='bulk_delete_messages'),
+    path('<uuid:conversation_id>/voice/upload/', views.upload_voice_message, name='upload_conversation_voice'),
 
     # ===== THIS MUST BE LAST =====
     path('<uuid:conversation_id>/', views.conversation, name='conversation'),

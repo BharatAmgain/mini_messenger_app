@@ -1,0 +1,507 @@
+<!-- templates/chat/audio_chat.html - Complete Voice Call Interface -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Voice Call - {{ conversation.get_display_name }}{% endblock %}
+
+{% block mobile_title %}Voice Call{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 flex flex-col">
+    <!-- Call Header -->
+    <div class="text-white p-6 text-center">
+        <h2 class="text-2xl font-bold mb-2">{{ target_user.username|default:"Voice Call" }}</h2>
+        <p class="text-gray-400" id="call-status">Connecting...</p>
+        <p class="text-gray-400" id="call-timer">00:00</p>
+    </div>
+
+    <!-- Caller Avatar -->
+    <div class="flex-1 flex items-center justify-center">
+        <div class="text-center">
+            <div class="w-32 h-32 md:w-40 md:h-40 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-phone-alt text-5xl text-white"></i>
+            </div>
+            <h3 class="text-white text-xl font-semibold">
+                {% if other_user %}{{ other_user.username }}{% else %}Call in progress{% endif %}
+            </h3>
+        </div>
+    </div>
+
+    <!-- Call Controls -->
+    <div class="p-8">
+        <div class="flex justify-center space-x-6">
+            <!-- Mute Button -->
+            <button id="mute-btn" onclick="toggleMute()" class="w-16 h-16 rounded-full bg-gray-700 hover:bg-gray-600 text-white flex items-center justify-center transition duration-200">
+                <i class="fas fa-microphone text-2xl"></i>
+            </button>
+
+            <!-- Speaker Button -->
+            <button id="speaker-btn" onclick="toggleSpeaker()" class="w-16 h-16 rounded-full bg-gray-700 hover:bg-gray-600 text-white flex items-center justify-center transition duration-200">
+                <i class="fas fa-volume-up text-2xl"></i>
+            </button>
+
+            <!-- End Call -->
+            <button onclick="endCall()" class="w-16 h-16 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center transition duration-200">
+                <i class="fas fa-phone-slash text-2xl"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Incoming Call Overlay -->
+    <div id="incoming-call-overlay" class="fixed inset-0 bg-black bg-opacity-90 hidden flex-col items-center justify-center z-50">
+        <div class="text-white text-center">
+            <div class="w-24 h-24 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                <i class="fas fa-phone-alt text-4xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold mb-2" id="caller-name">Incoming Call</h3>
+            <p class="text-gray-300 mb-8">Voice Call</p>
+            <div class="flex space-x-4">
+                <button onclick="acceptCall()" class="px-8 py-3 bg-green-600 rounded-full hover:bg-green-700 transition duration-200 font-semibold">
+                    <i class="fas fa-phone-alt mr-2"></i>Accept
+                </button>
+                <button onclick="rejectCall()" class="px-8 py-3 bg-red-600 rounded-full hover:bg-red-700 transition duration-200 font-semibold">
+                    <i class="fas fa-times mr-2"></i>Reject
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Call Ended Overlay -->
+    <div id="call-ended-overlay" class="fixed inset-0 bg-black bg-opacity-90 hidden flex-col items-center justify-center z-50">
+        <div class="text-white text-center">
+            <div class="w-24 h-24 bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-phone-slash text-4xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold mb-2">Call Ended</h3>
+            <p class="text-gray-300 mb-8" id="call-duration">Duration: 00:00</p>
+            <a href="{% url 'conversation' conversation.id %}" class="px-8 py-3 bg-blue-600 rounded-full hover:bg-blue-700 transition duration-200 font-semibold inline-block">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Chat
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // WebRTC Variables
+    let localStream;
+    let remoteStream;
+    let peerConnection;
+    let isCallActive = false;
+    let isMuted = false;
+    let isSpeakerMuted = false;
+    let callStartTime;
+    let callTimerInterval;
+    let currentCallId = null;
+    let isCaller = {{ is_caller|default:"false" }};
+    let targetUserId = "{{ target_user.id|default:'' }}";
+
+    // WebSocket Connection
+    const callSocket = new WebSocket(
+        'ws://' + window.location.host + '/ws/call/'
+    );
+
+    callSocket.onopen = function(e) {
+        console.log('Call WebSocket connected');
+        updateCallStatus('Connected');
+
+        if (isCaller && targetUserId) {
+            initiateCall();
+        }
+    };
+
+    callSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        console.log('Received call message:', data.type);
+
+        switch(data.type) {
+            case 'incoming_call':
+                handleIncomingCall(data);
+                break;
+            case 'call_accepted':
+                handleCallAccepted(data);
+                break;
+            case 'call_rejected':
+                handleCallRejected(data);
+                break;
+            case 'call_ended':
+                handleCallEnded(data);
+                break;
+            case 'offer':
+                handleOffer(data);
+                break;
+            case 'answer':
+                handleAnswer(data);
+                break;
+            case 'ice_candidate':
+                handleIceCandidate(data);
+                break;
+            case 'mute_toggle':
+                handleMuteToggle(data);
+                break;
+            case 'call_connected':
+                handleCallConnected(data);
+                break;
+            case 'error':
+                showError(data.message);
+                break;
+        }
+    };
+
+    callSocket.onclose = function(e) {
+        console.log('Call WebSocket disconnected');
+        updateCallStatus('Disconnected');
+        if (isCallActive) {
+            endCall();
+        }
+    };
+
+    // WebRTC Configuration
+    const configuration = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' },
+            {
+                urls: 'turn:numb.viagenie.ca',
+                credential: 'muazkh',
+                username: 'webrtc@live.com'
+            }
+        ]
+    };
+
+    // Initialize local media (audio only)
+    async function initializeLocalMedia() {
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({
+                video: false,
+                audio: true
+            });
+            return localStream;
+        } catch (err) {
+            console.error('Error accessing microphone:', err);
+            showError('Could not access microphone. Please check permissions.');
+            return null;
+        }
+    }
+
+    // Create peer connection
+    async function createPeerConnection() {
+        peerConnection = new RTCPeerConnection(configuration);
+
+        // Add local audio tracks
+        localStream.getAudioTracks().forEach(track => {
+            peerConnection.addTrack(track, localStream);
+        });
+
+        // Handle incoming remote stream
+        peerConnection.ontrack = function(event) {
+            if (!remoteStream) {
+                remoteStream = new MediaStream();
+            }
+            event.streams[0].getAudioTracks().forEach(track => {
+                remoteStream.addTrack(track);
+            });
+        };
+
+        // Handle ICE candidates
+        peerConnection.onicecandidate = function(event) {
+            if (event.candidate) {
+                callSocket.send(JSON.stringify({
+                    type: 'ice_candidate',
+                    target_user_id: targetUserId,
+                    candidate: event.candidate
+                }));
+            }
+        };
+
+        peerConnection.oniceconnectionstatechange = function() {
+            console.log('ICE Connection State:', peerConnection.iceConnectionState);
+        };
+
+        return peerConnection;
+    }
+
+    // Caller initiates call
+    async function initiateCall() {
+        updateCallStatus('Calling...');
+        currentCallId = generateCallId();
+
+        callSocket.send(JSON.stringify({
+            type: 'call_request',
+            target_user_id: targetUserId,
+            call_type: 'audio',
+            call_id: currentCallId,
+            conversation_id: "{{ conversation.id }}"
+        }));
+    }
+
+    // Handle incoming call
+    function handleIncomingCall(data) {
+        currentCallId = data.call_id;
+        targetUserId = data.caller_id;
+        document.getElementById('caller-name').textContent = data.caller_name;
+        document.getElementById('incoming-call-overlay').classList.remove('hidden');
+
+        // Play ringtone
+        playRingtone();
+    }
+
+    // Accept incoming call
+    async function acceptCall() {
+        document.getElementById('incoming-call-overlay').classList.add('hidden');
+        stopRingtone();
+
+        await initializeLocalMedia();
+        await createPeerConnection();
+
+        callSocket.send(JSON.stringify({
+            type: 'call_accept',
+            call_id: currentCallId,
+            caller_id: targetUserId
+        }));
+
+        isCallActive = true;
+        isCaller = false;
+        startCallTimer();
+        updateCallStatus('Connected');
+    }
+
+    // Reject incoming call
+    function rejectCall() {
+        document.getElementById('incoming-call-overlay').classList.add('hidden');
+        stopRingtone();
+
+        callSocket.send(JSON.stringify({
+            type: 'call_reject',
+            call_id: currentCallId,
+            caller_id: targetUserId
+        }));
+
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+        }
+
+        document.getElementById('call-ended-overlay').classList.remove('hidden');
+        setTimeout(() => {
+            window.location.href = "{% url 'conversation' conversation.id %}";
+        }, 2000);
+    }
+
+    // Handle call accepted
+    async function handleCallAccepted(data) {
+        updateCallStatus('Connected');
+        isCallActive = true;
+        startCallTimer();
+
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+
+        callSocket.send(JSON.stringify({
+            type: 'offer',
+            target_user_id: targetUserId,
+            offer: peerConnection.localDescription
+        }));
+    }
+
+    // Handle call rejected
+    function handleCallRejected(data) {
+        updateCallStatus('Call rejected');
+        showError(`${data.rejected_by_name} rejected the call`);
+
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+        }
+
+        document.getElementById('call-ended-overlay').classList.remove('hidden');
+        document.getElementById('call-duration').textContent = 'Call rejected';
+
+        setTimeout(() => {
+            window.location.href = "{% url 'conversation' conversation.id %}";
+        }, 2000);
+    }
+
+    // Handle WebRTC offer
+    async function handleOffer(data) {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+
+        callSocket.send(JSON.stringify({
+            type: 'answer',
+            target_user_id: data.sender_id,
+            answer: peerConnection.localDescription
+        }));
+    }
+
+    // Handle WebRTC answer
+    async function handleAnswer(data) {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+    }
+
+    // Handle ICE candidate
+    async function handleIceCandidate(data) {
+        try {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+        } catch (e) {
+            console.error('Error adding ICE candidate:', e);
+        }
+    }
+
+    // Call controls
+    function toggleMute() {
+        if (localStream) {
+            const audioTracks = localStream.getAudioTracks();
+            audioTracks.forEach(track => {
+                track.enabled = !track.enabled;
+            });
+            isMuted = !isMuted;
+
+            const btn = document.getElementById('mute-btn');
+            if (isMuted) {
+                btn.innerHTML = '<i class="fas fa-microphone-slash text-2xl text-red-500"></i>';
+            } else {
+                btn.innerHTML = '<i class="fas fa-microphone text-2xl"></i>';
+            }
+
+            if (isCallActive) {
+                callSocket.send(JSON.stringify({
+                    type: 'mute_toggle',
+                    target_user_id: targetUserId,
+                    muted: isMuted,
+                    audio_type: 'microphone'
+                }));
+            }
+        }
+    }
+
+    function toggleSpeaker() {
+        isSpeakerMuted = !isSpeakerMuted;
+
+        const btn = document.getElementById('speaker-btn');
+        if (isSpeakerMuted) {
+            btn.innerHTML = '<i class="fas fa-volume-mute text-2xl text-red-500"></i>';
+        } else {
+            btn.innerHTML = '<i class="fas fa-volume-up text-2xl"></i>';
+        }
+    }
+
+    async function endCall() {
+        if (!isCallActive) return;
+
+        callSocket.send(JSON.stringify({
+            type: 'call_end',
+            call_id: currentCallId,
+            target_user_id: targetUserId
+        }));
+
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+        }
+
+        if (peerConnection) {
+            peerConnection.close();
+        }
+
+        isCallActive = false;
+        clearInterval(callTimerInterval);
+
+        document.getElementById('call-ended-overlay').classList.remove('hidden');
+
+        if (callStartTime) {
+            const duration = Math.floor((Date.now() - callStartTime) / 1000);
+            const minutes = Math.floor(duration / 60);
+            const seconds = duration % 60;
+            document.getElementById('call-duration').textContent =
+                `Duration: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        setTimeout(() => {
+            window.location.href = "{% url 'conversation' conversation.id %}";
+        }, 3000);
+    }
+
+    function handleCallEnded(data) {
+        showError('Call ended by other participant');
+        endCall();
+    }
+
+    function handleCallConnected(data) {
+        updateCallStatus('Connected');
+    }
+
+    function handleMuteToggle(data) {
+        if (data.audio_type === 'microphone') {
+            const indicator = document.createElement('div');
+            indicator.className = 'fixed top-20 right-4 bg-yellow-600 text-white px-3 py-2 rounded-lg text-sm';
+            indicator.textContent = data.muted ?
+                `${data.username} muted microphone` :
+                `${data.username} unmuted microphone`;
+            document.body.appendChild(indicator);
+            setTimeout(() => indicator.remove(), 3000);
+        }
+    }
+
+    // Utility functions
+    function generateCallId() {
+        return 'call_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    function updateCallStatus(status) {
+        document.getElementById('call-status').textContent = status;
+    }
+
+    function startCallTimer() {
+        callStartTime = Date.now();
+        callTimerInterval = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('call-timer').textContent =
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }, 1000);
+    }
+
+    function playRingtone() {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+        gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.5);
+
+        window.ringtoneContext = audioContext;
+    }
+
+    function stopRingtone() {
+        if (window.ringtoneContext) {
+            window.ringtoneContext.close();
+        }
+    }
+
+    function showError(message) {
+        const toast = document.createElement('div');
+        toast.className = 'fixed top-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', async function() {
+        if (isCaller) {
+            await initializeLocalMedia();
+            await createPeerConnection();
+        }
+    });
+</script>
+{% endblock %}

@@ -168,6 +168,16 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Add this after MEDIA_ROOT = BASE_DIR / 'media'
+VOICE_MESSAGES_DIR = MEDIA_ROOT / 'voice_messages'
+os.makedirs(VOICE_MESSAGES_DIR, exist_ok=True)
+
+# Voice message settings
+MAX_VOICE_DURATION = config('MAX_VOICE_DURATION', default=60, cast=int)  # 60 seconds max
+VOICE_MESSAGE_FORMATS = ['audio/webm', 'audio/mp4', 'audio/mpeg']
+VOICE_SAMPLE_RATE = 48000
+VOICE_CHANNELS = 1  # Mono
+
 # Default primary key
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

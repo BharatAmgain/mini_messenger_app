@@ -1890,3 +1890,194 @@ def debug_conversations(request):
     html += "</ul>"
     html += "<p><a href='/chat/'>Back to Chat Home</a></p>"
     return HttpResponse(html)
+
+
+@login_required(login_url='/accounts/login/')
+def video_chat(request, conversation_id):
+    """Start a video chat in a conversation"""
+    conversation = get_object_or_404(
+        Conversation,
+        id=conversation_id,
+        participants=request.user
+    )
+
+    # Determine if user is caller or callee
+    is_caller = request.GET.get('caller', 'true') == 'true'
+
+    # Get other participant for display
+    if not conversation.is_group:
+        other_user = conversation.participants.exclude(id=request.user.id).first()
+    else:
+        other_user = None
+
+    context = {
+        'conversation': conversation,
+        'is_group': conversation.is_group,
+        'is_caller': is_caller,
+        'other_user': other_user,
+        'target_user': other_user,
+    }
+
+    return render(request, 'chat/video_chat.html', context)
+
+
+@login_required(login_url='/accounts/login/')
+def audio_chat(request, conversation_id):
+    """Start an audio chat in a conversation"""
+    conversation = get_object_or_404(
+        Conversation,
+        id=conversation_id,
+        participants=request.user
+    )
+
+    # Determine if user is caller or callee
+    is_caller = request.GET.get('caller', 'true') == 'true'
+
+    # Get other participant for display
+    if not conversation.is_group:
+        other_user = conversation.participants.exclude(id=request.user.id).first()
+    else:
+        other_user = None
+
+    context = {
+        'conversation': conversation,
+        'is_group': conversation.is_group,
+        'is_caller': is_caller,
+        'other_user': other_user,
+        'target_user': other_user,
+    }
+
+    return render(request, 'chat/audio_chat.html', context)
+
+
+@login_required
+@csrf_exempt
+def upload_voice_message(request, conversation_id=None):
+    """Upload voice message - FIXED for proper audio handling"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+
+    try:
+        # Handle both URL patterns
+        if conversation_id:
+            conversation = get_object_or_404(Conversation, id=conversation_id, participants=request.user)
+        else:
+            conversation_id = request.POST.get('conversation_id')
+            if not conversation_id:
+                return JsonResponse({'success': False, 'error': 'Conversation ID required'})
+            conversation = get_object_or_404(Conversation, id=conversation_id, participants=request.user)
+
+        # Get voice data
+        voice_data = request.POST.get('voice_data')
+        voice_duration = request.POST.get('duration')
+        voice_waveform = request.POST.get('waveform')
+
+        if not voice_data:
+            return JsonResponse({'success': False, 'error': 'No voice data provided'})
+
+        # Parse duration
+        try:
+            duration = int(voice_duration) if voice_duration else 0
+        except ValueError:
+            duration = 0
+
+        # Parse waveform
+        try:
+            waveform = json.loads(voice_waveform) if voice_waveform else None
+        except:
+            waveform = None
+
+        # Decode base64 audio
+        try:
+            # Remove data URL prefix if present
+            if ';base64,' in voice_data:
+                format, audio_data = voice_data.split(';base64,')
+                audio_bytes = base64.b64decode(audio_data)
+            else:
+                audio_bytes = base64.b64decode(voice_data)
+
+            # Validate file size (max 5MB for voice)
+            if len(audio_bytes) > 5 * 1024 * 1024:
+                return JsonResponse({'success': False, 'error': 'Voice message too large'})
+
+            # Generate filename
+            filename = f"voice_{uuid.uuid4()}.webm"
+
+            # Save file
+            file_path = default_storage.save(
+                f"voice_messages/{filename}",
+                ContentFile(audio_bytes)
+            )
+
+            # Create message
+            message = Message.objects.create(
+                conversation=conversation,
+                sender=request.user,
+                message_type='voice',
+                file=file_path,
+                file_name=filename,
+                file_size=len(audio_bytes),
+                voice_duration=duration,
+                voice_waveform=waveform
+            )
+
+            # Update conversation timestamp
+            conversation.updated_at = timezone.now()
+            conversation.save(update_fields=['updated_at'])
+
+            # Create notifications for other participants
+            for participant in conversation.participants.exclude(id=request.user.id):
+                if participant.message_notifications:
+                    Notification.objects.create(
+                        user=participant,
+                        notification_type='message',
+                        title=f"Voice message from {request.user.username}",
+                        message=f"🎤 Voice message ({duration}s)",
+                        related_url=f"/chat/{conversation.id}/"
+                    )
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Voice message sent',
+                'message_id': str(message.id),
+                'file_url': message.file.url,
+                'duration': duration,
+                'waveform': waveform,
+                'timestamp': message.timestamp.strftime('%H:%M'),
+                'full_timestamp': message.timestamp.isoformat()
+            })
+
+        except Exception as e:
+            print(f"Error processing voice data: {e}")
+            return JsonResponse({'success': False, 'error': f'Error processing audio: {str(e)}'})
+
+    except Exception as e:
+        print(f"Voice upload error: {e}")
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def play_voice_message(request, message_id):
+    """Stream voice message for playback"""
+    try:
+        message = get_object_or_404(Message, id=message_id)
+
+        # Check if user is participant
+        if request.user not in message.conversation.participants.all():
+            return HttpResponse('Unauthorized', status=401)
+
+        if not message.file or message.message_type != 'voice':
+            return HttpResponse('Voice message not found', status=404)
+
+        file_path = message.file.path
+        if not os.path.exists(file_path):
+            return HttpResponse('File not found', status=404)
+
+        # Stream the audio file
+        response = FileResponse(open(file_path, 'rb'), content_type='audio/webm')
+        response['Content-Disposition'] = f'inline; filename="{message.file_name}"'
+        return response
+
+    except Exception as e:
+        print(f"Error playing voice message: {e}")
+        return HttpResponse(f'Error: {str(e)}', status=500)
